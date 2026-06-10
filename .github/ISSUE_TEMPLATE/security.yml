@@ -1,0 +1,35 @@
+name: Security Advisory
+description: Report a security vulnerability privately to maintainers
+labels: ["security", "triage", "confidential"]
+assignees:
+  - abc-io-enterprise/security
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not file public issues for security vulnerabilities.
+        If the issue is sensitive, email `security@abc-io.com` with the details instead.
+  - type: textarea
+    id: description
+    attributes:
+      label: Vulnerability description
+      description: Describe the vulnerability, affected components, and potential impact.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce / proof of concept
+    validations:
+      required: true
+  - type: textarea
+    id: mitigation
+    attributes:
+      label: Suggested mitigation
+  - type: checkboxes
+    id: disclosure
+    attributes:
+      label: Disclosure
+      options:
+        - label: I agree to follow the project's responsible disclosure policy (90-day default)
+          required: true

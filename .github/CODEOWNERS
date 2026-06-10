@@ -1,0 +1,47 @@
+# ABC-IO v2.0 Enterprise CODEOWNERS
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global fallback — platform maintainers must review every change
+* @abc-io-enterprise/platform-maintainers
+
+# Infrastructure and deployment changes require SRE / platform approval
+/docker-compose.yml @abc-io-enterprise/sre @abc-io-enterprise/platform-maintainers
+/compose.prod.yml @abc-io-enterprise/sre @abc-io-enterprise/platform-maintainers
+/compose.dev.yml @abc-io-enterprise/sre @abc-io-enterprise/platform-maintainers
+/config/ @abc-io-enterprise/sre @abc-io-enterprise/security
+/infrastructure/ @abc-io-enterprise/sre @abc-io-enterprise/cloud-governance
+/scripts/ @abc-io-enterprise/sre @abc-io-enterprise/platform-maintainers
+/.github/workflows/ @abc-io-enterprise/sre @abc-io-enterprise/security
+
+# Security, secrets, and compliance documentation
+SECURITY.md @abc-io-enterprise/security
+/.security/ @abc-io-enterprise/security
+**/.env.example @abc-io-enterprise/security
+
+# Gateway — core API, auth, billing
+/services/gateway/ @abc-io-enterprise/backend @abc-io-enterprise/security
+
+# AI services
+/services/kimi/ @abc-io-enterprise/ai @abc-io-enterprise/backend
+/services/worker/ @abc-io-enterprise/ai @abc-io-enterprise/backend
+/services/ai-isp/ @abc-io-enterprise/ai @abc-io-enterprise/backend
+
+# Public-facing services
+/services/public-portal/ @abc-io-enterprise/frontend @abc-io-enterprise/security
+/services/mobile-gateway/ @abc-io-enterprise/mobile @abc-io-enterprise/security
+/services/beacon*/ @abc-io-enterprise/mobile @abc-io-enterprise/sre
+
+# Admin / operator interfaces
+/services/owner-dashboard/ @abc-io-enterprise/platform-maintainers @abc-io-enterprise/security
+/services/operator-station/ @abc-io-enterprise/platform-maintainers @abc-io-enterprise/sre
+
+# Database schema changes require data / platform review
+/services/postgres/ @abc-io-enterprise/data @abc-io-enterprise/platform-maintainers
+
+# Documentation
+/docs/ @abc-io-enterprise/docs @abc-io-enterprise/platform-maintainers
+*.md @abc-io-enterprise/docs
+AGENTS.md @abc-io-enterprise/platform-maintainers
+
+# Repository archive — read-only reference; changes require explicit approval
+/repositories/ @abc-io-enterprise/platform-maintainers @abc-io-enterprise/architecture
