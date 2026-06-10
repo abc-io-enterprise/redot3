@@ -1,0 +1,38 @@
+{
+  "name": "abc-io-v2",
+  "version": "2.0.0",
+  "description": "ABC-IO v2.0 — Unified AI-ISP Infrastructure Platform",
+  "private": true,
+  "workspaces": [
+    "services/gateway",
+    "services/operator-station",
+    "services/owner-dashboard",
+    "services/mobile-gateway",
+    "services/public-portal",
+    "services/beacon-pwa"
+  ],
+  "scripts": {
+    "dev": "docker compose -f docker-compose.yml up -d",
+    "dev:logs": "docker compose -f docker-compose.yml up",
+    "prod": "docker compose -f compose.prod.yml up -d",
+    "prod:logs": "docker compose -f compose.prod.yml up",
+    "build": "docker compose build",
+    "stop": "docker compose down",
+    "health": "bash scripts/health-check.sh",
+    "verify": "bash scripts/verify-cloud-deployment.sh",
+    "heal": "bash scripts/auto-heal.sh",
+    "test": "echo 'Run individual service tests'",
+    "apk:build": "bash apk/build-apk-manual.sh",
+    "deploy:vps": "bash scripts/deploy-vps-cluster.sh",
+    "lint": "echo 'Linting not configured'",
+    "format": "echo 'Formatting not configured'"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ccplexmath/redot2complete.git"
+  },
+  "license": "PROPRIETARY"
+}
