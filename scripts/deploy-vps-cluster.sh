@@ -8,8 +8,8 @@ DEPLOY_TAG="${1:-main}"
 REPO_URL="https://github.com/ccplexmath/redot2complete.git"
 
 REDOT1_IP="${REDOT1_IP:-162.254.32.142}"
-AI1_IP="${AI1_IP:-159.203.110.44}"
-AI2_IP="${AI2_IP:-159.203.44.3}"
+AI1_IP="${AI1_IP:-192.227.212.235}"
+AI2_IP="${AI2_IP:-192.227.212.237}"
 HEADSCALE_URL="${HEADSCALE_URL:-https://headscale.abc-io.com:8085}"
 
 echo "================================================"

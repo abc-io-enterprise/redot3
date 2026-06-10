@@ -53,11 +53,11 @@ set_hosts() {
         -d "TTL2=1800" \
         -d "HostName3=ai1" \
         -d "RecordType3=A" \
-        -d "Address3=${AI1_IP:-159.203.110.44}" \
+        -d "Address3=${AI1_IP:-192.227.212.235}" \
         -d "TTL3=1800" \
         -d "HostName4=ai2" \
         -d "RecordType4=A" \
-        -d "Address4=${AI2_IP:-159.203.44.3}" \
+        -d "Address4=${AI2_IP:-192.227.212.237}" \
         -d "TTL4=1800" \
         -d "HostName5=headscale" \
         -d "RecordType5=A" \

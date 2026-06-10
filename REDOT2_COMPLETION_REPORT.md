@@ -101,8 +101,8 @@ Requires Android SDK. Run `./scripts/build-mobile-apk.ps1` when SDK is available
 | Node | IP | Role | Services |
 |------|-----|------|----------|
 | redot1 | 162.254.32.142 | Primary Gateway | Full stack (14 services) |
-| ai1 | 159.203.110.44 | AI Primary | kimi, worker, redis, headscale |
-| ai2 | 159.203.44.3 | AI Standby | kimi, worker, redis, headscale |
+| ai1 | 192.227.212.235 | AI Primary | kimi, worker, redis, headscale |
+| ai2 | 192.227.212.237 | AI Standby | kimi, worker, redis, headscale |
 
 **Deploy:**
 ```bash

@@ -41,8 +41,8 @@ bash scripts/health-check.sh
 bash scripts/verify-cloud-deployment.sh
 ```
 - [ ] redot1 (162.254.32.142) — all services respond
-- [ ] ai1 (159.203.110.44) — AI worker responds
-- [ ] ai2 (159.203.44.3) — AI standby responds
+- [ ] ai1 (192.227.212.235) — AI worker responds
+- [ ] ai2 (192.227.212.237) — AI standby responds
 
 ### 2.2 Headscale VPN Mesh
 ```bash
@@ -126,7 +126,7 @@ docker compose down --volumes  # ONLY if you want to wipe data
 
 **The system will continue operating from:**
 - 🌐 **Public Cloud:** redot1 VPS (162.254.32.142)
-- 🤖 **AI Workers:** ai1 (159.203.110.44) + ai2 (159.203.44.3)
+- 🤖 **AI Workers:** ai1 (192.227.212.235) + ai2 (192.227.212.237)
 - 📱 **Cellular Backup:** Android APK gateway
 - 🔒 **Management:** Owner Dashboard + Operator Station
 

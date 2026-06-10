@@ -12,8 +12,8 @@ NC_CLIENT_IP="${NAMECHEAP_CLIENT_IP:-$(curl -s ifconfig.me)}"
 DOMAIN="${NAMECHEAP_DOMAIN:-abc-io.com}"
 
 REDOT1_IP="${REDOT1_IP:-162.254.32.142}"
-AI1_IP="${AI1_IP:-159.203.110.44}"
-AI2_IP="${AI2_IP:-159.203.44.3}"
+AI1_IP="${AI1_IP:-192.227.212.235}"
+AI2_IP="${AI2_IP:-192.227.212.237}"
 
 echo "================================================"
 echo "ABC-IO Namecheap DNS Sync"

@@ -56,13 +56,25 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-echo "[1/3] Pulling images..."
+# Disk guardrail: VPS has 20GB HDD, keep local files under 10GB
+echo "[0/4] Disk check..."
+df -h /
+disk_usage=$(df / | tail -1 | awk '{print $5}' | sed 's/%//')
+if [ "$disk_usage" -gt 80 ]; then
+    echo "WARNING: Disk usage is ${disk_usage}%. Pruning Docker..."
+    docker system prune -af --volumes || true
+fi
+
+echo "[1/4] Pruning old images..."
+docker system prune -af --volumes >/dev/null 2>&1 || true
+
+echo "[2/4] Pulling images..."
 docker compose -f compose.prod.yml pull
 
-echo "[2/3] Starting services..."
+echo "[3/4] Starting services..."
 docker compose -f compose.prod.yml up -d
 
-echo "[3/3] Waiting for services..."
+echo "[4/4] Waiting for services..."
 sleep 15
 
 echo ""
@@ -78,6 +90,10 @@ for port in 4000 8080 8500 5050 8090 5000 3005 7000 3006 8088 9091 14000 16686 8
         echo "  Port $port: CHECK"
     fi
 done
+
+echo ""
+echo "=== Disk Usage ==="
+df -h /
 
 echo ""
 echo "================================================"
@@ -110,10 +126,13 @@ ABC-IO v2.0 Production Deployment
 
 Node Roles:
 - redot1 (162.254.32.142): Full stack
-- ai1 (159.203.110.44): AI worker only
-- ai2 (159.203.44.3): AI standby only
+- ai1 (192.227.212.235): AI worker only
+- ai2 (192.227.212.237): AI standby only
 
-For AI nodes, after step 2, edit compose.prod.yml to only start:
+IMPORTANT: VPS nodes have 20GB HDD. Local files must stay under 10GB.
+The deploy script auto-prunes Docker images before deployment.
+
+For AI nodes, after step 2, only start AI services:
   docker compose -f compose.prod.yml up -d kimi worker redis headscale
 
 ================================================

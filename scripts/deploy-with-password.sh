@@ -10,8 +10,8 @@ BUNDLE="abc-io-deploy-${DEPLOY_TAG}.tar.gz"
 REPO_URL="https://github.com/ccplexmath/redot2complete.git"
 
 REDOT1_IP="${REDOT1_IP:-162.254.32.142}"
-AI1_IP="${AI1_IP:-159.203.110.44}"
-AI2_IP="${AI2_IP:-159.203.44.3}"
+AI1_IP="${AI1_IP:-192.227.212.235}"
+AI2_IP="${AI2_IP:-192.227.212.237}"
 
 # Load passwords from environment or prompt
 REDOT1_PASS="${REDOT1_ROOT_PASSWORD:-}"
@@ -49,6 +49,14 @@ deploy_node() {
         return 1
     fi
 
+    # Pre-deploy: check disk space on target
+    echo "  Checking disk space..."
+    disk_usage=$(sshpass -p "$pass" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "root@$ip" "df / | tail -1 | awk '{print \$5}' | sed 's/%//'" 2>/dev/null || echo "99")
+    if [ "$disk_usage" -gt 85 ]; then
+        echo "  WARNING: Disk usage is ${disk_usage}%. Pruning Docker..."
+        sshpass -p "$pass" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "root@$ip" "docker system prune -af --volumes" 2>/dev/null || true
+    fi
+
     # Copy bundle
     echo "  Uploading bundle..."
     sshpass -p "$pass" scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$BUNDLE" "root@$ip:/opt/" || {
@@ -64,6 +72,8 @@ deploy_node() {
         rm -rf abc-io
         tar -xzf $BUNDLE
         cd abc-io
+        echo "  Pruning old Docker images to stay under 10GB..."
+        docker system prune -af --volumes >/dev/null 2>&1 || true
         if [ -n "$services" ]; then
             docker compose -f compose.prod.yml up -d $services
         else
@@ -71,6 +81,9 @@ deploy_node() {
         fi
         sleep 10
         docker compose -f compose.prod.yml ps
+        echo ""
+        echo "  Disk usage after deploy:"
+        df -h / | tail -1
 EOF
 
     echo "  [$name] Deployment complete."
