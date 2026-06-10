@@ -2,8 +2,8 @@ services:
   nginx:
     image: nginx:stable-alpine
     ports:
-      - '80:80'
-      - '443:443'
+      - '8088:80'
+      - '8443:443'
     depends_on:
       - gateway
     volumes:
@@ -12,6 +12,8 @@ services:
   gateway:
     build:
       context: ./services/gateway
+    ports:
+      - '4000:4000'
     environment:
       - PORT=4000
       - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/abc_io
