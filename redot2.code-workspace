@@ -1,0 +1,119 @@
+{
+  "folders": [
+    {
+      "path": "C:\\Users\\cplexmath\\OneDrive\\Documents\\redot2"
+    }
+  ],
+  "settings": {
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+    "terminal.integrated.profiles.windows": {
+      "PowerShell": {
+        "source": "PowerShell",
+        "args": ["-NoExit", "-Command", "cd C:\\Users\\cplexmath\\OneDrive\\Documents\\redot2"]
+      }
+    },
+    "docker.defaultRegistry": "docker.io",
+    "docker.dockerPath": "docker",
+    "git.autofetch": true,
+    "git.confirmSync": false,
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    },
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/.git": true,
+      "**/dist": true,
+      "**/build": true
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/build": true,
+      "**/.git": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-vscode.vscode-docker",
+      "ms-vscode-remote.remote-containers",
+      "GitHub.copilot",
+      "GitHub.copilot-chat",
+      "moonshot-ai.kimi-code",
+      "ms-vscode.powershell",
+      "redhat.vscode-yaml",
+      "dbaeumer.vscode-eslint",
+      "esbenp.prettier-vscode"
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Docker Compose Up",
+        "type": "node",
+        "request": "launch",
+        "preLaunchTask": "docker-compose-up",
+        "runtimeExecutable": "docker-compose",
+        "runtimeArgs": ["up", "-d"],
+        "cwd": "${workspaceFolder}"
+      },
+      {
+        "name": "Docker Compose Down",
+        "type": "node",
+        "request": "launch",
+        "preLaunchTask": "docker-compose-down",
+        "runtimeExecutable": "docker-compose",
+        "runtimeArgs": ["down"],
+        "cwd": "${workspaceFolder}"
+      }
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "docker-compose-up",
+        "type": "shell",
+        "command": "docker-compose",
+        "args": ["up", "-d"],
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "docker-compose-down",
+        "type": "shell",
+        "command": "docker-compose",
+        "args": ["down"],
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "git-server-start",
+        "type": "shell",
+        "command": "docker-compose",
+        "args": ["up", "-d", "gitea"],
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": []
+      }
+    ]
+  }
+}
