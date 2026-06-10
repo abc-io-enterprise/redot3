@@ -35,7 +35,7 @@ echo ""
 # Create a .env.deploy template
 cat > "$BUNDLE_DIR/abc-io/.env.deploy.template" << 'ENVEOF'
 # Copy your local .env file to the VPS as /opt/abc-io/.env
-# Then run: docker compose -f compose.prod.yml up -d
+# Then run: docker-compose -f compose.prod.yml up -d
 ENVEOF
 
 # Create startup script
@@ -69,17 +69,17 @@ echo "[1/4] Pruning old images..."
 docker system prune -af --volumes >/dev/null 2>&1 || true
 
 echo "[2/4] Pulling images..."
-docker compose -f compose.prod.yml pull
+docker-compose -f compose.prod.yml pull
 
 echo "[3/4] Starting services..."
-docker compose -f compose.prod.yml up -d
+docker-compose -f compose.prod.yml up -d
 
 echo "[4/4] Waiting for services..."
 sleep 15
 
 echo ""
 echo "=== Service Status ==="
-docker compose -f compose.prod.yml ps
+docker-compose -f compose.prod.yml ps
 
 echo ""
 echo "=== Health Checks ==="
@@ -133,7 +133,7 @@ IMPORTANT: VPS nodes have 20GB HDD. Local files must stay under 10GB.
 The deploy script auto-prunes Docker images before deployment.
 
 For AI nodes, after step 2, only start AI services:
-  docker compose -f compose.prod.yml up -d kimi worker redis headscale
+  docker-compose -f compose.prod.yml up -d kimi worker redis headscale
 
 ================================================
 READMEEOF
