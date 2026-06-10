@@ -77,10 +77,13 @@ services:
     build:
       context: ./services/kimi
     environment:
-      - MODEL=production
+      - AI_PROVIDER=${AI_PROVIDER:-mistral}
       - MISTRAL_API_KEY=${MISTRAL_API_KEY}
       - MISTRAL_MODEL=${MISTRAL_MODEL}
       - MISTRAL_API_BASE_URL=${MISTRAL_API_BASE_URL}
+      - KIMI_API_KEY=${KIMI_API_KEY}
+      - KIMI_MODEL=${KIMI_MODEL}
+      - KIMI_API_BASE_URL=${KIMI_API_BASE_URL}
 
   postgres:
     image: postgres:15-alpine
@@ -97,5 +100,19 @@ services:
     ports:
       - '6379:6379'
 
+  headscale:
+    image: headscale/headscale:latest
+    container_name: redot2-headscale
+    ports:
+      - '8085:8080'
+      - '9095:9090'
+      - '41641:41641/udp'
+    volumes:
+      - ./config/headscale:/etc/headscale:ro
+      - headscale-data:/var/lib/headscale
+    command: serve
+    restart: unless-stopped
+
 volumes:
   postgres-data:
+  headscale-data:

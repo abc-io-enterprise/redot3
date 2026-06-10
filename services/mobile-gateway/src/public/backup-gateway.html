@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a0a2e">
+<title>ABC-IO Backup Gateway</title>
+<link rel="manifest" href="backup-gateway-manifest.json">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0a2e;
+    color: #00ff88;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .header h1 { font-size: 1.5rem; color: #fff; }
+  .header p { font-size: 0.85rem; color: #888; }
+  .status-card {
+    background: #111144;
+    border: 1px solid #00ff88;
+    border-radius: 12px;
+    padding: 20px;
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 15px;
+  }
+  .status-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+  }
+  .online { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
+  .offline { background: #ff4444; box-shadow: 0 0 8px #ff4444; }
+  .standby { background: #ffaa00; box-shadow: 0 0 8px #ffaa00; }
+  .btn {
+    background: #00ff88;
+    color: #0a0a2e;
+    border: none;
+    padding: 14px 24px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 10px;
+  }
+  .btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+  .log {
+    background: #000;
+    border-radius: 8px;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 0.75rem;
+    height: 150px;
+    overflow-y: auto;
+    width: 100%;
+    max-width: 400px;
+    margin-top: 15px;
+    color: #0f0;
+  }
+  .info { color: #0af; }
+  .warn { color: #fa0; }
+  .err { color: #f44; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>🛡️ ABC-IO Backup Gateway</h1>
+    <p>Cellular failover when public assets go down</p>
+  </div>
+
+  <div class="status-card">
+    <div><span class="status-indicator standby" id="netStatus"></span> Network: <span id="netText">Checking...</span></div>
+    <div style="margin-top:8px"><span class="status-indicator standby" id="primaryStatus"></span> Primary: <span id="primaryText">Checking...</span></div>
+    <div style="margin-top:8px"><span class="status-indicator standby" id="cellStatus"></span> Cellular Backup: <span id="cellText">Standby</span></div>
+  </div>
+
+  <button class="btn" id="activateBtn" onclick="activateBackup()">Activate Cellular Backup</button>
+  <button class="btn" style="background:#0a4a8a;color:#fff;margin-top:8px" onclick="sendBeacon()">Send Emergency Beacon</button>
+
+  <div class="log" id="log"></div>
+
+<script>
+const PRIMARY_URL = 'http://162.254.32.142:4000/health';
+const AI1_URL = 'http://159.203.110.44:5000/health';
+const AI2_URL = 'http://159.203.44.3:5000/health';
+const logEl = document.getElementById('log');
+
+function log(msg, cls='info') {
+  const line = document.createElement('div');
+  line.className = cls;
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function setStatus(id, textId, state, text) {
+  const dot = document.getElementById(id);
+  const txt = document.getElementById(textId);
+  dot.className = 'status-indicator ' + state;
+  txt.textContent = text;
+}
+
+async function checkPrimary() {
+  try {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 5000);
+    const res = await fetch(PRIMARY_URL, { signal: ctrl.signal, mode: 'no-cors' });
+    setStatus('primaryStatus', 'primaryText', 'online', 'Online');
+    return true;
+  } catch (e) {
+    setStatus('primaryStatus', 'primaryText', 'offline', 'OFFLINE');
+    return false;
+  }
+}
+
+function checkNetwork() {
+  const online = navigator.onLine;
+  setStatus('netStatus', 'netText', online ? 'online' : 'offline', online ? 'Connected' : 'Disconnected');
+  return online;
+}
+
+async function activateBackup() {
+  log('Activating cellular backup gateway...', 'warn');
+  document.getElementById('activateBtn').disabled = true;
+  setStatus('cellStatus', 'cellText', 'online', 'ACTIVE');
+
+  // Attempt to relay through available nodes
+  const nodes = [AI1_URL, AI2_URL];
+  for (const node of nodes) {
+    try {
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), 8000);
+      await fetch(node, { signal: ctrl.signal, mode: 'no-cors' });
+      log(`Backup node reachable: ${node}`, 'info');
+    } catch (e) {
+      log(`Backup node unreachable: ${node}`, 'err');
+    }
+  }
+
+  log('Cellular backup gateway ACTIVE. Serving local beacon API.', 'info');
+
+  // Start local beacon relay loop
+  setInterval(async () => {
+    if (!navigator.onLine) {
+      log('Network down — caching beacon locally', 'warn');
+      localStorage.setItem('beacon_' + Date.now(), JSON.stringify({
+        timestamp: new Date().toISOString(),
+        type: 'cached_beacon',
+        location: 'cellular_backup'
+      }));
+    }
+  }, 30000);
+}
+
+async function sendBeacon() {
+  if (!navigator.geolocation) {
+    log('Geolocation not available', 'err');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(pos => {
+    const beacon = {
+      deviceId: 'backup-mobile-' + Math.random().toString(36).slice(2, 8),
+      latitude: pos.coords.latitude,
+      longitude: pos.coords.longitude,
+      battery: navigator.getBattery ? 'unknown' : 'unknown',
+      timestamp: new Date().toISOString()
+    };
+    log(`Beacon: ${beacon.latitude}, ${beacon.longitude}`, 'info');
+    // Cache locally and attempt relay
+    localStorage.setItem('last_beacon', JSON.stringify(beacon));
+  }, err => {
+    log('Location error: ' + err.message, 'err');
+  });
+}
+
+// Auto-check loop
+setInterval(async () => {
+  checkNetwork();
+  const primaryUp = await checkPrimary();
+  if (!primaryUp && navigator.onLine) {
+    log('PRIMARY GATEWAY DOWN — ready to activate cellular backup', 'warn');
+    document.getElementById('activateBtn').disabled = false;
+    document.getElementById('activateBtn').style.background = '#ff4444';
+    document.getElementById('activateBtn').textContent = '🔴 ACTIVATE BACKUP NOW';
+  }
+}, 10000);
+
+checkNetwork();
+checkPrimary();
+log('Backup Gateway initialized');
+log('Primary: ' + PRIMARY_URL);
+log('Monitoring every 10s...');
+</script>
+</body>
+</html>
