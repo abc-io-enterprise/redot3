@@ -578,6 +578,10 @@
 
     // Verification checklist
     async function runVerification() {
+      if (!authToken) {
+        alert('Please authenticate first using the Auth Panel above.');
+        return;
+      }
       log('▶ Starting full verification checklist...');
       const resultDiv = document.getElementById('verificationResult');
       resultDiv.style.display = 'block';
@@ -632,15 +636,19 @@
 
       // 4. VPN (headscale health)
       try {
-        const res = await fetch('http://localhost:8085/health', { mode: 'no-cors' });
-        setChecklistItem('check-vpn', 'pass', 'Headscale endpoint reachable');
+        const res = await fetch('/api/health/headscale', { headers: { 'x-owner-token': authToken } });
+        if (res.ok) {
+          setChecklistItem('check-vpn', 'pass', 'Headscale endpoint reachable');
+        } else {
+          setChecklistItem('check-vpn', 'pending', 'Headscale endpoint check returned non-200');
+        }
       } catch (e) {
-        setChecklistItem('check-vpn', 'pending', 'Headscale endpoint check skipped (CORS)');
+        setChecklistItem('check-vpn', 'pending', 'Headscale endpoint check skipped');
       }
 
       // 5. AI Provider
       try {
-        const res = await fetch('http://localhost:5000/health');
+        const res = await fetch('/api/health/kimi', { headers: { 'x-owner-token': authToken } });
         const data = await res.json();
         if (data.status === 'ok') {
           const providerStatus = data.mistral_enabled ? 'Mistral enabled' : data.kimi_enabled ? 'Kimi enabled' : 'No provider configured';

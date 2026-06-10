@@ -345,6 +345,27 @@ app.get('/api/signature', (req, res) => {
   });
 });
 
+// ==================== HEALTH PROXY ROUTES ====================
+app.get('/api/health/kimi', async (req, res) => {
+  try {
+    const response = await fetch('http://kimi:5000/health');
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(502).json({ status: 'error', message: String(error) });
+  }
+});
+
+app.get('/api/health/headscale', async (req, res) => {
+  try {
+    const response = await fetch('http://headscale:8080/health');
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(502).json({ status: 'error', message: String(error) });
+  }
+});
+
 app.post('/api/beacon-relay', async (req, res) => {
   const { token, deviceId, latitude, longitude, battery } = req.body;
   if (token !== ownerSessionToken) {
