@@ -51,12 +51,22 @@
         android:padding="16dp" />
 
     <TextView
+        android:id="@+id/deviceInfoText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Device Info"
+        android:textColor="#667eea"
+        android:textSize="11sp"
+        android:layout_marginTop="24dp"
+        android:gravity="center" />
+
+    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Primary: 162.254.32.142\nAI1: 159.203.110.44\nAI2: 159.203.44.3"
         android:textColor="#666666"
         android:textSize="12sp"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="16dp"
         android:gravity="center" />
 
     <TextView
