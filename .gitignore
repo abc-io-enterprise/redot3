@@ -50,3 +50,4 @@ apk/android-project/build/
 # Lockfiles (include for reproducible builds)
 # yarn.lock
 # pnpm-lock.yaml
+abc-io-deploy-*.tar.gz
