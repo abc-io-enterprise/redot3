@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Advisory (private)
+    url: https://github.com/abc-io-enterprise/redot2/security/advisories/new
+    about: Report a security vulnerability privately.
+  - name: Enterprise Support
+    url: mailto:support@abc-io.com
+    about: Contact enterprise support for account, billing, or SLA questions.
+  - name: Architecture Discussions
+    url: https://github.com/abc-io-enterprise/redot2/discussions
+    about: Open a discussion for design questions or RFCs.
