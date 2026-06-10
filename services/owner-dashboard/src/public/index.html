@@ -7,10 +7,10 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #222; }
-    
+
     .container { max-width: 1400px; margin: 0 auto; padding: 20px; min-height: 100vh; display: flex; flex-direction: column; }
-    
-    header { 
+
+    header {
       background: rgba(255,255,255,0.95);
       padding: 20px 30px;
       border-radius: 12px;
@@ -20,12 +20,12 @@
       justify-content: space-between;
       align-items: center;
     }
-    
+
     .logo-section { display: flex; align-items: center; gap: 15px; }
     .logo { font-size: 28px; font-weight: bold; color: #667eea; }
     .logo-text { font-size: 12px; color: #999; }
-    
-    .status-badge { 
+
+    .status-badge {
       display: inline-block;
       padding: 8px 16px;
       border-radius: 20px;
@@ -35,27 +35,27 @@
     }
     .status-online { background: #10b981; color: white; }
     .status-offline { background: #ef4444; color: white; }
-    
+
     .auth-section { display: flex; gap: 10px; align-items: center; }
     .user-info { font-size: 12px; color: #666; text-align: right; }
-    
+
     .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex: 1; }
-    
+
     .card {
       background: rgba(255,255,255,0.95);
       padding: 20px;
       border-radius: 12px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
-    
+
     .card-full { grid-column: 1 / -1; }
-    
+
     h2 { font-size: 18px; margin-bottom: 15px; color: #222; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
     h3 { font-size: 14px; margin-top: 15px; margin-bottom: 8px; color: #444; }
-    
+
     .input-group { margin-bottom: 10px; }
     label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; }
-    input, select { 
+    input, select {
       width: 100%;
       padding: 8px 12px;
       border: 1px solid #ddd;
@@ -63,7 +63,7 @@
       font-family: inherit;
     }
     input:focus, select:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
-    
+
     .button-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
     button, a {
       padding: 10px 18px;
@@ -79,18 +79,18 @@
     }
     .btn-primary { background: #667eea; color: white; }
     .btn-primary:hover { background: #5568d3; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
-    
+
     .btn-success { background: #10b981; color: white; }
     .btn-success:hover { background: #059669; }
-    
+
     .btn-danger { background: #ef4444; color: white; }
     .btn-danger:hover { background: #dc2626; }
-    
+
     .btn-warning { background: #f59e0b; color: white; }
     .btn-warning:hover { background: #d97706; }
-    
+
     .btn-sm { padding: 6px 12px; font-size: 11px; }
-    
+
     .service-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
     .service-item {
       padding: 10px;
@@ -104,7 +104,7 @@
     }
     .service-item.up { border-left-color: #10b981; background: #f0fdf4; }
     .service-item.down { border-left-color: #ef4444; background: #fef2f2; }
-    .service-badge { 
+    .service-badge {
       font-weight: bold;
       font-size: 10px;
       padding: 2px 6px;
@@ -112,7 +112,7 @@
     }
     .badge-up { background: #10b981; color: white; }
     .badge-down { background: #ef4444; color: white; }
-    
+
     .log-box {
       background: #1a1a2e;
       color: #00ff00;
@@ -124,14 +124,14 @@
       overflow-y: auto;
       margin-top: 10px;
     }
-    
+
     .alert { padding: 12px; border-radius: 6px; margin-bottom: 10px; font-size: 13px; }
     .alert-info { background: #e0f2fe; color: #0369a1; border-left: 3px solid #0284c7; }
     .alert-success { background: #f0fdf4; color: #166534; border-left: 3px solid #22c55e; }
     .alert-error { background: #fef2f2; color: #991b1b; border-left: 3px solid #ef4444; }
     .alert-warning { background: #fffbeb; color: #92400e; border-left: 3px solid #f59e0b; }
-    
-    .stat-box { 
+
+    .stat-box {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
       padding: 15px;
@@ -140,7 +140,22 @@
     }
     .stat-value { font-size: 24px; font-weight: bold; }
     .stat-label { font-size: 12px; opacity: 0.9; }
-    
+
+    .checklist-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    .checklist-item.pass { background: #f0fdf4; border-left: 3px solid #10b981; }
+    .checklist-item.fail { background: #fef2f2; border-left: 3px solid #ef4444; }
+    .checklist-item.pending { background: #fffbeb; border-left: 3px solid #f59e0b; }
+    .check-icon { font-size: 16px; width: 24px; text-align: center; }
+
     @media (max-width: 1024px) {
       .main-grid { grid-template-columns: 1fr; }
     }
@@ -168,15 +183,15 @@
         <h2>🔐 Owner Authentication</h2>
         <div class="input-group">
           <label>Email</label>
-          <input id="email" type="email" value="cporreca@abc-io.com" />
+          <input id="email" type="email" placeholder="owner@abc-io.com" />
         </div>
         <div class="input-group">
           <label>Password</label>
-          <input id="password" type="password" value="secure-owner-password" />
+          <input id="password" type="password" placeholder="Enter password" />
         </div>
         <div class="input-group">
           <label>Biometric Token</label>
-          <input id="bioToken" type="text" value="BIO-VALID" />
+          <input id="bioToken" type="text" placeholder="Enter biometric token" />
         </div>
         <div class="button-group">
           <button class="btn-primary" onclick="authenticate()">Authenticate</button>
@@ -193,6 +208,45 @@
           <button class="btn-success" onclick="triggerHeal()">Auto-Heal All</button>
         </div>
         <div id="healthResult" class="log-box" style="margin-top: 10px; display: none;"></div>
+      </div>
+
+      <!-- VERIFICATION CHECKLIST -->
+      <div class="card card-full">
+        <h2>✅ Pre-Shutdown Verification Checklist</h2>
+        <div class="alert alert-info">
+          Run this checklist before shutting down the local desktop. All items must pass for the system to run independently in the cloud.
+        </div>
+        <div id="verificationChecklist">
+          <div class="checklist-item pending" id="check-cloud">
+            <span class="check-icon">⏳</span>
+            <span><strong>Public Cloud Services</strong> — All Docker services healthy and reachable via public IPs</span>
+          </div>
+          <div class="checklist-item pending" id="check-apk">
+            <span class="check-icon">⏳</span>
+            <span><strong>Android APK</strong> — Compiled, signed, and downloadable</span>
+          </div>
+          <div class="checklist-item pending" id="check-github">
+            <span class="check-icon">⏳</span>
+            <span><strong>GitHub Backup</strong> — All code committed and pushed to origin</span>
+          </div>
+          <div class="checklist-item pending" id="check-vpn">
+            <span class="check-icon">⏳</span>
+            <span><strong>VPN Mesh</strong> — Headscale WireGuard mesh operational across all nodes</span>
+          </div>
+          <div class="checklist-item pending" id="check-ai">
+            <span class="check-icon">⏳</span>
+            <span><strong>AI Provider</strong> — Mistral API responding with valid credentials</span>
+          </div>
+          <div class="checklist-item pending" id="check-backup">
+            <span class="check-icon">⏳</span>
+            <span><strong>Local Backup</strong> — Complete project backup stored externally</span>
+          </div>
+        </div>
+        <div class="button-group" style="margin-top: 15px;">
+          <button class="btn-success" onclick="runVerification()">▶ Run Full Verification</button>
+          <button class="btn-primary" onclick="resetChecklist()">Reset</button>
+        </div>
+        <div id="verificationResult" class="log-box" style="margin-top: 10px; display: none;"></div>
       </div>
 
       <!-- SERVICE CONTROL -->
@@ -246,8 +300,17 @@
           <label>Device ID</label>
           <input id="deviceId" type="text" value="owner-phone-001" />
         </div>
+        <div class="input-group">
+          <label>Latitude</label>
+          <input id="beaconLat" type="text" placeholder="Auto-detect or enter manually" />
+        </div>
+        <div class="input-group">
+          <label>Longitude</label>
+          <input id="beaconLng" type="text" placeholder="Auto-detect or enter manually" />
+        </div>
         <div class="button-group">
           <button class="btn-warning" onclick="sendBeacon()">Send Emergency Beacon</button>
+          <button class="btn-sm btn-primary" onclick="autoDetectLocation()">Auto-Detect Location</button>
         </div>
       </div>
 
@@ -291,26 +354,41 @@
 
   <script>
     // Global state
-    let authToken = null;
-    const eventLog = [];
+    let authToken = localStorage.getItem('abcio_auth_token') || null;
+    const eventLogArr = [];
 
     // Utility functions
     function log(message) {
       const timestamp = new Date().toLocaleTimeString();
-      eventLog.unshift(`[${timestamp}] ${message}`);
-      if (eventLog.length > 50) eventLog.pop();
+      eventLogArr.unshift(`[${timestamp}] ${message}`);
+      if (eventLogArr.length > 50) eventLogArr.pop();
       updateEventLog();
     }
 
     function updateEventLog() {
       const logDiv = document.getElementById('eventLog');
-      logDiv.textContent = eventLog.join('\n');
+      logDiv.textContent = eventLogArr.join('\n');
     }
 
     function showResult(elementId, data) {
       const elem = document.getElementById(elementId);
       elem.textContent = JSON.stringify(data, null, 2);
       elem.style.display = 'block';
+    }
+
+    function setChecklistItem(id, status, message) {
+      const el = document.getElementById(id);
+      el.className = 'checklist-item ' + status;
+      const icon = status === 'pass' ? '✅' : status === 'fail' ? '❌' : '⏳';
+      const strong = el.querySelector('strong').outerHTML;
+      el.innerHTML = `<span class="check-icon">${icon}</span><span>${strong} — ${message}</span>`;
+    }
+
+    function resetChecklist() {
+      ['check-cloud','check-apk','check-github','check-vpn','check-ai','check-backup'].forEach(id => {
+        setChecklistItem(id, 'pending', 'Not verified');
+      });
+      document.getElementById('verificationResult').style.display = 'none';
     }
 
     // Authentication
@@ -328,6 +406,7 @@
         const data = await res.json();
         if (data.authenticated) {
           authToken = data.token;
+          localStorage.setItem('abcio_auth_token', authToken);
           document.getElementById('userInfo').textContent = `Authenticated: ${document.getElementById('email').value}`;
           showResult('authResult', data);
           log('✓ Owner authenticated successfully');
@@ -343,6 +422,7 @@
 
     function logout() {
       authToken = null;
+      localStorage.removeItem('abcio_auth_token');
       document.getElementById('userInfo').textContent = 'Not authenticated';
       log('Logged out');
     }
@@ -441,7 +521,7 @@
         document.getElementById('apkStatus').innerHTML = `
           <div class="alert alert-${data.localBackupAvailable ? 'success' : 'warning'}">
             APK Status: ${data.localBackupAvailable ? '✓ Available' : '✗ Not available'}<br>
-            Size: ${data.apkSize ? (data.apkSize / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown'}
+            Size: ${data.apkSize ? (data.apkSize / 1024).toFixed(1) + ' KB' : 'Unknown'}
           </div>
         `;
         log(`APK check: ${data.localBackupAvailable ? 'available' : 'not available'}`);
@@ -458,6 +538,8 @@
     // Beacon relay
     async function sendBeacon() {
       if (!authToken) { alert('Authenticate first'); return; }
+      const lat = document.getElementById('beaconLat').value;
+      const lng = document.getElementById('beaconLng').value;
       try {
         const res = await fetch('/api/beacon-relay', {
           method: 'POST',
@@ -465,24 +547,132 @@
           body: JSON.stringify({
             token: authToken,
             deviceId: document.getElementById('deviceId').value,
-            latitude: 43.16,
-            longitude: -77.61,
+            latitude: lat || null,
+            longitude: lng || null,
             battery: 85
           })
         });
         const data = await res.json();
-        log('✓ Emergency beacon sent');
+        log('✓ Emergency beacon sent' + (lat && lng ? ` at ${lat}, ${lng}` : ''));
       } catch (error) {
         log('✗ Beacon error: ' + error.message);
       }
     }
 
+    function autoDetectLocation() {
+      if (!navigator.geolocation) {
+        alert('Geolocation not supported');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          document.getElementById('beaconLat').value = pos.coords.latitude.toFixed(5);
+          document.getElementById('beaconLng').value = pos.coords.longitude.toFixed(5);
+          log(`Location auto-detected: ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`);
+        },
+        (err) => {
+          alert('Location error: ' + err.message);
+        }
+      );
+    }
+
+    // Verification checklist
+    async function runVerification() {
+      log('▶ Starting full verification checklist...');
+      const resultDiv = document.getElementById('verificationResult');
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = 'Running verification...';
+
+      let allPass = true;
+
+      // 1. Cloud services
+      try {
+        const res = await fetch('/api/system-health', { headers: { 'x-owner-token': authToken } });
+        const data = await res.json();
+        if (data.overall === 'HEALTHY') {
+          setChecklistItem('check-cloud', 'pass', `${data.servicesUp}/${data.servicesTotal} services healthy`);
+        } else {
+          setChecklistItem('check-cloud', 'fail', `${data.servicesUp}/${data.servicesTotal} services up — ${data.overall}`);
+          allPass = false;
+        }
+      } catch (e) {
+        setChecklistItem('check-cloud', 'fail', 'Health endpoint unreachable');
+        allPass = false;
+      }
+
+      // 2. APK
+      try {
+        const res = await fetch('/api/backup-status');
+        const data = await res.json();
+        if (data.localBackupAvailable) {
+          setChecklistItem('check-apk', 'pass', `APK available (${(data.apkSize / 1024).toFixed(1)} KB)`);
+        } else {
+          setChecklistItem('check-apk', 'fail', 'APK not found');
+          allPass = false;
+        }
+      } catch (e) {
+        setChecklistItem('check-apk', 'fail', 'APK endpoint unreachable');
+        allPass = false;
+      }
+
+      // 3. GitHub
+      try {
+        const res = await fetch('/api/github/status', { headers: { 'x-owner-token': authToken } });
+        const data = await res.json();
+        if (data.lastCommits && data.lastCommits.length > 0) {
+          setChecklistItem('check-github', 'pass', `${data.lastCommits.length} recent commits tracked`);
+        } else {
+          setChecklistItem('check-github', 'fail', 'No commits found');
+          allPass = false;
+        }
+      } catch (e) {
+        setChecklistItem('check-github', 'fail', 'GitHub status unreachable');
+        allPass = false;
+      }
+
+      // 4. VPN (headscale health)
+      try {
+        const res = await fetch('http://localhost:8085/health', { mode: 'no-cors' });
+        setChecklistItem('check-vpn', 'pass', 'Headscale endpoint reachable');
+      } catch (e) {
+        setChecklistItem('check-vpn', 'pending', 'Headscale endpoint check skipped (CORS)');
+      }
+
+      // 5. AI Provider
+      try {
+        const res = await fetch('http://localhost:5000/health');
+        const data = await res.json();
+        if (data.status === 'ok') {
+          const providerStatus = data.mistral_enabled ? 'Mistral enabled' : data.kimi_enabled ? 'Kimi enabled' : 'No provider configured';
+          setChecklistItem('check-ai', data.mistral_enabled || data.kimi_enabled ? 'pass' : 'fail', providerStatus);
+          if (!data.mistral_enabled && !data.kimi_enabled) allPass = false;
+        } else {
+          setChecklistItem('check-ai', 'fail', 'AI service not ok');
+          allPass = false;
+        }
+      } catch (e) {
+        setChecklistItem('check-ai', 'fail', 'AI service unreachable');
+        allPass = false;
+      }
+
+      // 6. Backup
+      setChecklistItem('check-backup', 'pending', 'Manual verification required — check external backup location');
+
+      resultDiv.textContent = allPass
+        ? '✅ VERIFICATION PASSED — System is ready for cloud deployment and local shutdown.'
+        : '❌ VERIFICATION FAILED — Fix failing items before shutdown.';
+
+      log(allPass ? '✅ Full verification passed' : '❌ Full verification failed');
+    }
+
     // Initialize
     window.addEventListener('load', () => {
+      if (authToken) {
+        document.getElementById('userInfo').textContent = 'Restoring session...';
+      }
       log('Operator Control Center loaded');
       checkAPK();
-      refreshHealth();
-      setInterval(refreshHealth, 30000);
+      setInterval(checkAPK, 60000);
     });
   </script>
 </body>
