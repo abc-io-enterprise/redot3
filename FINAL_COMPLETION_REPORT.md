@@ -134,8 +134,8 @@ tracer:16686          → 200 OK
 | Node | IP | Role | Services |
 |------|-----|------|----------|
 | redot1 | 162.254.32.142 | Primary Gateway | Full stack (all 15) |
-| ai1 | 159.203.110.44 | AI Worker | kimi + worker + redis + headscale |
-| ai2 | 159.203.44.3 | AI Standby | kimi + worker + redis + headscale |
+| ai1 | 192.227.212.235 | AI Worker | kimi + worker + redis + headscale |
+| ai2 | 192.227.212.237 | AI Standby | kimi + worker + redis + headscale |
 
 ### Deployment Scripts
 - `scripts/deploy-vps-cluster.sh` — 3-node cluster deployment

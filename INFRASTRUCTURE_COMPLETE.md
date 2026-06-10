@@ -13,8 +13,8 @@ All new credentials have been stored securely in `.env` and are **excluded from 
 | Credential | Purpose |
 |-----------|---------|
 | `KIMI_API_KEY` | platform.kimi.ai — development/local AI |
-| `AI1_ROOT_PASSWORD` | Root access for ai1.abc-io.com (159.203.110.44) |
-| `AI2_ROOT_PASSWORD` | Root access for ai2.abc-io.com (159.203.44.3) |
+| `AI1_ROOT_PASSWORD` | Root access for ai1.abc-io.com (192.227.212.235) |
+| `AI2_ROOT_PASSWORD` | Root access for ai2.abc-io.com (192.227.212.237) |
 | `NAMECHEAP_VPS_API_KEY` | VPS panel API (vpspanel.web-hosting.com) |
 | `NAMECHEAP_SHARED_HOSTING_API_KEY` | Shared hosting API (abc-io.com) |
 
@@ -64,8 +64,8 @@ All new credentials have been stored securely in `.env` and are **excluded from 
 | Node | IP | Role | Services |
 |------|-----|------|----------|
 | redot1 | 162.254.32.142 | Primary Gateway | Full stack (all 14 services) |
-| ai1 | 159.203.110.44 | Primary AI | kimi, worker, redis, headscale |
-| ai2 | 159.203.44.3 | Standby AI | kimi, worker, redis, headscale |
+| ai1 | 192.227.212.235 | Primary AI | kimi, worker, redis, headscale |
+| ai2 | 192.227.212.237 | Standby AI | kimi, worker, redis, headscale |
 
 **Deploy:**
 ```bash
@@ -81,8 +81,8 @@ All new credentials have been stored securely in `.env` and are **excluded from 
 **Records Managed:**
 - `@` → A → 162.254.32.142
 - `redot1` → A → 162.254.32.142
-- `ai1` → A → 159.203.110.44
-- `ai2` → A → 159.203.44.3
+- `ai1` → A → 192.227.212.235
+- `ai2` → A → 192.227.212.237
 - `headscale` → A → 162.254.32.142
 - `www` → CNAME → abc-io.com
 

@@ -247,7 +247,7 @@ public class GatewayService extends Service {
                         "<div class='network-badge'>Network: " + service.getNetworkType() + "</div>" +
                         "<div class='network-badge'>Requests: " + service.requestCount + "</div>" +
                         "<p>Cellular backup server running on port 5050</p>" +
-                        "<p>Primary: 162.254.32.142<br>AI1: 159.203.110.44<br>AI2: 159.203.44.3</p>" +
+                        "<p>Primary: 162.254.32.142<br>AI1: 192.227.212.235<br>AI2: 192.227.212.237</p>" +
                         "<button class='btn' onclick='sendBeacon()'>Send Emergency Beacon</button>" +
                         "<div class='privacy'>No personal data is stored or transmitted. All beacons are anonymized.</div>" +
                         "</div>" +

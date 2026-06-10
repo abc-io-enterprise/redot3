@@ -29,10 +29,10 @@ Test SSH to all 3 nodes. If any fail, resolve before deploying.
 ssh root@162.254.32.142 "echo 'redot1 OK'"
 
 # Test ai1 (AI worker)
-ssh root@159.203.110.44 "echo 'ai1 OK'"
+ssh root@192.227.212.235 "echo 'ai1 OK'"
 
 # Test ai2 (AI standby)
-ssh root@159.203.44.3 "echo 'ai2 OK'"
+ssh root@192.227.212.237 "echo 'ai2 OK'"
 ```
 
 **If SSH uses password auth**, install `sshpass` and use:
@@ -41,17 +41,17 @@ ssh root@159.203.44.3 "echo 'ai2 OK'"
 apt-get update && apt-get install -y sshpass
 
 # Then deploy with passwords
-export REDOT1_ROOT_PASSWORD="81lVuWv6pKuG5AdZ59"
-export AI1_ROOT_PASSWORD="81lVuWv6pKuG5AdZ59"
-export AI2_ROOT_PASSWORD="86c4wv3FK39uMtkINM"
+export REDOT1_ROOT_PASSWORD="45oEwlHtu8J1ZO7u3M"
+export AI1_ROOT_PASSWORD="sKCro5zL9XQ3a7O28w"
+export AI2_ROOT_PASSWORD="04FNc8Rvqpsk731PXW"
 bash scripts/deploy-with-password.sh
 ```
 
 **If SSH uses key auth**, copy your key first:
 ```bash
 ssh-copy-id root@162.254.32.142
-ssh-copy-id root@159.203.110.44
-ssh-copy-id root@159.203.44.3
+ssh-copy-id root@192.227.212.235
+ssh-copy-id root@192.227.212.237
 bash scripts/deploy-vps-cluster.sh
 ```
 
@@ -66,10 +66,10 @@ bash scripts/deploy-vps-cluster.sh
 scp .env root@162.254.32.142:/opt/abc-io/
 
 # Copy to ai1
-scp .env root@159.203.110.44:/opt/abc-io/
+scp .env root@192.227.212.235:/opt/abc-io/
 
 # Copy to ai2
-scp .env root@159.203.44.3:/opt/abc-io/
+scp .env root@192.227.212.237:/opt/abc-io/
 ```
 
 ---
@@ -87,8 +87,8 @@ scp abc-io-deploy-049a363.tar.gz root@162.254.32.142:/opt/
 ssh root@162.254.32.142 "cd /opt && tar -xzf abc-io-deploy-049a363.tar.gz && cd abc-io && bash startup.sh"
 
 # For ai1 and ai2, only start AI services:
-ssh root@159.203.110.44 "cd /opt/abc-io && docker compose -f compose.prod.yml up -d kimi worker redis headscale"
-ssh root@159.203.44.3 "cd /opt/abc-io && docker compose -f compose.prod.yml up -d kimi worker redis headscale"
+ssh root@192.227.212.235 "cd /opt/abc-io && docker compose -f compose.prod.yml up -d kimi worker redis headscale"
+ssh root@192.227.212.237 "cd /opt/abc-io && docker compose -f compose.prod.yml up -d kimi worker redis headscale"
 
 # Option B: Use the password deploy script (if sshpass installed)
 bash scripts/deploy-with-password.sh
@@ -107,8 +107,8 @@ This sets A records for:
 - `abc-io.com` → 162.254.32.142
 - `www.abc-io.com` → 162.254.32.142
 - `redot1.abc-io.com` → 162.254.32.142
-- `ai1.abc-io.com` → 159.203.110.44
-- `ai2.abc-io.com` → 159.203.44.3
+- `ai1.abc-io.com` → 192.227.212.235
+- `ai2.abc-io.com` → 192.227.212.237
 - `admin.abc-io.com` → 162.254.32.142
 
 Wait 5-30 minutes for DNS propagation.

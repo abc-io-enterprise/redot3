@@ -25,8 +25,8 @@
 | Component | Address / Endpoint |
 |-----------|-------------------|
 | redot1 (Gateway) | 162.254.32.142 |
-| ai1 (Primary AI) | 159.203.110.44 |
-| ai2 (Standby AI) | 159.203.44.3 |
+| ai1 (Primary AI) | 192.227.212.235 |
+| ai2 (Standby AI) | 192.227.212.237 |
 | cPanel (Frontend) | abc-io.com |
 | GitHub (Backup) | github.com/ccplexmath/rd1nc |
 | Namecheap (DNS) | namecheap.com |
