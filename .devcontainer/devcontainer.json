@@ -1,0 +1,104 @@
+{
+  "name": "ABC-IO Development",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "dev",
+  "workspaceFolder": "/workspaces/redot2",
+  "shutdownAction": "stopCompose",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11",
+      "installTools": true
+    },
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "version": "latest",
+      "helm": "latest",
+      "minikube": "none"
+    },
+    "ghcr.io/devcontainers/features/terraform:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/git-lfs:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-azuretools.vscode-docker",
+        "HashiCorp.terraform",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "GitHub.copilot"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+  "postCreateCommand": "npm install && docker --version && python3 --version",
+  "forwardPorts": [
+    8500,
+    8080,
+    4000,
+    5050,
+    8090,
+    5000,
+    3005,
+    9091,
+    14000,
+    16686,
+    8085
+  ],
+  "portsAttributes": {
+    "4000": {
+      "label": "Gateway",
+      "onAutoForward": "notify"
+    },
+    "8080": {
+      "label": "Operator Station",
+      "onAutoForward": "notify"
+    },
+    "8500": {
+      "label": "Owner Dashboard",
+      "onAutoForward": "notify"
+    },
+    "5050": {
+      "label": "Mobile Gateway",
+      "onAutoForward": "notify"
+    },
+    "8090": {
+      "label": "Public Portal",
+      "onAutoForward": "notify"
+    },
+    "5000": {
+      "label": "KIMI AI Service",
+      "onAutoForward": "notify"
+    },
+    "3005": {
+      "label": "Beacon PWA",
+      "onAutoForward": "notify"
+    },
+    "9091": {
+      "label": "Prometheus",
+      "onAutoForward": "notify"
+    },
+    "14000": {
+      "label": "Grafana",
+      "onAutoForward": "notify"
+    },
+    "16686": {
+      "label": "Jaeger Tracing",
+      "onAutoForward": "notify"
+    },
+    "8085": {
+      "label": "Headscale",
+      "onAutoForward": "notify"
+    }
+  },
+  "remoteUser": "codespace",
+  "remoteEnv": {
+    "PATH": "${containerEnv:PATH}:/workspaces/redot2/node_modules/.bin"
+  },
+  "mounts": [
+    "source=${localWorkspaceFolder}/.env,target=/workspaces/redot2/.env,type=bind,consistency=cached"
+  ]
+}

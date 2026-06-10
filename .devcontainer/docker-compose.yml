@@ -1,0 +1,37 @@
+version: "3.8"
+
+services:
+  dev:
+    image: mcr.microsoft.com/devcontainers/universal:2
+    init: true
+    privileged: true
+    volumes:
+      - ..:/workspaces/redot2:cached
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: sleep infinity
+    env_file:
+      - ../.env
+    environment:
+      - DOCKER_BUILDKIT=1
+      - COMPOSE_DOCKER_CLI_BUILD=1
+    networks:
+      - redot2-dev
+    # Ports are forwarded by Dev Containers; explicit mapping is optional
+    # but helps when running docker compose from inside the container.
+    ports:
+      - "8500:8500"
+      - "8080:8080"
+      - "4000:4000"
+      - "5050:5050"
+      - "8090:8090"
+      - "5000:5000"
+      - "3005:3005"
+      - "9091:9091"
+      - "14000:14000"
+      - "16686:16686"
+      - "8085:8085"
+
+networks:
+  redot2-dev:
+    name: redot2-dev
+    driver: bridge
