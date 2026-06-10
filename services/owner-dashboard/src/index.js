@@ -8,11 +8,27 @@ const app = express();
 const port = Number(process.env.PORT || 8500);
 const apkFile = process.env.APK_PATH || '/apk/redot2-latest.apk';
 
-const ownerSigningKey = process.env.OWNER_SIGNING_KEY || 'owner-system-secret';
-const ownerFingerprint = process.env.OWNER_SIGNING_FINGERPRINT || 'owner-fingerprint-123';
-const ownerAccountEmail = process.env.OWNER_ACCOUNT_EMAIL || 'cporreca@abc-io.com';
-const ownerAccountPassword = process.env.OWNER_ACCOUNT_PASSWORD || 'secure-owner-password';
-const ownerSessionToken = process.env.OWNER_SESSION_TOKEN || 'owner-session-token';
+const ownerSigningKey = process.env.OWNER_SIGNING_KEY;
+const ownerFingerprint = process.env.OWNER_SIGNING_FINGERPRINT;
+const ownerAccountEmail = process.env.OWNER_ACCOUNT_EMAIL;
+const ownerAccountPassword = process.env.OWNER_ACCOUNT_PASSWORD;
+const ownerSessionToken = process.env.OWNER_SESSION_TOKEN;
+
+// Validate required environment variables on startup
+const requiredEnvVars = [
+  { name: 'OWNER_SIGNING_KEY', value: ownerSigningKey },
+  { name: 'OWNER_SIGNING_FINGERPRINT', value: ownerFingerprint },
+  { name: 'OWNER_ACCOUNT_EMAIL', value: ownerAccountEmail },
+  { name: 'OWNER_ACCOUNT_PASSWORD', value: ownerAccountPassword },
+  { name: 'OWNER_SESSION_TOKEN', value: ownerSessionToken }
+];
+
+for (const envVar of requiredEnvVars) {
+  if (!envVar.value) {
+    console.error(`FATAL: Missing required environment variable: ${envVar.name}`);
+    process.exit(1);
+  }
+}
 const mobileGatewayUrl = process.env.MOBILE_GATEWAY_URL || 'http://mobile-gateway:5050';
 
 // System services list
@@ -41,7 +57,9 @@ app.get('/health', (req, res) => {
 
 app.post('/api/auth', (req, res) => {
   const { email, password, biometricToken } = req.body;
-  if (email === ownerAccountEmail && password === ownerAccountPassword && biometricToken === 'BIO-VALID') {
+  const biometricSecret = process.env.OWNER_BIOMETRIC_SECRET || ownerSigningKey;
+  const expectedBiometricToken = crypto.createHmac('sha256', biometricSecret).update(email + password).digest('hex');
+  if (email === ownerAccountEmail && password === ownerAccountPassword && biometricToken === expectedBiometricToken) {
     const sessionId = crypto.randomBytes(16).toString('hex');
     activeSessions.set(sessionId, { email, loginTime: new Date(), lastActivity: new Date() });
     return res.json({ 

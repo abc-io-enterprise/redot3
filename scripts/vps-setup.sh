@@ -5,7 +5,7 @@ set -euo pipefail
 # Creates a non-root deploy user, installs Docker and Docker Compose plugin,
 # enables UFW, and configures basic firewall rules.
 
-DEploy_USER=redot2
+DEPLOY_USER=redot2
 SSH_PORT=2222
 
 if [ "$EUID" -ne 0 ]; then
@@ -16,8 +16,8 @@ fi
 apt update && apt upgrade -y
 
 # Create deploy user
-id -u $DEploy_USER &>/dev/null || useradd -m -s /bin/bash $DEploy_USER
-usermod -aG sudo $DEploy_USER
+id -u $DEPLOY_USER &>/dev/null || useradd -m -s /bin/bash $DEPLOY_USER
+usermod -aG sudo $DEPLOY_USER
 
 # Install dependencies
 apt install -y ca-certificates curl gnupg lsb-release ufw chrony git
@@ -43,6 +43,6 @@ ufw --force enable
 # Time sync
 systemctl enable --now chronyd || systemctl enable --now chrony || true
 
-echo "VPS bootstrapped. Next: copy repo and create .env for production as non-root user: $DEploy_USER"
+echo "VPS bootstrapped. Next: copy repo and create .env for production as non-root user: $DEPLOY_USER"
 
 exit 0
