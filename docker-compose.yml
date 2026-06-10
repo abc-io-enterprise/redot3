@@ -40,6 +40,9 @@ services:
       - OWNER_ACCOUNT_PASSWORD=${OWNER_ACCOUNT_PASSWORD}
       - OWNER_SESSION_TOKEN=${OWNER_SESSION_TOKEN}
       - MOBILE_GATEWAY_URL=http://mobile-gateway:5050
+      - APK_PATH=/apk/redot2-latest.apk
+    volumes:
+      - ./apk:/apk:ro
     restart: unless-stopped
     depends_on:
       - gateway

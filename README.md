@@ -23,6 +23,8 @@ sleep 20
 - Public Portal UI: `http://localhost:8090/`
 - Mobile Gateway UI: `http://localhost:5050/`
 - Owner Dashboard UI: `http://localhost:8500/`
+- APK backup status: `http://localhost:8500/api/backup-status`
+- APK download endpoint: `http://localhost:8500/download/apk`
 - Prometheus: `http://localhost:9091`
 - Grafana: `http://localhost:14000`
 - Jaeger UI: `http://localhost:16686`

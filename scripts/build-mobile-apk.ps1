@@ -53,10 +53,14 @@ foreach ($check in $checks.GetEnumerator()) {
     }
 }
 
+# Resolve output path from repository root
+$rootPath = (Get-Location).Path
+$fullOutputPath = [System.IO.Path]::GetFullPath($OutputPath, $rootPath)
+
 # Create output directory
-if (!(Test-Path $OutputPath)) {
-    New-Item -ItemType Directory -Path $OutputPath | Out-Null
-    Write-Host "Created output directory: $OutputPath" @Success
+if (!(Test-Path $fullOutputPath)) {
+    New-Item -ItemType Directory -Path $fullOutputPath | Out-Null
+    Write-Host "Created output directory: $fullOutputPath" @Success
 }
 
 # Navigate to mobile-gateway
@@ -152,13 +156,22 @@ if (!$SkipSigning -and $BuildType -eq "Release") {
 # Copy APK to output directory
 Write-Host "Copying APK to output directory..." @Warning
 
+$timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 if ($BuildType -eq "Release") {
-    Copy-Item "android/app/release/app-release.apk" "$OutputPath/redot2-$BuildType-$(Get-Date -Format 'yyyyMMdd-HHmmss').apk" -Force
+    $artifactPath = "android/app/release/app-release.apk"
+    $outputFile = Join-Path $fullOutputPath "redot2-Release-$timestamp.apk"
 } else {
-    Copy-Item "android/app/debug/app-debug.apk" "$OutputPath/redot2-$BuildType-$(Get-Date -Format 'yyyyMMdd-HHmmss').apk" -Force
+    $artifactPath = "android/app/debug/app-debug.apk"
+    $outputFile = Join-Path $fullOutputPath "redot2-Debug-$timestamp.apk"
 }
 
-Write-Host "APK copied to $OutputPath" @Success
+Copy-Item $artifactPath $outputFile -Force
+Write-Host "APK copied to $outputFile" @Success
+
+# Maintain a stable latest backup copy for local download
+$stableFilePath = Join-Path $fullOutputPath 'redot2-latest.apk'
+Copy-Item $outputFile $stableFilePath -Force
+Write-Host "Stable APK copy created at: $stableFilePath" @Success
 
 # Generate build report
 $reportFile = "$OutputPath/BUILD_REPORT_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"

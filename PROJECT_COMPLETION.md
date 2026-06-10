@@ -125,7 +125,7 @@ docker compose down
 sudo bash scripts/vps-setup.sh
 
 # 2. Deploy
-sudo bash scripts/vps-deploy.sh https://github.com/your-repo/redot2.git v1.0.0
+sudo bash scripts/vps-deploy.sh <YOUR_GIT_REPO_URL> v1.0.0
 
 # 3. Configure secrets on VPS
 nano /opt/redot2/.env

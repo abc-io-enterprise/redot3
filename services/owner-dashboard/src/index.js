@@ -1,9 +1,11 @@
 const express = require('express');
 const helmet = require('helmet');
+const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const app = express();
 const port = Number(process.env.PORT || 8500);
+const apkFile = process.env.APK_PATH || '/apk/redot2-latest.apk';
 
 const ownerSigningKey = process.env.OWNER_SIGNING_KEY || 'owner-system-secret';
 const ownerFingerprint = process.env.OWNER_SIGNING_FINGERPRINT || 'owner-fingerprint-123';
@@ -45,6 +47,23 @@ app.get('/api/signature', (req, res) => {
     signature: signPayload(payload),
     payload
   });
+});
+
+app.get('/api/backup-status', (req, res) => {
+  const fileExists = fs.existsSync(apkFile);
+  res.json({
+    localBackupAvailable: fileExists,
+    localBackupPath: fileExists ? '/download/apk' : null,
+    offlineAdminReady: true,
+    message: fileExists ? 'APK backup is available for local download.' : 'APK file not found. Build using scripts/build-mobile-apk.ps1.'
+  });
+});
+
+app.get('/download/apk', (req, res) => {
+  if (!fs.existsSync(apkFile)) {
+    return res.status(404).json({ error: 'APK not found. Build it first with scripts/build-mobile-apk.ps1.' });
+  }
+  res.download(apkFile, 'redot2-latest.apk');
 });
 
 app.post('/api/auth', (req, res) => {

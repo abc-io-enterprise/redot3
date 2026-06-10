@@ -18,13 +18,19 @@ docker compose ps
 
 ### Access Services
 ```
-Owner Dashboard:  http://localhost:8500
-Kimi AI:          http://localhost:5000
-Mobile Gateway:   http://localhost:5050
-Public Portal:    http://localhost:8090
-Prometheus:       http://localhost:9091
-Grafana:          http://localhost:14000 (admin/admin)
-Jaeger Tracing:   http://localhost:16686
+Owner Dashboard:       http://localhost:8500
+Operator Station:      http://localhost:8080
+Mobile Gateway:        http://localhost:5050
+Public Portal:         http://localhost:8090
+Prometheus:            http://localhost:9091
+Grafana:               http://localhost:14000 (admin/admin)
+Jaeger Tracing:        http://localhost:16686
+```
+
+### APK Backup
+```
+Check backup status:   http://localhost:8500/api/backup-status
+Download latest APK:   http://localhost:8500/download/apk
 ```
 
 ### Check Health
@@ -222,14 +228,15 @@ All endpoints use HMAC-SHA256 signing:
 ```bash
 ssh root@<VPS_IP>
 # Copy vps-setup.sh to VPS or:
-curl -fsSL https://raw.githubusercontent.com/your-repo/redot2/main/scripts/vps-setup.sh | sudo bash
+# Replace with your repository URL when using raw GitHub delivery
+curl -fsSL https://raw.githubusercontent.com/<YOUR_GITHUB_USERNAME>/<YOUR_REPO>/main/scripts/vps-setup.sh | sudo bash
 ```
 
 ### Step 3: Deploy Application
 ```bash
 ssh redot2@<VPS_IP>
 # Copy vps-deploy.sh and run:
-sudo bash /path/to/vps-deploy.sh https://github.com/your-repo/redot2.git v1.0.0
+sudo bash /path/to/vps-deploy.sh <YOUR_GIT_REPO_URL> v1.0.0
 ```
 
 ### Step 4: Configure Secrets on VPS

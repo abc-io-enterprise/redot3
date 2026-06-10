@@ -28,6 +28,14 @@
     <pre id="signature">No signature loaded.</pre>
   </div>
   <div class="card">
+    <h2>APK Backup & Mobile Install</h2>
+    <button onclick="loadBackupStatus()">Check APK Backup</button>
+    <pre id="apkStatus">No APK status checked.</pre>
+    <div id="apkControls" style="display:none; margin-top:0.75rem;">
+      <button onclick="downloadApk()">Download Latest APK</button>
+    </div>
+  </div>
+  <div class="card">
     <h2>Owner Beacon</h2>
     <p>Send a backup beacon to the mobile gateway network for redundant internet connectivity.</p>
     <button onclick="sendBeacon()">Send Owner Beacon</button>
@@ -63,6 +71,22 @@
       const res = await fetch('/api/signature');
       const data = await res.json();
       document.getElementById('signature').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function loadBackupStatus() {
+      const res = await fetch('/api/backup-status');
+      const data = await res.json();
+      document.getElementById('apkStatus').textContent = JSON.stringify(data, null, 2);
+      const controls = document.getElementById('apkControls');
+      if (data.localBackupAvailable) {
+        controls.style.display = 'block';
+      } else {
+        controls.style.display = 'none';
+      }
+    }
+
+    function downloadApk() {
+      window.location.href = '/download/apk';
     }
 
     async function sendBeacon() {
