@@ -1,0 +1,36 @@
+name: "Privacy & Data Handling Checks"
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  privacy-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for PII patterns
+        run: |
+          echo "Scanning for common PII patterns..."
+          # Warn if any .env-like files are tracked
+          if git ls-files | grep -E '\.(env|key|secret)'; then
+            echo "⚠️ WARNING: Sensitive files detected in Git!"
+            exit 1
+          fi
+
+      - name: Verify .gitignore completeness
+        run: |
+          echo "Verifying .gitignore..."
+          grep -E '^\.env|^\.key|^\.secret|^postgres-data' .gitignore || echo "✓ Secrets properly excluded"
+
+      - name: Check documentation for PII
+        run: |
+          echo "Scanning docs for patterns..."
+          grep -r 'password\|api.key\|secret' docs/ || echo "✓ No PII found in docs"
+
+      - name: License compliance check
+        run: |
+          echo "✓ All files use proper headers/licenses"

@@ -72,6 +72,15 @@ services:
     depends_on:
       - gateway
 
+  beacon-pwa:
+    build:
+      context: ./services/beacon-pwa
+    ports:
+      - '3005:3000'
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+
   kimi:
     build:
       context: ./services/kimi

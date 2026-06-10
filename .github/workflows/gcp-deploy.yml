@@ -1,0 +1,21 @@
+name: GCP Deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+      - name: Build and push images
+        run: |
+          echo "Build step placeholder"
+      - name: Apply k8s manifests
+        run: |
+          kubectl apply -f infrastructure/gcp/k8s/

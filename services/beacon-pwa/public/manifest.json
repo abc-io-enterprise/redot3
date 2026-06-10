@@ -1,0 +1,8 @@
+{
+  "name": "ABC-IO Beacon",
+  "short_name": "Beacon",
+  "start_url": "/",
+  "display": "standalone",
+  "scope": "/",
+  "icons": []
+}

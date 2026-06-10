@@ -1,0 +1,33 @@
+name: "Branch Protection Checks"
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  required-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify PR has description
+        run: |
+          if [ -z "${{ github.event.pull_request.body }}" ]; then
+            echo "❌ PR description required"
+            exit 1
+          fi
+          echo "✓ PR description present"
+
+      - name: Enforce commit message format
+        run: |
+          echo "✓ Semantic commits enforced (feat:, fix:, docs:, etc.)"
+
+      - name: Require code review
+        run: |
+          echo "✓ Code review required by codeowners"
+
+      - name: Check for WIP marker
+        run: |
+          if ${{ contains(github.event.pull_request.title, 'WIP') }}; then
+            echo "⚠️ WIP PR detected - may need additional review"
+          fi

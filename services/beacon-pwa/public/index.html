@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ABC-IO Beacon</title>
+  <link rel="manifest" href="/manifest.json">
+  <style>body{font-family:system-ui,Arial;margin:1rem;}header{display:flex;justify-content:space-between;align-items:center}</style>
+</head>
+<body>
+  <header>
+    <h1>ABC-IO Beacon (Public)</h1>
+    <small id="ts"></small>
+  </header>
+  <main>
+    <p>This public beacon provides location-aware status without requiring an account.</p>
+    <button id="loc">Get local beacon</button>
+    <pre id="out"></pre>
+  </main>
+  <script>
+  document.getElementById('ts').textContent = new Date().toISOString()
+  document.getElementById('loc').addEventListener('click', ()=>{
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const {latitude:lat, longitude:lon} = pos.coords
+      fetch(`/api/beacon?lat=${lat}&lon=${lon}`).then(r=>r.json()).then(j=>{
+        document.getElementById('out').textContent = JSON.stringify(j,null,2)
+      })
+    }, err => { document.getElementById('out').textContent = String(err) })
+  })
+  </script>
+</body>
+</html>
