@@ -1,5 +1,6 @@
 #!/bin/bash
-# Manual Android APK Build Script
+# ABC-IO Android APK Build Script
+# Targets Android 14 (API 34) with modern privacy features + foldable support
 set -e
 
 PROJECT_DIR="/c/Users/cplexmath/OneDrive/Documents/redot2/apk/android-project"
@@ -7,8 +8,13 @@ SDK_DIR="/c/Users/cplexmath/OneDrive/Documents/redot2/android-sdk"
 BUILD_TOOLS="$SDK_DIR/build-tools/34.0.0"
 PLATFORM="$SDK_DIR/platforms/android-34"
 OUTPUT_DIR="/c/Users/cplexmath/OneDrive/Documents/redot2/apk"
+JDK="/c/Program Files/Java/jdk-26.0.1"
 
-echo "=== ABC-IO Android APK Build ==="
+echo "================================================"
+echo "ABC-IO Android APK Build"
+echo "Target: Android 14 (API 34) + Foldable Support"
+echo "Privacy: Modern Android permissions, no cleartext, no backup"
+echo "================================================"
 
 # Clean and create build dirs
 rm -rf "$PROJECT_DIR/build"
@@ -33,11 +39,10 @@ javac -d "$PROJECT_DIR/build/classes" -source 1.8 -target 1.8 \
 
 # 3. Convert to DEX
 echo "[3/6] Converting to DEX..."
-# Use jar instead of individual class files to avoid path issues
 cd "$PROJECT_DIR/build/classes"
-"/c/Program Files/Java/jdk-26.0.1/bin/jar.exe" cvf "$PROJECT_DIR/build/intermediates/classes.jar" .
+"$JDK/bin/jar.exe" cvf "$PROJECT_DIR/build/intermediates/classes.jar" .
 cd "$PROJECT_DIR"
-"$BUILD_TOOLS/d8.bat" --no-desugaring --min-api 21 \
+"$BUILD_TOOLS/d8.bat" --no-desugaring --min-api 26 \
     --lib "$PLATFORM/android.jar" \
     --output "$PROJECT_DIR/build/intermediates" \
     "$PROJECT_DIR/build/intermediates/classes.jar" \
@@ -52,7 +57,7 @@ cd "$PROJECT_DIR/build/intermediates"
 # 5. Sign APK
 echo "[5/6] Signing APK..."
 if [ ! -f "$OUTPUT_DIR/keystore.jks" ]; then
-    "/c/Program Files/Java/jdk-26.0.1/bin/keytool.exe" -genkey -v -keystore "$OUTPUT_DIR/keystore.jks" -alias abcio \
+    "$JDK/bin/keytool.exe" -genkey -v -keystore "$OUTPUT_DIR/keystore.jks" -alias abcio \
         -keyalg RSA -keysize 2048 -validity 10000 \
         -storepass abcio123 -keypass abcio123 \
         -dname "CN=ABC-IO, O=ABC-IO, C=US"
@@ -66,8 +71,11 @@ echo "[6/6] Verifying APK..."
 "$BUILD_TOOLS/apksigner.bat" verify "$OUTPUT_DIR/redot2-operator.apk"
 
 echo ""
-echo "=================================="
+echo "================================================"
 echo "APK BUILD SUCCESSFUL"
 echo "Output: $OUTPUT_DIR/redot2-operator.apk"
 echo "Size: $(du -h $OUTPUT_DIR/redot2-operator.apk | cut -f1)"
-echo "=================================="
+echo "Target: Android 14 (API 34)"
+echo "Min: Android 8.0 (API 26)"
+echo "Features: Foldable support, modern permissions, privacy mode"
+echo "================================================"
