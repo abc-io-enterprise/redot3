@@ -55,3 +55,15 @@ scrape_configs:
       - targets: ['redis:6379']
         labels:
           service: 'redis'
+
+  - job_name: 'abc_io_ai_isp'
+    static_configs:
+      - targets: ['ai-isp:7000']
+        labels:
+          service: 'ai-isp'
+
+  - job_name: 'abc_io_beacon'
+    static_configs:
+      - targets: ['beacon:3000']
+        labels:
+          service: 'beacon'

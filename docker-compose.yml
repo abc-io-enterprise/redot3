@@ -164,6 +164,26 @@ services:
     command: serve
     restart: unless-stopped
 
+  ai-isp:
+    build:
+      context: ./services/ai-isp
+    ports:
+      - '7000:7000'
+    environment:
+      - PORT=7000
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+
+  beacon:
+    build:
+      context: ./services/beacon
+    ports:
+      - '3006:3000'
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    restart: unless-stopped
+
 volumes:
   postgres-data:
   headscale-data:

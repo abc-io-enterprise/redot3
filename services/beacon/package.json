@@ -1,0 +1,27 @@
+{
+  "name": "abc-io-beacon",
+  "version": "1.0.0",
+  "description": "ABC-IO Public Safety Beacon System — Free, anonymized Locational Awareness Beacon providing global transit safety and search-and-rescue support without account requirements or private data retention.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "helmet": "^7.1.0"
+  },
+  "keywords": [
+    "beacon",
+    "public-safety",
+    "sos",
+    "transit",
+    "search-and-rescue",
+    "anonymized"
+  ],
+  "license": "MIT"
+}

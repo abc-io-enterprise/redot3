@@ -1,0 +1,67 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Attach to Node.js Gateway",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "address": "localhost",
+      "localRoot": "${workspaceFolder}/services/gateway",
+      "remoteRoot": "/app",
+      "skipFiles": ["<node_internals>/**"],
+      "sourceMaps": true,
+      "restart": true
+    },
+    {
+      "name": "Attach to Python KIMI Service",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5678
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/services/kimi",
+          "remoteRoot": "/app"
+        }
+      ],
+      "justMyCode": false,
+      "subProcess": false
+    },
+    {
+      "name": "Chrome: Debug Owner Dashboard",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:8500",
+      "webRoot": "${workspaceFolder}/services/owner-dashboard/src",
+      "sourceMaps": true,
+      "runtimeArgs": ["--incognito"]
+    },
+    {
+      "name": "Docker Compose Debug",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "address": "localhost",
+      "localRoot": "${workspaceFolder}/services/gateway",
+      "remoteRoot": "/app",
+      "skipFiles": ["<node_internals>/**"],
+      "sourceMaps": true,
+      "restart": true,
+      "preLaunchTask": "Docker Compose Up"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug All Services",
+      "configurations": [
+        "Attach to Node.js Gateway",
+        "Attach to Python KIMI Service"
+      ],
+      "preLaunchTask": "Docker Compose Up",
+      "stopAll": true
+    }
+  ]
+}

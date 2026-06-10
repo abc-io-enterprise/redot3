@@ -1,0 +1,53 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: abc-io-ingress
+  namespace: abc-io
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    networking.gke.io/managed-certificates: "abc-io-managed-cert"
+    networking.gke.io/v1beta1.FrontendConfig: "abc-io-frontend-config"
+spec:
+  rules:
+    - host: abc-io.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway
+                port:
+                  number: 8080
+          - path: /owner
+            pathType: Prefix
+            backend:
+              service:
+                name: owner-dashboard
+                port:
+                  number: 8500
+          - path: /ai
+            pathType: Prefix
+            backend:
+              service:
+                name: kimi
+                port:
+                  number: 8600
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: abc-io-managed-cert
+  namespace: abc-io
+spec:
+  domains:
+    - abc-io.example.com
+---
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: abc-io-frontend-config
+  namespace: abc-io
+spec:
+  redirectToHttps:
+    enabled: true
