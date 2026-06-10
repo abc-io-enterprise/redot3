@@ -6,8 +6,13 @@ const crypto = require('crypto');
 const app = express();
 const port = Number(process.env.PORT || 8090);
 
-const publicSigningKey = process.env.PUBLIC_SIGNING_KEY || 'public-system-secret';
-const publicFingerprint = process.env.PUBLIC_SIGNING_FINGERPRINT || 'public-fingerprint-xyz';
+const publicSigningKey = process.env.PUBLIC_SIGNING_KEY;
+const publicFingerprint = process.env.PUBLIC_SIGNING_FINGERPRINT;
+
+if (!publicSigningKey || !publicFingerprint) {
+  console.error('FATAL: PUBLIC_SIGNING_KEY and PUBLIC_SIGNING_FINGERPRINT are required');
+  process.exit(1);
+}
 
 function signPayload(payload) {
   return crypto.createHmac('sha256', publicSigningKey).update(JSON.stringify(payload)).digest('hex');

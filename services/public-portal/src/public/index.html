@@ -1,22 +1,218 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ABC-IO Public Portal</title>
-  <style>body{font-family:Arial,sans-serif;max-width:900px;margin:2rem auto;padding:1rem;background:#f5f7fb;color:#111}h1{margin-bottom:.5rem}button{padding:.75rem 1rem;border:none;border-radius:8px;background:#0069d9;color:#fff;cursor:pointer}pre{background:#eef2f7;padding:1rem;border-radius:8px;overflow:auto}</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ABC-IO — AI-Powered Global Interfacing Provider</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a2e; color: #fff; line-height: 1.6; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+    
+    header { background: linear-gradient(135deg, #1a1a4e 0%, #0a0a2e 100%); padding: 60px 0; text-align: center; border-bottom: 2px solid #00ff88; }
+    .logo { font-size: 48px; font-weight: 900; background: linear-gradient(90deg, #00ff88, #00ccff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
+    .tagline { font-size: 18px; color: #8892b0; max-width: 600px; margin: 0 auto; }
+    .status-badge { display: inline-block; margin-top: 20px; padding: 8px 20px; background: rgba(0,255,136,0.1); border: 1px solid #00ff88; border-radius: 20px; color: #00ff88; font-size: 14px; font-weight: 600; }
+    
+    .section { padding: 60px 0; }
+    .section-alt { background: #0f0f3a; }
+    h2 { font-size: 32px; margin-bottom: 20px; color: #00ff88; }
+    h3 { font-size: 20px; margin-bottom: 10px; color: #ccd6f6; }
+    p { color: #8892b0; margin-bottom: 15px; }
+    
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; margin-top: 30px; }
+    .card { background: #1a1a4e; padding: 30px; border-radius: 12px; border: 1px solid #2a2a5e; transition: all 0.3s; }
+    .card:hover { border-color: #00ff88; transform: translateY(-5px); }
+    .card-icon { font-size: 36px; margin-bottom: 15px; }
+    
+    .cta { display: inline-block; margin-top: 10px; padding: 12px 30px; background: #00ff88; color: #0a0a2e; text-decoration: none; border-radius: 8px; font-weight: 700; transition: all 0.3s; }
+    .cta:hover { background: #00cc6a; transform: translateY(-2px); }
+    
+    .tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 30px; }
+    .tier { background: #1a1a4e; padding: 30px; border-radius: 12px; border: 1px solid #2a2a5e; text-align: center; }
+    .tier-featured { border-color: #00ff88; position: relative; }
+    .tier-featured::before { content: 'MOST POPULAR'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #00ff88; color: #0a0a2e; padding: 4px 16px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+    .tier-price { font-size: 36px; font-weight: 900; color: #00ff88; margin: 15px 0; }
+    .tier-price span { font-size: 14px; color: #8892b0; }
+    .tier ul { list-style: none; text-align: left; margin: 20px 0; }
+    .tier ul li { padding: 8px 0; color: #8892b0; border-bottom: 1px solid #2a2a5e; }
+    .tier ul li::before { content: '✓ '; color: #00ff88; }
+    
+    footer { background: #05051a; padding: 40px 0; text-align: center; border-top: 1px solid #1a1a4e; }
+    footer p { color: #555; font-size: 13px; }
+    .links { margin-top: 15px; }
+    .links a { color: #00ff88; text-decoration: none; margin: 0 15px; font-size: 13px; }
+    .links a:hover { text-decoration: underline; }
+    
+    .infra-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 30px; }
+    .infra-node { background: #1a1a4e; padding: 20px; border-radius: 8px; text-align: center; border-left: 3px solid #00ff88; }
+    .infra-node.standby { border-left-color: #f59e0b; }
+    .infra-node.backup { border-left-color: #00ccff; }
+    .infra-status { display: inline-block; width: 8px; height: 8px; background: #00ff88; border-radius: 50%; margin-right: 8px; }
+    
+    @media (max-width: 768px) {
+      .logo { font-size: 32px; }
+      h2 { font-size: 24px; }
+    }
+  </style>
 </head>
 <body>
-  <h1>ABC-IO Public Portal</h1>
-  <p>This portal is the public-facing site for the ABC-IO system, including privacy signature validation for verified public hosting.</p>
-  <button onclick="loadSignature()">Load Public Signature</button>
-  <pre id="signature">No signature loaded.</pre>
-  <script>
-    async function loadSignature() {
-      const res = await fetch('/api/signature');
-      const data = await res.json();
-      document.getElementById('signature').textContent = JSON.stringify(data, null, 2);
-    }
-  </script>
+  <header>
+    <div class="container">
+      <div class="logo">🔷 ABC-IO</div>
+      <p class="tagline">The World's First AI-Powered Global Interfacing Provider — Autonomous Digital Infrastructure for the Next 20 Years</p>
+      <div class="status-badge">● SYSTEM OPERATIONAL</div>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="container">
+      <h2>What is ABC-IO?</h2>
+      <p>ABC-IO is a next-generation AI-ISP (Artificial Intelligence Internet Service Provider) that combines autonomous digital agents, permanent cloud infrastructure, and cellular backup gateways to deliver uninterrupted digital services anywhere on Earth.</p>
+      <p>Built on a 3-node VPS cluster with Mistral AI integration, WireGuard mesh VPN, and a 20-year operational roadmap.</p>
+      <div class="grid">
+        <div class="card">
+          <div class="card-icon">🤖</div>
+          <h3>AI-Powered Operations</h3>
+          <p>Dual-mode LLM engine using Mistral API for public services with Kimi fallback for private operations.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🌐</div>
+          <h3>Global Mesh Network</h3>
+          <p>Headscale WireGuard VPN connects all nodes — primary gateway, AI workers, and mobile backup.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">📱</div>
+          <h3>Cellular Backup Gateway</h3>
+          <p>Android APK turns any phone into an emergency backup gateway when primary cloud connections fail.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🔒</div>
+          <h3>Enterprise Security</h3>
+          <p>HMAC-SHA256 signed communications, biometric owner authentication, and automated secret rotation.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="container">
+      <h2>Infrastructure</h2>
+      <p>ABC-IO operates on a resilient 3-node cluster with automatic failover and a cellular backup layer.</p>
+      <div class="infra-grid">
+        <div class="infra-node">
+          <h3>🔷 redot1</h3>
+          <p><span class="infra-status"></span>Primary Gateway</p>
+          <p style="font-size: 12px; color: #555;">162.254.32.142</p>
+          <p style="font-size: 12px;">Full stack services</p>
+        </div>
+        <div class="infra-node standby">
+          <h3>🔷 ai1</h3>
+          <p><span class="infra-status" style="background: #f59e0b;"></span>AI Worker Primary</p>
+          <p style="font-size: 12px; color: #555;">159.203.110.44</p>
+          <p style="font-size: 12px;">Mistral API processing</p>
+        </div>
+        <div class="infra-node standby">
+          <h3>🔷 ai2</h3>
+          <p><span class="infra-status" style="background: #f59e0b;"></span>AI Worker Standby</p>
+          <p style="font-size: 12px; color: #555;">159.203.44.3</p>
+          <p style="font-size: 12px;">Backup AI processing</p>
+        </div>
+        <div class="infra-node backup">
+          <h3>📱 Mobile</h3>
+          <p><span class="infra-status" style="background: #00ccff;"></span>Cellular Backup</p>
+          <p style="font-size: 12px; color: #555;">Android APK Gateway</p>
+          <p style="font-size: 12px;">Port 5050 failover</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <h2>Service Tiers</h2>
+      <div class="tiers">
+        <div class="tier">
+          <h3>Individual</h3>
+          <div class="tier-price">$29<span>/mo</span></div>
+          <ul>
+            <li>1 AI agent</li>
+            <li>1,000 API calls/mo</li>
+            <li>Basic beacon relay</li>
+            <li>Email support</li>
+          </ul>
+          <a href="#" class="cta">Get Started</a>
+        </div>
+        <div class="tier tier-featured">
+          <h3>Business</h3>
+          <div class="tier-price">$99<span>/mo</span></div>
+          <ul>
+            <li>5 AI agents</li>
+            <li>10,000 API calls/mo</li>
+            <li>Priority beacon relay</li>
+            <li>VPN mesh access</li>
+            <li>Priority support</li>
+          </ul>
+          <a href="#" class="cta">Get Started</a>
+        </div>
+        <div class="tier">
+          <h3>Enterprise</h3>
+          <div class="tier-price">$299<span>/mo</span></div>
+          <ul>
+            <li>Unlimited AI agents</li>
+            <li>Unlimited API calls</li>
+            <li>Dedicated gateway</li>
+            <li>Custom integrations</li>
+            <li>24/7 phone support</li>
+          </ul>
+          <a href="#" class="cta">Contact Sales</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="container">
+      <h2>Developer Resources</h2>
+      <div class="grid">
+        <div class="card">
+          <div class="card-icon">📚</div>
+          <h3>API Documentation</h3>
+          <p>RESTful API endpoints for AI generation, beacon relay, and system management.</p>
+          <a href="/docs" class="cta">View Docs</a>
+        </div>
+        <div class="card">
+          <div class="card-icon">📱</div>
+          <h3>Android APK</h3>
+          <p>Download the cellular backup gateway APK for emergency failover.</p>
+          <a href="http://162.254.32.142:8500/download/apk" class="cta">Download APK</a>
+        </div>
+        <div class="card">
+          <div class="card-icon">🔧</div>
+          <h3>Admin Portal</h3>
+          <p>Owner dashboard for system administration, monitoring, and deployment.</p>
+          <a href="http://162.254.32.142:8500" class="cta">Open Dashboard</a>
+        </div>
+        <div class="card">
+          <div class="card-icon">💻</div>
+          <h3>GitHub Repository</h3>
+          <p>Open-source infrastructure code, deployment scripts, and documentation.</p>
+          <a href="https://github.com/ccplexmath/redot2complete" target="_blank" class="cta">View Code</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <p>© 2026 ABC-IO Global Interfacing Provider. All rights reserved.</p>
+      <p style="margin-top: 5px;">Built for 20-year operational endurance.</p>
+      <div class="links">
+        <a href="mailto:cporreca@abc-io.com">Contact</a>
+        <a href="tel:585-629-9120">Phone</a>
+        <a href="https://github.com/ccplexmath/redot2complete" target="_blank">GitHub</a>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>
