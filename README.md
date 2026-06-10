@@ -57,8 +57,28 @@ Before production deployment:
 - `scripts/` — release, operations, self-heal, and validation automation.
 - `.github/workflows/` — CI and release automation templates.
 
+## Consolidated Repositories
+
+This project now contains a unified index of all 10 ABC-IO ecosystem repositories under `repositories/`.
+
+| # | Repository | Status | Description |
+|---|------------|--------|-------------|
+| 01 | `rd2live` | ✅ Base | Current project — ABC-IO v2.0 microservices |
+| 02 | `rd1aii` | ✅ Archived | v1.x AI ISP installer and web portal |
+| 03 | `redot1system` | ✅ Archived | Global Interfacing Provider (TypeScript/React) |
+| 04 | `rd1backupublive` | ⚠️ Remote Only | Backup/sync to public_html on 3 VPS nodes |
+| 05 | `rd1nc` | ⚠️ Remote Only | Namecheap DNS/domain backup |
+| 06 | `abc-ai-node-2` | ✅ Archived | PAIOS + API marketplace + multi-user node |
+| 07 | `redot1live` | ⚠️ Remote Only | Live redot1 deployment state |
+| 08 | `redot1abc-ai` | ✅ Archived | redot1abc-ai swarm (TypeScript) |
+| 09 | `abc-io-system` | ✅ Archived | ON-LIVE AI ISP shell deployment system |
+| 10 | `abc-ai` | ✅ Archived | ABC-AI HTML gateway and AI core |
+
+See [`REPOSITORIES.md`](./REPOSITORIES.md) for the full consolidation map, git remotes, and integration roadmap.
+
 ## Notes
 
 - This environment cannot publish to GitHub or Namecheap automatically without user credentials.
 - Use `README.md` and `DEPLOYMENT.md` together when moving to production.
 - Review `KEY_SIGNING.md` for the independent owner/mobile/public signing and privacy verification model.
+- All 10 repository remotes are configured; run `git remote -v` to view them.
