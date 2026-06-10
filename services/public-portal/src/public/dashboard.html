@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — ABC-IO</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#0a0a2e;color:#e2e8f0;min-height:100vh}
+.nav{display:flex;justify-content:space-between;align-items:center;padding:16px 32px;border-bottom:1px solid #1e293b}
+.nav .logo{font-size:18px;font-weight:700;color:#fff}
+.nav .logo span{color:#00ff88}
+.nav-right{display:flex;gap:16px;align-items:center}
+.nav-right a,.nav-right button{color:#94a3b8;font-size:13px;background:none;border:none;cursor:pointer}
+.nav-right a:hover,.nav-right button:hover{color:#fff}
+.container{max-width:1100px;margin:0 auto;padding:32px}
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
+.card{background:#0f1633;border:1px solid #1e293b;border-radius:12px;padding:24px}
+.card h2{font-size:16px;font-weight:600;color:#fff;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card h2 .badge{font-size:11px;padding:2px 8px;border-radius:4px;background:#00ff88;color:#0a0a2e;font-weight:700}
+.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1e293b;font-size:14px}
+.row:last-child{border-bottom:none}
+.row .label{color:#94a3b8}
+.row .value{color:#fff;font-weight:500}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.2s}
+.btn-primary{background:#00ff88;color:#0a0a2e}
+.btn-primary:hover{background:#00dd77}
+.btn-danger{background:#ef4444;color:#fff}
+.btn-danger:hover{background:#dc2626}
+.btn-sm{padding:6px 12px;font-size:12px}
+.api-key-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #1e293b}
+.api-key-row:last-child{border-bottom:none}
+.key-name{font-size:14px;color:#fff}
+.key-meta{font-size:12px;color:#64748b}
+.key-token{background:#0a0a2e;border:1px solid #334155;padding:6px 10px;border-radius:6px;font-family:monospace;font-size:12px;color:#00ff88;margin:8px 0;word-break:break-all}
+.hidden{color:#64748b}
+.empty{color:#64748b;font-size:14px;text-align:center;padding:20px 0}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="logo">ABC<span>-IO</span></a>
+  <div class="nav-right">
+    <a href="/docs">API Docs</a>
+    <span id="userEmail" style="color:#fff;font-size:13px"></span>
+    <button onclick="logout()">Log Out</button>
+  </div>
+</nav>
+<div class="container">
+  <div class="grid-2">
+    <div class="card">
+      <h2>👤 Profile <span class="badge" id="tierBadge">FREE</span></h2>
+      <div id="profileContent"><div class="empty">Loading...</div></div>
+    </div>
+    <div class="card">
+      <h2>💳 Billing</h2>
+      <div id="billingContent"><div class="empty">Loading...</div></div>
+    </div>
+    <div class="card">
+      <h2>🔑 API Keys</h2>
+      <div style="margin-bottom:12px">
+        <input type="text" id="keyName" placeholder="Key name" style="padding:8px 12px;background:#0a0a2e;border:1px solid #334155;border-radius:6px;color:#fff;font-size:13px;width:200px">
+        <button class="btn btn-primary btn-sm" onclick="createKey()">Create Key</button>
+      </div>
+      <div id="keysContent"><div class="empty">Loading...</div></div>
+    </div>
+    <div class="card">
+      <h2>📊 Usage (24h)</h2>
+      <div id="usageContent"><div class="empty">Loading...</div></div>
+    </div>
+  </div>
+</div>
+<script>
+const API = '/api';
+const token = localStorage.getItem('abcio_token');
+if (!token) location.href = '/login';
+
+async function api(path, opts = {}) {
+  const res = await fetch(`${API}${path}`, { ...opts, headers: { ...opts.headers, 'Authorization': `Bearer ${token}` } });
+  if (res.status === 401) { localStorage.removeItem('abcio_token'); location.href = '/login'; }
+  return res;
+}
+
+async function loadProfile() {
+  const res = await api('/v1/auth/me');
+  const data = await res.json();
+  const u = data.user;
+  document.getElementById('tierBadge').textContent = (u.tier || 'FREE').toUpperCase();
+  document.getElementById('userEmail').textContent = u.email;
+  document.getElementById('profileContent').innerHTML = `
+    <div class="row"><span class="label">Email</span><span class="value">${u.email}</span></div>
+    <div class="row"><span class="label">Name</span><span class="value">${u.first_name || ''} ${u.last_name || ''}</span></div>
+    <div class="row"><span class="label">Role</span><span class="value" style="text-transform:capitalize">${u.role}</span></div>
+    <div class="row"><span class="label">Verified</span><span class="value">${u.email_verified ? '✅ Yes' : '⏳ Pending'}</span></div>
+    <div class="row"><span class="label">Account</span><span class="value">${u.account_name}</span></div>
+    <div class="row"><span class="label">Joined</span><span class="value">${new Date(u.created_at).toLocaleDateString()}</span></div>`;
+}
+
+async function loadBilling() {
+  const res = await api('/v1/billing/invoices');
+  const data = await res.json();
+  const invoices = data.invoices || [];
+  let html = invoices.length ? '' : '<div class="empty">No invoices yet.</div>';
+  invoices.slice(0, 5).forEach(inv => {
+    html += `<div class="row"><span class="label">${new Date(inv.invoice_date).toLocaleDateString()}</span><span class="value">$${(inv.amount_paid / 100).toFixed(2)} ${inv.currency?.toUpperCase()}</span></div>`;
+  });
+  html += `<div style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="billingPortal()">Billing Portal</button></div>`;
+  document.getElementById('billingContent').innerHTML = html;
+}
+
+async function billingPortal() {
+  const res = await api('/v1/billing/portal', { method: 'POST' });
+  const data = await res.json();
+  if (data.url) window.open(data.url, '_blank');
+}
+
+async function loadKeys() {
+  const res = await api('/v1/keys');
+  const data = await res.json();
+  const keys = data.keys || [];
+  if (!keys.length) { document.getElementById('keysContent').innerHTML = '<div class="empty">No API keys.</div>'; return; }
+  document.getElementById('keysContent').innerHTML = keys.map(k => `
+    <div class="api-key-row">
+      <div>
+        <div class="key-name">${k.name}</div>
+        <div class="key-meta">${k.key_prefix}*** · Used: ${k.last_used_at ? new Date(k.last_used_at).toLocaleDateString() : 'Never'}</div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="revokeKey('${k.id}')">Revoke</button>
+    </div>`).join('');
+}
+
+let newKeyToken = null;
+async function createKey() {
+  const name = document.getElementById('keyName').value;
+  if (!name) return;
+  const res = await api('/v1/keys', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+  const data = await res.json();
+  if (data.token) {
+    newKeyToken = data.token;
+    alert(`Key created! Copy it now — it will not be shown again:\n\n${data.token}`);
+    loadKeys();
+  }
+}
+
+async function revokeKey(id) {
+  if (!confirm('Revoke this API key?')) return;
+  await api(`/v1/keys/${id}`, { method: 'DELETE' });
+  loadKeys();
+}
+
+async function loadUsage() {
+  // Simple display — gateway logs usage in DB; we'd need an endpoint for aggregated stats
+  document.getElementById('usageContent').innerHTML = `
+    <div class="row"><span class="label">Tier</span><span class="value" id="usageTier">—</span></div>
+    <div class="row"><span class="label">Rate Limit</span><span class="value" id="usageLimit">—</span></div>
+    <div class="row"><span class="label">Status</span><span class="value" style="color:#00ff88">Active</span></div>`;
+}
+
+function logout() { localStorage.removeItem('abcio_token'); location.href = '/login'; }
+
+loadProfile().then(loadBilling).then(loadKeys).then(loadUsage);
+</script>
+</body>
+</html>

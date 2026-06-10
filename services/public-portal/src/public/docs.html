@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Documentation — ABC-IO</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#0a0a2e;color:#e2e8f0;line-height:1.7}
+.nav{display:flex;justify-content:space-between;align-items:center;padding:16px 32px;border-bottom:1px solid #1e293b}
+.nav .logo{font-size:18px;font-weight:700;color:#fff}
+.nav .logo span{color:#00ff88}
+.nav a{color:#94a3b8;font-size:13px}
+.container{max-width:900px;margin:0 auto;padding:40px 24px}
+h1{font-size:32px;font-weight:700;color:#fff;margin-bottom:8px}
+h2{font-size:20px;font-weight:600;color:#fff;margin:32px 0 12px;padding-bottom:8px;border-bottom:1px solid #1e293b}
+h3{font-size:16px;font-weight:600;color:#00ff88;margin:20px 0 8px}
+p,li{color:#94a3b8;font-size:14px;margin-bottom:8px}
+ul{margin-left:20px;margin-bottom:16px}
+code{background:#0f1633;border:1px solid #1e293b;padding:2px 6px;border-radius:4px;font-family:'SF Mono',monospace;font-size:13px;color:#00ff88}
+pre{background:#0f1633;border:1px solid #1e293b;border-radius:8px;padding:16px;overflow-x:auto;margin:12px 0}
+pre code{background:none;border:none;padding:0;color:#e2e8f0}
+.endpoint{display:flex;gap:8px;align-items:center;margin:8px 0}
+.method{font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;background:#00ff88;color:#0a0a2e}
+.path{font-family:monospace;font-size:14px;color:#fff}
+.footer{border-top:1px solid #1e293b;padding:24px;text-align:center;color:#64748b;font-size:13px;margin-top:40px}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="logo">ABC<span>-IO</span></a>
+  <a href="/dashboard">Dashboard →</a>
+</nav>
+<div class="container">
+  <h1>API Documentation</h1>
+  <p>Base URL: <code>https://abc-io.com/api/v1</code></p>
+
+  <h2>Authentication</h2>
+  <p>All protected endpoints require either a <strong>JWT Bearer token</strong> (from login) or an <strong>API key</strong> (from dashboard).</p>
+  <pre><code>Authorization: Bearer &lt;jwt-token&gt;
+# OR
+x-api-key: &lt;api-key&gt;</code></pre>
+
+  <h2>Auth Endpoints</h2>
+  <h3>Register</h3>
+  <div class="endpoint"><span class="method">POST</span><span class="path">/auth/register</span></div>
+  <pre><code>{ "email": "user@example.com", "password": "min8chars", "firstName": "", "accountName": "" }</code></pre>
+
+  <h3>Login</h3>
+  <div class="endpoint"><span class="method">POST</span><span class="path">/auth/login</span></div>
+  <pre><code>{ "email": "user@example.com", "password": "..." }</code></pre>
+
+  <h3>Get Current User</h3>
+  <div class="endpoint"><span class="method">GET</span><span class="path">/auth/me</span></div>
+
+  <h2>AI Endpoints</h2>
+  <h3>Generate</h3>
+  <div class="endpoint"><span class="method">POST</span><span class="path">/ai/generate</span></div>
+  <pre><code>{ "prompt": "Explain quantum computing", "model": "mistral" }</code></pre>
+
+  <h3>Health</h3>
+  <div class="endpoint"><span class="method">GET</span><span class="path">/ai/health</span></div>
+
+  <h2>Translation Endpoints</h2>
+  <h3>Universal Translation</h3>
+  <div class="endpoint"><span class="method">POST</span><span class="path">/translate/:modality</span></div>
+  <p>Modalities: <code>speech-to-text</code>, <code>text-to-braille</code>, <code>text-to-morse</code>, <code>text-to-haptic</code>, <code>sign-to-text</code>, <code>universal</code></p>
+  <pre><code>POST /translate/universal
+{ "input": "Hello", "from": "text", "to": "braille" }</code></pre>
+
+  <h2>Beacon Endpoints (Public)</h2>
+  <h3>Emit Beacon</h3>
+  <div class="endpoint"><span class="method">POST</span><span class="path">/beacon/emit</span></div>
+  <pre><code>{ "latitude": 40.7, "longitude": -74.0, "type": "distress" }</code></pre>
+
+  <h3>List Active Beacons</h3>
+  <div class="endpoint"><span class="method">GET</span><span class="path">/beacon/active?lat=&lng=&radiusKm=</span></div>
+
+  <h2>Billing Endpoints</h2>
+  <h3>Create Checkout</h3>
+  <div class="endpoint"><span class="method">POST</span><span class="path">/billing/checkout</span></div>
+  <pre><code>{ "priceId": "price_xxx" }</code></pre>
+
+  <h3>Billing Portal</h3>
+  <div class="endpoint"><span class="method">POST</span><span class="path">/billing/portal</span></div>
+
+  <h3>List Invoices</h3>
+  <div class="endpoint"><span class="method">GET</span><span class="path">/billing/invoices</span></div>
+
+  <h2>Rate Limits</h2>
+  <ul>
+    <li><strong>Free</strong>: 30 requests / minute</li>
+    <li><strong>Pro</strong>: 300 requests / minute</li>
+    <li><strong>Enterprise</strong>: 3,000 requests / minute</li>
+  </ul>
+  <p>Rate limit headers: <code>X-RateLimit-Limit</code>, <code>X-RateLimit-Remaining</code></p>
+
+  <h2>Support</h2>
+  <p>Email: <a href="mailto:support@abc-io.com">support@abc-io.com</a> · <a href="https://github.com/ccplexmath/redot2complete" target="_blank">GitHub</a></p>
+</div>
+<footer class="footer">© 2026 ABC-IO · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a></footer>
+</body>
+</html>
