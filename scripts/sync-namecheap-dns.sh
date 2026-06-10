@@ -8,7 +8,7 @@ set -e
 # Load from environment
 NC_USER="${NAMECHEAP_USER:-ccplexmath}"
 NC_API_KEY="${NAMECHEAP_VPS_API_KEY}"
-NC_CLIENT_IP="${NAMECHEAP_CLIENT_IP:-$(curl -s ifconfig.me)}"
+NC_CLIENT_IP="${NAMECHEAP_CLIENT_IP:-$(curl -4 -s ifconfig.me)}"
 DOMAIN="${NAMECHEAP_DOMAIN:-abc-io.com}"
 
 REDOT1_IP="${REDOT1_IP:-162.254.32.142}"
