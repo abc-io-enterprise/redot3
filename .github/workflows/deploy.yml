@@ -1,0 +1,60 @@
+﻿name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      tag:
+        description: 'Release tag to deploy'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v3
+      - name: Checkout tag
+        run: git fetch --all --tags && git checkout ${{ github.event.inputs.tag }}
+
+      - name: Deploy to VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_KEY: ${{ secrets.VPS_SSH_KEY }}
+          ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
+        run: |
+          mkdir -p ~/.ssh
+          echo $VPS_KEY > ~/.ssh/vps_key
+          chmod 600 ~/.ssh/vps_key
+          ssh-keyscan -H $VPS_HOST >> ~/.ssh/known_hosts 2>/dev/null
+          
+          ssh -i ~/.ssh/vps_key $VPS_USER@$VPS_HOST << 'DEPLOY'
+            cd /opt/redot2
+            git fetch --all --tags
+            git checkout ${{ github.event.inputs.tag }}
+            docker compose pull
+            docker compose up -d --remove-orphans
+            ./scripts/health-check.sh
+          DEPLOY
+
+      - name: Smoke test
+        run: |
+          sleep 30
+          curl -f http://${{ secrets.VPS_HOST }}/health || exit 1
+
+      - name: Notify deployment
+        if: success()
+        run: echo Deployment to ${{ github.event.inputs.environment }} successful
+
+      - name: Notify failure
+        if: failure()
+        run: echo Deployment FAILED - Rollback required
