@@ -3,111 +3,487 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Owner Dashboard</title>
-  <style>body { font-family: Arial, sans-serif; max-width: 900px; margin: 2rem auto; padding: 1rem; background:#f2f4f7;color:#111; } h1 { margin-bottom: 0.5rem; } .card { background:#fff;padding:1rem;border-radius:10px;box-shadow:0 0 12px rgba(0,0,0,0.08);margin-bottom:1rem; } button { margin-top:0.5rem;padding:.75rem 1rem;border:none;border-radius:8px;background:#0b5ed7;color:#fff;cursor:pointer; } button:hover { background:#084faa; } pre { background:#eef2f7;padding:1rem;border-radius:10px; }</style>
+  <title>ABC-IO Operator Control Center</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #222; }
+    
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; min-height: 100vh; display: flex; flex-direction: column; }
+    
+    header { 
+      background: rgba(255,255,255,0.95);
+      padding: 20px 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .logo-section { display: flex; align-items: center; gap: 15px; }
+    .logo { font-size: 28px; font-weight: bold; color: #667eea; }
+    .logo-text { font-size: 12px; color: #999; }
+    
+    .status-badge { 
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    .status-online { background: #10b981; color: white; }
+    .status-offline { background: #ef4444; color: white; }
+    
+    .auth-section { display: flex; gap: 10px; align-items: center; }
+    .user-info { font-size: 12px; color: #666; text-align: right; }
+    
+    .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex: 1; }
+    
+    .card {
+      background: rgba(255,255,255,0.95);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .card-full { grid-column: 1 / -1; }
+    
+    h2 { font-size: 18px; margin-bottom: 15px; color: #222; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+    h3 { font-size: 14px; margin-top: 15px; margin-bottom: 8px; color: #444; }
+    
+    .input-group { margin-bottom: 10px; }
+    label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; }
+    input, select { 
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-family: inherit;
+    }
+    input:focus, select:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+    
+    .button-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
+    button, a {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-primary { background: #667eea; color: white; }
+    .btn-primary:hover { background: #5568d3; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+    
+    .btn-success { background: #10b981; color: white; }
+    .btn-success:hover { background: #059669; }
+    
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    
+    .btn-warning { background: #f59e0b; color: white; }
+    .btn-warning:hover { background: #d97706; }
+    
+    .btn-sm { padding: 6px 12px; font-size: 11px; }
+    
+    .service-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
+    .service-item {
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border-left: 3px solid #ddd;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+    }
+    .service-item.up { border-left-color: #10b981; background: #f0fdf4; }
+    .service-item.down { border-left-color: #ef4444; background: #fef2f2; }
+    .service-badge { 
+      font-weight: bold;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+    .badge-up { background: #10b981; color: white; }
+    .badge-down { background: #ef4444; color: white; }
+    
+    .log-box {
+      background: #1a1a2e;
+      color: #00ff00;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+    
+    .alert { padding: 12px; border-radius: 6px; margin-bottom: 10px; font-size: 13px; }
+    .alert-info { background: #e0f2fe; color: #0369a1; border-left: 3px solid #0284c7; }
+    .alert-success { background: #f0fdf4; color: #166534; border-left: 3px solid #22c55e; }
+    .alert-error { background: #fef2f2; color: #991b1b; border-left: 3px solid #ef4444; }
+    .alert-warning { background: #fffbeb; color: #92400e; border-left: 3px solid #f59e0b; }
+    
+    .stat-box { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .stat-value { font-size: 24px; font-weight: bold; }
+    .stat-label { font-size: 12px; opacity: 0.9; }
+    
+    @media (max-width: 1024px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
-  <h1>ABC-IO Owner Dashboard</h1>
-  <div class="card">
-    <h2>Secure Owner Access</h2>
-    <p>Authenticate with email, password, and biometric token placeholder for secure owner control.</p>
-    <label>Email<input id="email" value="cporreca@abc-io.com" /></label><br />
-    <label>Password<input id="password" type="password" value="secure-owner-password" /></label><br />
-    <label>Biometric Token<input id="token" value="BIO-VALID" /></label><br />
-    <button onclick="authenticate()">Authenticate</button>
-    <pre id="result">No authentication attempt yet.</pre>
-  </div>
-  <div class="card">
-    <h2>System Status</h2>
-    <button onclick="loadStatus()">Load status</button>
-    <pre id="status">No status loaded.</pre>
-  </div>
-  <div class="card">
-    <h2>Signature Validation</h2>
-    <button onclick="loadSignature()">Load owner signature</button>
-    <pre id="signature">No signature loaded.</pre>
-  </div>
-  <div class="card">
-    <h2>APK Backup & Mobile Install</h2>
-    <button onclick="loadBackupStatus()">Check APK Backup</button>
-    <pre id="apkStatus">No APK status checked.</pre>
-    <div id="apkControls" style="display:none; margin-top:0.75rem;">
-      <button onclick="downloadApk()">Download Latest APK</button>
+  <div class="container">
+    <!-- HEADER -->
+    <header>
+      <div class="logo-section">
+        <div class="logo">🔷 ABC-IO</div>
+        <div class="logo-text">Operator Control Center v2.0</div>
+      </div>
+      <div class="status-badge status-online" id="overallStatus">● ONLINE</div>
+      <div class="auth-section">
+        <div class="user-info" id="userInfo">Not authenticated</div>
+        <button class="btn-sm btn-primary" onclick="logout()">Logout</button>
+      </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-grid">
+      <!-- AUTHENTICATION -->
+      <div class="card">
+        <h2>🔐 Owner Authentication</h2>
+        <div class="input-group">
+          <label>Email</label>
+          <input id="email" type="email" value="cporreca@abc-io.com" />
+        </div>
+        <div class="input-group">
+          <label>Password</label>
+          <input id="password" type="password" value="secure-owner-password" />
+        </div>
+        <div class="input-group">
+          <label>Biometric Token</label>
+          <input id="bioToken" type="text" value="BIO-VALID" />
+        </div>
+        <div class="button-group">
+          <button class="btn-primary" onclick="authenticate()">Authenticate</button>
+        </div>
+        <div id="authResult" class="log-box" style="margin-top: 10px; display: none;"></div>
+      </div>
+
+      <!-- SYSTEM HEALTH -->
+      <div class="card">
+        <h2>📊 System Health</h2>
+        <div id="healthStats"></div>
+        <div class="button-group">
+          <button class="btn-primary" onclick="refreshHealth()">Refresh Health</button>
+          <button class="btn-success" onclick="triggerHeal()">Auto-Heal All</button>
+        </div>
+        <div id="healthResult" class="log-box" style="margin-top: 10px; display: none;"></div>
+      </div>
+
+      <!-- SERVICE CONTROL -->
+      <div class="card">
+        <h2>🔧 Service Management</h2>
+        <h3>Services Status</h3>
+        <div id="servicesList" class="service-list">Loading services...</div>
+        <h3 style="margin-top: 15px;">Manual Control</h3>
+        <div class="input-group">
+          <label>Select Service</label>
+          <select id="serviceSelect">
+            <option value="gateway">Gateway</option>
+            <option value="kimi">Kimi (AI)</option>
+            <option value="postgres">Database</option>
+            <option value="redis">Cache</option>
+            <option value="owner-dashboard">Owner Dashboard</option>
+            <option value="mobile-gateway">Mobile Gateway</option>
+            <option value="public-portal">Public Portal</option>
+          </select>
+        </div>
+        <div class="button-group">
+          <button class="btn-success btn-sm" onclick="serviceAction('start')">Start</button>
+          <button class="btn-warning btn-sm" onclick="serviceAction('restart')">Restart</button>
+          <button class="btn-danger btn-sm" onclick="serviceAction('stop')">Stop</button>
+        </div>
+      </div>
+
+      <!-- DEPLOYMENT -->
+      <div class="card">
+        <h2>🚀 Deployment & Updates</h2>
+        <h3>Git Repository</h3>
+        <div id="gitStatus"></div>
+        <h3 style="margin-top: 15px;">Deploy Update</h3>
+        <div class="button-group">
+          <button class="btn-primary" onclick="checkGitStatus()">Check Git Status</button>
+          <button class="btn-primary" onclick="deployUpdate()">Deploy Update</button>
+        </div>
+      </div>
+
+      <!-- MOBILE & APK -->
+      <div class="card">
+        <h2>📱 Mobile & APK Management</h2>
+        <h3>APK Distribution</h3>
+        <div id="apkStatus"></div>
+        <div class="button-group">
+          <button class="btn-primary" onclick="checkAPK()">Check APK Status</button>
+          <button class="btn-success" onclick="downloadAPK()">Download APK</button>
+        </div>
+        <h3 style="margin-top: 15px;">Mobile Beacon</h3>
+        <div class="input-group">
+          <label>Device ID</label>
+          <input id="deviceId" type="text" value="owner-phone-001" />
+        </div>
+        <div class="button-group">
+          <button class="btn-warning" onclick="sendBeacon()">Send Emergency Beacon</button>
+        </div>
+      </div>
+
+      <!-- MONITORING & LOGS -->
+      <div class="card card-full">
+        <h2>📈 Monitoring & Logs</h2>
+        <h3>Available Dashboards</h3>
+        <div class="button-group">
+          <a href="http://localhost:9091" target="_blank" class="btn-primary btn-sm">Prometheus (Metrics)</a>
+          <a href="http://localhost:14000" target="_blank" class="btn-primary btn-sm">Grafana (Dashboards)</a>
+          <a href="http://localhost:16686" target="_blank" class="btn-primary btn-sm">Jaeger (Tracing)</a>
+        </div>
+        <h3 style="margin-top: 15px;">Recent Events</h3>
+        <div id="eventLog" class="log-box" style="height: 200px;">Waiting for events...</div>
+      </div>
+
+      <!-- SYSTEM INFO -->
+      <div class="card card-full">
+        <h2>ℹ️ System Information</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+          <div class="stat-box">
+            <div class="stat-value" id="systemUptime">--</div>
+            <div class="stat-label">System Uptime</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="servicesUp">--</div>
+            <div class="stat-label">Services Running</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="lastSync">--</div>
+            <div class="stat-label">Last Sync</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="systemMode">OPERATIONAL</div>
+            <div class="stat-label">System Mode</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="card">
-    <h2>Owner Beacon</h2>
-    <p>Send a backup beacon to the mobile gateway network for redundant internet connectivity.</p>
-    <button onclick="sendBeacon()">Send Owner Beacon</button>
-    <pre id="beacon">No beacon sent.</pre>
-  </div>
+
   <script>
-    let sessionToken = null;
+    // Global state
+    let authToken = null;
+    const eventLog = [];
 
+    // Utility functions
+    function log(message) {
+      const timestamp = new Date().toLocaleTimeString();
+      eventLog.unshift(`[${timestamp}] ${message}`);
+      if (eventLog.length > 50) eventLog.pop();
+      updateEventLog();
+    }
+
+    function updateEventLog() {
+      const logDiv = document.getElementById('eventLog');
+      logDiv.textContent = eventLog.join('\n');
+    }
+
+    function showResult(elementId, data) {
+      const elem = document.getElementById(elementId);
+      elem.textContent = JSON.stringify(data, null, 2);
+      elem.style.display = 'block';
+    }
+
+    // Authentication
     async function authenticate() {
-      const res = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: document.getElementById('email').value,
-          password: document.getElementById('password').value,
-          biometricToken: document.getElementById('token').value
-        })
-      });
-      const data = await res.json();
-      if (data.authenticated) {
-        sessionToken = data.token;
-      }
-      document.getElementById('result').textContent = JSON.stringify(data, null, 2);
-    }
-
-    async function loadStatus() {
-      const res = await fetch('/api/status');
-      const data = await res.json();
-      document.getElementById('status').textContent = JSON.stringify(data, null, 2);
-    }
-
-    async function loadSignature() {
-      const res = await fetch('/api/signature');
-      const data = await res.json();
-      document.getElementById('signature').textContent = JSON.stringify(data, null, 2);
-    }
-
-    async function loadBackupStatus() {
-      const res = await fetch('/api/backup-status');
-      const data = await res.json();
-      document.getElementById('apkStatus').textContent = JSON.stringify(data, null, 2);
-      const controls = document.getElementById('apkControls');
-      if (data.localBackupAvailable) {
-        controls.style.display = 'block';
-      } else {
-        controls.style.display = 'none';
+      try {
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value,
+            biometricToken: document.getElementById('bioToken').value
+          })
+        });
+        const data = await res.json();
+        if (data.authenticated) {
+          authToken = data.token;
+          document.getElementById('userInfo').textContent = `Authenticated: ${document.getElementById('email').value}`;
+          showResult('authResult', data);
+          log('✓ Owner authenticated successfully');
+        } else {
+          showResult('authResult', data);
+          log('✗ Authentication failed');
+        }
+      } catch (error) {
+        showResult('authResult', { error: error.message });
+        log('✗ Authentication error: ' + error.message);
       }
     }
 
-    function downloadApk() {
+    function logout() {
+      authToken = null;
+      document.getElementById('userInfo').textContent = 'Not authenticated';
+      log('Logged out');
+    }
+
+    // Health checks
+    async function refreshHealth() {
+      if (!authToken) { alert('Authenticate first'); return; }
+      try {
+        const res = await fetch('/api/system-health', { headers: { 'x-owner-token': authToken } });
+        const data = await res.json();
+        showResult('healthResult', data);
+        document.getElementById('healthStats').innerHTML = `
+          <div class="stat-box" style="margin-bottom: 10px;">
+            <div class="stat-value">${data.servicesUp}/${data.servicesTotal}</div>
+            <div class="stat-label">Services Running</div>
+          </div>
+          <div class="alert alert-${data.overall === 'HEALTHY' ? 'success' : 'warning'}">${data.overall}</div>
+        `;
+        log(`Health check: ${data.servicesUp}/${data.servicesTotal} services up`);
+      } catch (error) {
+        log('✗ Health check error: ' + error.message);
+      }
+    }
+
+    // Service control
+    async function serviceAction(action) {
+      if (!authToken) { alert('Authenticate first'); return; }
+      const service = document.getElementById('serviceSelect').value;
+      try {
+        const res = await fetch(`/api/service/${action}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-owner-token': authToken },
+          body: JSON.stringify({ service })
+        });
+        const data = await res.json();
+        log(`${action}: ${service}`);
+        setTimeout(refreshHealth, 2000);
+      } catch (error) {
+        log('✗ Service action error: ' + error.message);
+      }
+    }
+
+    // Healing
+    async function triggerHeal() {
+      if (!authToken) { alert('Authenticate first'); return; }
+      try {
+        const res = await fetch('/api/heal/all', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-owner-token': authToken },
+          body: JSON.stringify({})
+        });
+        const data = await res.json();
+        log('✓ Auto-healing triggered');
+        setTimeout(refreshHealth, 5000);
+      } catch (error) {
+        log('✗ Healing error: ' + error.message);
+      }
+    }
+
+    // Git/Deployment
+    async function checkGitStatus() {
+      if (!authToken) { alert('Authenticate first'); return; }
+      try {
+        const res = await fetch('/api/github/status', { headers: { 'x-owner-token': authToken } });
+        const data = await res.json();
+        document.getElementById('gitStatus').innerHTML = `
+          <div class="alert alert-success">Last commits: ${data.lastCommits.length}</div>
+          ${data.lastCommits.map(c => `<div style="font-family: monospace; font-size: 11px;">${c.hash}: ${c.message}</div>`).join('')}
+        `;
+        log('Git status checked');
+      } catch (error) {
+        log('✗ Git status error: ' + error.message);
+      }
+    }
+
+    async function deployUpdate() {
+      if (!authToken) { alert('Authenticate first'); return; }
+      try {
+        const res = await fetch('/api/deploy/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-owner-token': authToken },
+          body: JSON.stringify({})
+        });
+        const data = await res.json();
+        log('✓ Deployment initiated');
+      } catch (error) {
+        log('✗ Deployment error: ' + error.message);
+      }
+    }
+
+    // APK Management
+    async function checkAPK() {
+      try {
+        const res = await fetch('/api/backup-status');
+        const data = await res.json();
+        document.getElementById('apkStatus').innerHTML = `
+          <div class="alert alert-${data.localBackupAvailable ? 'success' : 'warning'}">
+            APK Status: ${data.localBackupAvailable ? '✓ Available' : '✗ Not available'}<br>
+            Size: ${data.apkSize ? (data.apkSize / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown'}
+          </div>
+        `;
+        log(`APK check: ${data.localBackupAvailable ? 'available' : 'not available'}`);
+      } catch (error) {
+        log('✗ APK check error: ' + error.message);
+      }
+    }
+
+    function downloadAPK() {
       window.location.href = '/download/apk';
+      log('APK download initiated');
     }
 
+    // Beacon relay
     async function sendBeacon() {
-      if (!sessionToken) {
-        document.getElementById('beacon').textContent = 'Authenticate first to send a beacon.';
-        return;
+      if (!authToken) { alert('Authenticate first'); return; }
+      try {
+        const res = await fetch('/api/beacon-relay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: authToken,
+            deviceId: document.getElementById('deviceId').value,
+            latitude: 43.16,
+            longitude: -77.61,
+            battery: 85
+          })
+        });
+        const data = await res.json();
+        log('✓ Emergency beacon sent');
+      } catch (error) {
+        log('✗ Beacon error: ' + error.message);
       }
-      const res = await fetch('/api/beacon-relay', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: sessionToken,
-          deviceId: 'OWNER-DEVICE-1',
-          latitude: 42.9634,
-          longitude: -85.6681,
-          battery: 99
-        })
-      });
-      const data = await res.json();
-      document.getElementById('beacon').textContent = JSON.stringify(data, null, 2);
     }
+
+    // Initialize
+    window.addEventListener('load', () => {
+      log('Operator Control Center loaded');
+      checkAPK();
+      refreshHealth();
+      setInterval(refreshHealth, 30000);
+    });
   </script>
 </body>
 </html>
