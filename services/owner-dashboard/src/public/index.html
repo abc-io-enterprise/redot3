@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Owner Dashboard</title>
+  <style>body { font-family: Arial, sans-serif; max-width: 900px; margin: 2rem auto; padding: 1rem; background:#f2f4f7;color:#111; } h1 { margin-bottom: 0.5rem; } .card { background:#fff;padding:1rem;border-radius:10px;box-shadow:0 0 12px rgba(0,0,0,0.08);margin-bottom:1rem; } button { margin-top:0.5rem;padding:.75rem 1rem;border:none;border-radius:8px;background:#0b5ed7;color:#fff;cursor:pointer; } button:hover { background:#084faa; } pre { background:#eef2f7;padding:1rem;border-radius:10px; }</style>
+</head>
+<body>
+  <h1>ABC-IO Owner Dashboard</h1>
+  <div class="card">
+    <h2>Secure Owner Access</h2>
+    <p>Authenticate with email, password, and biometric token placeholder for secure owner control.</p>
+    <label>Email<input id="email" value="cporreca@abc-io.com" /></label><br />
+    <label>Password<input id="password" type="password" value="secure-owner-password" /></label><br />
+    <label>Biometric Token<input id="token" value="BIO-VALID" /></label><br />
+    <button onclick="authenticate()">Authenticate</button>
+    <pre id="result">No authentication attempt yet.</pre>
+  </div>
+  <div class="card">
+    <h2>System Status</h2>
+    <button onclick="loadStatus()">Load status</button>
+    <pre id="status">No status loaded.</pre>
+  </div>
+  <div class="card">
+    <h2>Signature Validation</h2>
+    <button onclick="loadSignature()">Load owner signature</button>
+    <pre id="signature">No signature loaded.</pre>
+  </div>
+  <div class="card">
+    <h2>Owner Beacon</h2>
+    <p>Send a backup beacon to the mobile gateway network for redundant internet connectivity.</p>
+    <button onclick="sendBeacon()">Send Owner Beacon</button>
+    <pre id="beacon">No beacon sent.</pre>
+  </div>
+  <script>
+    let sessionToken = null;
+
+    async function authenticate() {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: document.getElementById('email').value,
+          password: document.getElementById('password').value,
+          biometricToken: document.getElementById('token').value
+        })
+      });
+      const data = await res.json();
+      if (data.authenticated) {
+        sessionToken = data.token;
+      }
+      document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function loadStatus() {
+      const res = await fetch('/api/status');
+      const data = await res.json();
+      document.getElementById('status').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function loadSignature() {
+      const res = await fetch('/api/signature');
+      const data = await res.json();
+      document.getElementById('signature').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function sendBeacon() {
+      if (!sessionToken) {
+        document.getElementById('beacon').textContent = 'Authenticate first to send a beacon.';
+        return;
+      }
+      const res = await fetch('/api/beacon-relay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: sessionToken,
+          deviceId: 'OWNER-DEVICE-1',
+          latitude: 42.9634,
+          longitude: -85.6681,
+          battery: 99
+        })
+      });
+      const data = await res.json();
+      document.getElementById('beacon').textContent = JSON.stringify(data, null, 2);
+    }
+  </script>
+</body>
+</html>

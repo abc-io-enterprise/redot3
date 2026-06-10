@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build service containers
+        run: |
+          docker build -t abc-io-gateway ./services/gateway
+          docker build -t abc-io-operator-station ./services/operator-station
+          docker build -t abc-io-kimi ./services/kimi
+      - name: Validate compose files
+        run: docker compose -f docker-compose.yml config

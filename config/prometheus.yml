@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'abc_io'
+    static_configs:
+      - targets: ['gateway:4000', 'operator-station:8080', 'kimi:5000']

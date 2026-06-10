@@ -1,0 +1,33 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build service containers
+        run: |
+          docker build -t abc-io-gateway ./services/gateway
+          docker build -t abc-io-operator-station ./services/operator-station
+          docker build -t abc-io-kimi ./services/kimi
+      - name: Create release archive
+        run: |
+          zip -r rd1backupublive-final-2.0.zip . -x .git/*
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ABC-IO v2.0 Release ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload release artifact
+        uses: softprops/action-gh-release@v1
+        with:
+          files: rd1backupublive-final-2.0.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,101 @@
+services:
+  nginx:
+    image: nginx:stable-alpine
+    ports:
+      - '80:80'
+      - '443:443'
+    depends_on:
+      - gateway
+    environment:
+      - NGINX_ENV=production
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
+
+  gateway:
+    build:
+      context: ./services/gateway
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/abc_io
+    depends_on:
+      - postgres
+      - kimi
+
+  operator-station:
+    build:
+      context: ./services/operator-station
+    environment:
+      - NODE_ENV=production
+    ports:
+      - '8080:8080'
+    depends_on:
+      - gateway
+
+  owner-dashboard:
+    build:
+      context: ./services/owner-dashboard
+    environment:
+      - NODE_ENV=production
+      - OWNER_SIGNING_KEY=${OWNER_SIGNING_KEY}
+      - OWNER_SIGNING_FINGERPRINT=${OWNER_SIGNING_FINGERPRINT}
+      - OWNER_ACCOUNT_EMAIL=${OWNER_ACCOUNT_EMAIL}
+      - OWNER_ACCOUNT_PASSWORD=${OWNER_ACCOUNT_PASSWORD}
+      - OWNER_SESSION_TOKEN=${OWNER_SESSION_TOKEN}
+      - MOBILE_GATEWAY_URL=http://mobile-gateway:5050
+    ports:
+      - '8500:8500'
+    depends_on:
+      - gateway
+      - mobile-gateway
+
+  mobile-gateway:
+    build:
+      context: ./services/mobile-gateway
+    environment:
+      - NODE_ENV=production
+      - MOBILE_SIGNING_KEY=${MOBILE_SIGNING_KEY}
+      - MOBILE_SIGNING_FINGERPRINT=${MOBILE_SIGNING_FINGERPRINT}
+    ports:
+      - '5050:5050'
+    depends_on:
+      - redis
+
+  public-portal:
+    build:
+      context: ./services/public-portal
+    environment:
+      - NODE_ENV=production
+      - PUBLIC_SIGNING_KEY=${PUBLIC_SIGNING_KEY}
+      - PUBLIC_SIGNING_FINGERPRINT=${PUBLIC_SIGNING_FINGERPRINT}
+    ports:
+      - '8090:8090'
+    depends_on:
+      - gateway
+
+  kimi:
+    build:
+      context: ./services/kimi
+    environment:
+      - MODEL=production
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - MISTRAL_MODEL=${MISTRAL_MODEL}
+      - MISTRAL_API_BASE_URL=${MISTRAL_API_BASE_URL}
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: abc_io
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./services/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  redis:
+    image: redis:alpine
+    ports:
+      - '6379:6379'
+
+volumes:
+  postgres-data:
