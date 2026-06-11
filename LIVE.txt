@@ -38,6 +38,8 @@ Public Services:
   - Free Beacon PWA: https://abc-io.com/beacon/
   - Help Center API: https://abc-io.com/api/v1/help/articles
   - Beacon Awareness API: https://abc-io.com/api/v1/beacon/awareness
+  - Mobile App / APK Download: https://abc-io.com/mobile-app.html
+  - Owner APK Download: https://abc-io.com/download/redot2-operator.apk
 
 SSL: Let's Encrypt valid through 2026-09-09
 DNS: abc-io.com and www.abc-io.com resolving to 162.254.32.142
@@ -45,7 +47,7 @@ DNS: abc-io.com and www.abc-io.com resolving to 162.254.32.142
 All services verified and operational.
 Desktop may disconnect; public VPS runs autonomously.
 
-Final Backup: C:\Users\cplexmath\OneDrive\Documents\redot2.zip (48.26 MB)
+Final Backup: C:\Users\cplexmath\OneDrive\Documents\redot2-v5.0.0-final-backup.zip
 Operational Report: OPERATIONAL_REPORT.md
 
 See SYSTEM_DEFINITION.md, FINAL_STATUS.md, AUTONOMOUS_SYSTEM.md, and OPERATIONAL_REPORT.md for full details.

@@ -221,7 +221,10 @@ All public endpoints verified live on 2026-06-11:
 - ✅ https://abc-io.com/api/v1/beacon/awareness — Weather, safety alerts, events
 - ✅ https://abc-io.com/api/v1/help/articles — Help center API
 - ✅ https://abc-io.com/api/v1/system/health — Gateway health
+- ✅ https://abc-io.com/mobile-app.html — Mobile app & APK download page
+- ✅ https://abc-io.com/download/redot2-operator.apk — Owner APK download
 - ✅ GitHub tag `v5.0.0` pushed to `abc-io-enterprise/redot2`
+- ✅ VPS deployment complete: redot1 (162.254.32.142) running 19 services
 - ✅ Desktop orchestrator and autonomous APK ready
 - ✅ Local archive: `redot2-v5.0.0-final-backup.zip` (14.29 MB)
 - ✅ Owner reference PDF: `ABC-IO_v5.0.0_Owner_Reference.pdf`
