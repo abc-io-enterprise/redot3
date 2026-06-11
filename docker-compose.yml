@@ -98,8 +98,7 @@ services:
   public-portal:
     build:
       context: ./services/public-portal
-    ports:
-      - '8090:8090'
+    # Host port 8090 removed: access via NGINX proxy only (Windows port binding issue)
     environment:
       - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/abc_io
       - PUBLIC_SIGNING_KEY=${PUBLIC_SIGNING_KEY}

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ABC-IO — Mobile App & APK Download</title>
+<meta name="description" content="Download the ABC-IO mobile app and Android APK. Owner-only cellular failsafe gateway with biometric authentication.">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="stylesheet" href="/brand.css">
+<style>
+.container{max-width:900px;margin:0 auto;padding:80px 24px}
+.page-title{font-size:2.5rem;margin-bottom:12px}
+.page-sub{color:var(--text-muted);font-size:1.1rem;margin-bottom:48px}
+.card{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px;margin-bottom:24px;backdrop-filter:blur(10px)}
+.card h2{margin-top:0;font-size:1.5rem}
+.card p{color:var(--text-secondary)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:var(--radius-md);font-weight:600;transition:transform .2s,background .2s}
+.btn:hover{transform:translateY(-1px);text-decoration:none}
+.btn-primary{background:var(--accent);color:#0a2438}
+.btn-primary:hover{background:var(--accent-light);color:#0a2438}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--link)}
+.btn-outline:hover{border-color:var(--link);color:var(--link-hover)}
+.steps{margin:24px 0;padding-left:20px}
+.steps li{margin-bottom:12px;color:var(--text-secondary)}
+.status-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#10b981;padding:6px 14px;border-radius:20px;font-size:.85rem;font-weight:600;margin-bottom:16px}
+.status-badge::before{content:'';width:6px;height:6px;background:#10b981;border-radius:50%}
+.warning{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.4);padding:16px;border-radius:var(--radius-md);margin:16px 0}
+.warning p{margin:0;color:var(--text-secondary)}
+.warning strong{color:#f59e0b}
+.file-meta{color:var(--text-muted);font-size:.85rem;margin-top:8px}
+</style>
+</head>
+<body>
+<header class="brand-header">
+  <div class="header-inner">
+    <a href="/" class="logo-link">
+      <img src="/abc-io_logo.png" alt="ABC-IO" class="logo-img">
+      <span class="brand-name">ABC-IO</span>
+    </a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/features.html">Features</a>
+      <a href="/pricing.html">Pricing</a>
+      <a href="/community.html">Community</a>
+      <a href="/solutions.html">Solutions</a>
+      <a href="/help.html">Help</a>
+      <a href="/mobile-app.html" style="color:var(--accent)">Mobile App</a>
+      <a href="/dashboard.html">Dashboard</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+  <div class="status-badge">APK Verified & Signed</div>
+  <h1 class="page-title">ABC-IO Mobile</h1>
+  <p class="page-sub">Take the global mesh network with you. Emergency beacon, cellular backup gateway, and owner controls — all from your Android device.</p>
+
+  <div class="card">
+    <h2>📱 Progressive Web App (PWA)</h2>
+    <p>The fastest way to use ABC-IO on mobile. No download required.</p>
+    <ol class="steps">
+      <li>Open <strong>https://abc-io.com/beacon/</strong> in Chrome on your Android phone.</li>
+      <li>Tap the Chrome menu (⋮) and choose <strong>Add to Home Screen</strong>.</li>
+      <li>Launch ABC-IO from your home screen like a native app.</li>
+    </ol>
+    <a href="/beacon/" class="btn btn-outline">Open Beacon PWA →</a>
+  </div>
+
+  <div class="card">
+    <h2>🛡️ Owner APK — Cellular Failsafe Gateway</h2>
+    <p>The owner-only Android APK turns a phone into an autonomous cellular backup gateway for the ABC-IO mesh. It includes biometric authentication and hardcoded failsafe routes to the production VPS.</p>
+
+    <div class="warning">
+      <p><strong>Owner use only.</strong> This APK requires fingerprint or face unlock to operate and is tied to the redot1 / ABC-IO owner account.</p>
+    </div>
+
+    <p>
+      <a href="/download/redot2-operator.apk" class="btn btn-primary" download>Download Owner APK</a>
+      <a href="/download/redot2-operator.apk.idsig" class="btn btn-outline" download style="margin-left:12px">Download Signature</a>
+    </p>
+    <p class="file-meta">redot2-operator.apk • 45 KB • signed with META-INF/ABCIO.RSA • version 2.0.0</p>
+
+    <h3 style="margin-top:24px;font-size:1.2rem">Installation Steps</h3>
+    <ol class="steps">
+      <li>Download <code>redot2-operator.apk</code> to your Android device.</li>
+      <li>Go to <strong>Settings → Security → Install unknown apps</strong> and allow your browser or file manager.</li>
+      <li>Open the APK file and tap <strong>Install</strong>.</li>
+      <li>Launch <strong>ABC-IO Gateway</strong> and authenticate with biometrics.</li>
+      <li>Confirm the dashboard shows Primary, AI1, and AI2 nodes as online.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>📲 Latest APK Build</h2>
+    <p>For reference and testing, the latest signed APK build is also available.</p>
+    <p><a href="/download/redot2-latest.apk" class="btn btn-outline" download>Download Latest APK</a></p>
+    <p class="file-meta">redot2-latest.apk • 45 KB • signed</p>
+  </div>
+
+  <div class="card">
+    <h2>🔗 Related Links</h2>
+    <p>
+      <a href="/beacon.html">Free Beacon Landing</a> •
+      <a href="/help.html">Help Center</a> •
+      <a href="/dashboard.html">Owner Dashboard</a> •
+      <a href="/contact.html">Contact Support</a>
+    </p>
+  </div>
+</main>
+
+<footer class="brand-footer">
+  <div class="footer-inner">
+    <p>&copy; 2026 ABC-IO by Christopher Porreca / redot1. All rights reserved.</p>
+    <p style="color:var(--text-muted);font-size:.85rem;margin-top:8px">
+      <a href="/privacy.html">Privacy</a> •
+      <a href="/terms.html">Terms</a> •
+      <a href="/mobile-app.html">Mobile App</a>
+    </p>
+  </div>
+</footer>
+</body>
+</html>
