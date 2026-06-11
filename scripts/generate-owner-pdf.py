@@ -21,6 +21,7 @@ SECTIONS = [
     ("SIGN_OFF.md", "System Sign-Off"),
     ("FINAL_LIVE_CONFIRMATION.md", "Final Live Confirmation"),
     ("APK_VERIFICATION_REPORT.md", "APK Verification Report"),
+    ("SOLUTIONS_AND_AUDIT.md", "Solutions & Live Audit"),
 ]
 
 CSS = """

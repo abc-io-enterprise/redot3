@@ -638,9 +638,29 @@ app.delete('/api/v1/keys/:id', authMiddleware, async (req, res) => {
 // Create checkout session
 app.post('/api/v1/billing/checkout', authMiddleware, async (req, res) => {
   try {
-    const { priceId } = req.body;
+    const { priceId, tier } = req.body;
     const userResult = await pool.query('SELECT email, account_id FROM users WHERE id = $1', [req.userId]);
     const user = userResult.rows[0];
+
+    let finalPriceId = priceId;
+    if (!finalPriceId && tier) {
+      const priceEnvMap = {
+        free: process.env.STRIPE_PRICE_ID_FREE,
+        basic: process.env.STRIPE_PRICE_ID_BASIC,
+        standard: process.env.STRIPE_PRICE_ID_STANDARD,
+        pro: process.env.STRIPE_PRICE_ID_PRO,
+        business: process.env.STRIPE_PRICE_ID_BUSINESS,
+        team: process.env.STRIPE_PRICE_ID_TEAM,
+        corporate: process.env.STRIPE_PRICE_ID_CORPORATE,
+        enterprise: process.env.STRIPE_PRICE_ID_ENTERPRISE,
+        agency: process.env.STRIPE_PRICE_ID_AGENCY,
+        global: process.env.STRIPE_PRICE_ID_GLOBAL,
+      };
+      finalPriceId = priceEnvMap[tier.toLowerCase()];
+    }
+    if (!finalPriceId) {
+      return res.status(400).json({ error: 'Valid priceId or tier is required' });
+    }
 
     let customerId;
     const accResult = await pool.query('SELECT stripe_customer_id FROM accounts WHERE id = $1', [user.account_id]);
@@ -655,7 +675,7 @@ app.post('/api/v1/billing/checkout', authMiddleware, async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [{ price: finalPriceId, quantity: 1 }],
       mode: 'subscription',
       success_url: `${process.env.PUBLIC_URL || 'https://abc-io.com'}/dashboard?checkout=success`,
       cancel_url: `${process.env.PUBLIC_URL || 'https://abc-io.com'}/pricing?checkout=cancel`,
