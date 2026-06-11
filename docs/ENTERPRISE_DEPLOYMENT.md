@@ -1,157 +1,75 @@
-﻿# Enterprise Deployment Guide - ABC-IO v2.0
+# Enterprise Deployment Guide — ABC-IO v2.0
 
-## GITHUB ENTERPRISE SETUP
+> **Note**: This guide has been consolidated with the enterprise runbooks. For the authoritative setup procedures, see:
+> - `docs/ENTERPRISE_SETUP_RUNBOOK.md` — GitHub Enterprise org and repository setup.
+> - `docs/SECURITY_RUNBOOK.md` — Security operations and incident response.
+> - `docs/DISASTER_RECOVERY.md` — Backup and restore procedures.
+> - `docs/GITHUB_ENTERPRISE_MIGRATION.md` — Migration plan to `abc-io-enterprise`.
+> - `docs/ONBOARDING.md` — New team member guide.
 
-1. Create Organization at github.com/settings/organizations
-   - Name: abc-io-enterprises
-   - Email: cporreca@abc-io.com
+## Quick Reference
 
-2. Enable Enterprise Billing
-   - Go to github.com/enterprises
-   - Link organization
+### Organization
 
-3. Add Team Members
-   - Owner: cporreca@abc-io.com
-   - Admin: operator@abc-io.com
-   - Require 2FA for all users
+- **Organization**: `abc-io-enterprise`
+- **Repository**: `redot2`
+- **Primary contact**: `ops@abc-io.com`
+- **Security contact**: `security@abc-io.com`
 
-4. Repository Settings
-   - Create repo: redot2 (public)
-   - Branch protection: main branch
-   - Require: 1 review, status checks pass
+### Domains
 
-5. Secrets Management
-   - POSTGRES_PASSWORD: 32+ random chars
-   - VPS_SSH_KEY: Ed25519 private key
-   - VPS_HOST: abc-io.com
-   - PROD_ENV_FILE: Full .env content
+- Primary: `abc-io.com`
+- Primary node: `redot1.abc-io.com`
+- AI node 1: `ai1.abc-io.com`
+- AI node 2: `ai2.abc-io.com`
 
-## NAMECHEAP INTEGRATION
+### Infrastructure
 
-1. Register Domain: abc-io.com
-2. Configure DNS:
-   - A record @ → VPS IP
-   - CNAME redot1 → abc-io.com
-   - CNAME ai1 → abc-io.com
-   - CNAME ai2 → abc-io.com
+| Node | Services | DNS |
+|------|----------|-----|
+| Primary (redot1) | All 17 services | `redot1.abc-io.com` |
+| AI Node 1 (ai1) | kimi, worker | `ai1.abc-io.com` |
+| AI Node 2 (ai2) | kimi, worker | `ai2.abc-io.com` |
 
-3. SSL Certificate: Auto via Let''s Encrypt
-   - Domains: abc-io.com, *.abc-io.com
-   - Renewal: Automatic (90 days)
+### Required DNS Records
 
-## VPS DEPLOYMENT
+- `A @` → Primary VPS IP
+- `CNAME redot1` → `abc-io.com`
+- `CNAME ai1` → `abc-io.com`
+- `CNAME ai2` → `abc-io.com`
+- TLS: Let's Encrypt for `abc-io.com` and `*.abc-io.com`
 
-1. Provision Ubuntu 22.04 LTS (2GB+ RAM)
-2. Bootstrap: bash scripts/vps-setup.sh
-3. Deploy: bash scripts/vps-deploy.sh <REPO_URL> v1.0.0
-4. Configure: nano .env (add secrets)
-5. Verify: docker compose ps && ./scripts/health-check.sh
+### Deployment Commands
 
-## THREE-NODE INFRASTRUCTURE
+```bash
+# Bootstrap a new VPS
+bash scripts/vps-setup.sh
 
-### Primary Node (redot1.abc-io.com)
-- All 14 services
-- Database: PostgreSQL primary
-- Cache: Redis primary
+# Deploy a release tag
+bash scripts/vps-deploy.sh https://github.com/abc-io-enterprise/redot2.git v1.0.0
 
-### AI Node 1 (ai1.abc-io.com)
-- Kimi service (AI inference)
-- Worker service (background jobs)
+# Validate
+./scripts/health-check.sh
+./scripts/auto-heal.sh
+```
 
-### AI Node 2 (ai2.abc-io.com)
-- Kimi service (AI inference)
-- Worker service (background jobs)
+### Secrets Management
 
-All nodes:
-- Sync via Git
-- Monitor via Prometheus
-- Log via centralized stack
+All production secrets are stored in **GitHub Repository Secrets** and synchronized to the VPS `.env` at deploy time. See `.security/SECRETS_INVENTORY.md` for the full list and rotation schedule.
 
-## SECURITY CHECKLIST
+**Never commit `.env`, keys, or passwords to Git.**
 
-- [x] .env excluded from Git
-- [x] Secrets in GitHub Actions Secrets
-- [x] SSH key-based auth
-- [x] Firewall enabled (UFW)
-- [x] HTTPS/TLS configured
-- [x] 2FA mandatory
-- [x] Regular backups
-- [x] Monitoring enabled
-- [x] Logging centralized
-- [x] Key rotation scheduled
+### Support Escalation
 
-## OPERATIONAL DASHBOARD
+| Level | Hours | Responsibilities |
+|-------|-------|------------------|
+| L1 | Business hours | Basic troubleshooting, service restarts, log review |
+| L2 | On-call | Deep troubleshooting, emergency patches, system recovery |
+| Security | 24/7 for incidents | Incident response, secret rotation, forensics |
 
-Access: http://localhost:8500 (owner dashboard)
-Features:
-- APK backup status and download
-- Service health monitoring
-- Beacon relay for mobile
-- Owner authentication and signing
+- Emergency email: `security@abc-io.com`
+- On-call page: via PagerDuty / Opsgenie
 
-Operational Station: http://localhost:8080
-- Cross-service status check
-- Quick operational links
-- System health overview
+## Status
 
-## BACKUP & DISASTER RECOVERY
-
-1. Daily Automated Backups
-   - Database: PostgreSQL backup
-   - Files: Rsync to offsite
-   - Encryption: AES-256
-
-2. Recovery Procedures
-   - RTO: 15 minutes (critical systems)
-   - RPO: 1 hour (data loss acceptable)
-   - Tested monthly
-
-3. Backup Verification
-   - Automated restore tests
-   - Documented procedures
-   - Owner notification
-
-## MOBILE CELLULAR FAILOVER
-
-1. APK Available For Download
-   - Owner Dashboard: /download/apk
-   - Secure local backup storage
-
-2. Mobile Beacon Relay
-   - Location tracking via beacon
-   - Cellular fallback when public system offline
-   - Battery monitoring
-
-3. Owner Device Configuration
-   - Mobile app connects to gateway
-   - Beacon relay sends position
-   - Fallback routing via cellular
-
-## SUPPORT & ESCALATION
-
-L1 Support: On-site (8am-5pm)
-- Basic troubleshooting
-- Service restarts
-- Log review
-
-L2 Support: On-call (8pm-8am)
-- Deep troubleshooting
-- Emergency patches
-- System recovery
-
-Emergency Contact: cporreca@abc-io.com
-Phone: +1-585-629-9120
-
-## STATUS: LIVE AND OPERATIONAL
-
-All components deployed and verified:
-✅ Local Docker Desktop environment
-✅ GitHub Enterprise repository
-✅ VPS deployment automation
-✅ APK build and distribution
-✅ Mobile cellular failover
-✅ Security and key management
-✅ Operational dashboards
-✅ Monitoring and alerting
-
-System is ready for 24/7 production use.
+See `FINAL_HANDOFF.md` for the original delivery sign-off. This guide is kept current as the system evolves.
