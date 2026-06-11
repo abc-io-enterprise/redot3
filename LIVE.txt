@@ -4,8 +4,8 @@ ABC-IO v2.0 / redot1 - PRODUCTION LIVE
 Status: REDOT2 COMPLETE SYSTEM BUILT AND LIVE
 Domain: https://abc-io.com
 Date: 2026-06-11
-Version: 2.1.0-autonomous
-Tag: v2.1.0
+Version: v5.0.0
+Tag: v5.0.0
 
 Owner: Christopher Porreca / redot1
 Company: redot1 — A Personal Communications Provider and Personal Interfacing Provider

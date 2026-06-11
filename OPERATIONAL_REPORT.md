@@ -5,7 +5,7 @@
 **Contact:** cporreca@abc-io.com | 585-629-9120
 **Domain:** https://abc-io.com
 **Repository:** https://github.com/abc-io-enterprise/redot2
-**Version:** v2.1.0
+**Version:** v5.0.0
 
 ## Executive Summary
 
