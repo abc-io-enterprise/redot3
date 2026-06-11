@@ -24,6 +24,7 @@ REQUIRED_FILES = [
     "FINAL_STATUS.md",
     "LIVE.txt",
     "AUTONOMOUS_SYSTEM.md",
+    "SYSTEM_DEFINITION.md",
     "services/autonomous/orchestrator.py",
     "services/autonomous/Dockerfile",
     "services/autonomous/requirements.txt",
@@ -215,7 +216,7 @@ def audit_autonomous():
 
 def audit_docs():
     section("DOCUMENTATION AUDIT")
-    docs = ["FINAL_STATUS.md", "LIVE.txt", "AUTONOMOUS_SYSTEM.md", "DEPLOYMENT.md"]
+    docs = ["FINAL_STATUS.md", "LIVE.txt", "AUTONOMOUS_SYSTEM.md", "DEPLOYMENT.md", "SYSTEM_DEFINITION.md"]
     all_ok = True
     for doc in docs:
         path = ROOT / doc
