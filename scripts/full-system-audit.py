@@ -131,9 +131,10 @@ def audit_git():
             print("    " + out.replace("\n", "\n    "))
         else:
             print(f"  {CHECK} Working tree clean")
-    ok2, out2, err2 = run("git tag --list 'v*.*.*' | tail -1")
-    if ok2 and out2.strip():
-        print(f"  {CHECK} Latest tag: {out2.strip()}")
+    ok2, out2, err2 = run("git tag --list")
+    tags = [t.strip() for t in out2.splitlines() if t.strip().startswith("v") and "." in t.strip()]
+    if tags:
+        print(f"  {CHECK} Latest tag: {tags[-1]}")
     else:
         print(f"  {WARN} No version tag found")
     return True
