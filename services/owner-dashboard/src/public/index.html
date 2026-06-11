@@ -168,32 +168,32 @@
   <div class="header-inner">
     <a href="/" class="logo-link">
       <img src="/abc-io_logo.png" alt="ABC-IO" class="logo-img">
-      <span class="brand-name">ABC-IO Operator Control</span>
+      <span class="brand-name">ABC-IO</span>
     </a>
     <nav>
-      <a href="/">Operator Center</a>
-      <a href="https://abc-io.com" target="_blank">Public Site</a>
+      <a href="/">Home</a>
+      <a href="/features.html">Features</a>
+      <a href="/pricing.html">Pricing</a>
+      <a href="/docs.html">API Docs</a>
+      <a href="/help.html">Help</a>
+      <a href="/dashboard.html">Dashboard</a>
     </nav>
   </div>
 </header>
 
-  <div class="container">
-    <!-- HEADER -->
-    <header>
-      <div class="logo-section">
-        <div class="logo"><img src="/abc-io_logo.png" alt="ABC-IO" style="height:32px;vertical-align:middle;margin-right:8px"> ABC-IO</div>
-        <div class="logo-text">Universal Interfacing Communications Company — Operator Control Center v2.0</div>
-      </div>
-      <div class="status-badge status-online" id="overallStatus">● ONLINE</div>
-      <div class="auth-section">
-        <div class="user-info" id="userInfo">Not authenticated</div>
-        <button class="btn-sm btn-primary" onclick="logout()">Logout</button>
-      </div>
-    </header>
 
+  <div class="container">
     <!-- MAIN CONTENT -->
-    <div class="main-grid">
-      <!-- AUTHENTICATION -->
+    <main class="main-grid">
+      
+      <div class="card card-full" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">
+        <div><div class="status-badge status-online" id="overallStatus">● ONLINE</div></div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="user-info" id="userInfo">Not authenticated</div>
+          <button class="btn-sm btn-primary" onclick="logout()">Logout</button>
+        </div>
+      </div>
+<!-- AUTHENTICATION -->
       <div class="card">
         <h2>🔐 Owner Authentication</h2>
         <div class="input-group">
@@ -478,7 +478,7 @@
           <button class="btn-sm" onclick="loadChatMessages()">Load</button>
         </div>
       </div>
-    </div>
+    </main>
   </div>
 
   <script>
@@ -1013,20 +1013,27 @@
       setInterval(() => { if (authToken) { loadInterventionQueue(); loadChatMessages(); } }, 30000);
     });
   </script>
+
+
 <footer class="brand-footer">
   <div class="footer-inner">
     <div>
-      <h4>ABC-IO Operator Control</h4>
-      <p>Private administration system for Christopher Porreca / redot1.</p>
+      <h4>ABC-IO</h4>
+      <p>Global Sensory Interface Communications Provider and AI Software ISP System.</p>
     </div>
     <div>
       <h4>Contact</h4>
+      <p>Christopher Porreca / redot1</p>
       <p><a href="mailto:cporreca@abc-io.com">cporreca@abc-io.com</a></p>
       <p><a href="tel:585-629-9120">585-629-9120</a></p>
     </div>
-    <p class="copyright">&copy; 2026 ABC-IO by Christopher Porreca / redot1. Private operational system.</p>
+    <div>
+      <h4>Legal</h4>
+      <p><a href="/privacy.html">Privacy Policy</a></p>
+      <p><a href="/terms.html">Terms of Service</a></p>
+    </div>
+    <p class="copyright">&copy; 2026 ABC-IO by Christopher Porreca / redot1. All rights reserved. Private operational system.</p>
   </div>
 </footer>
-
 </body>
 </html>

@@ -1,7 +1,7 @@
 {
   "name": "abc-io-v2",
-  "version": "2.0.0",
-  "description": "ABC-IO v2.0 — Unified AI-ISP Infrastructure Platform",
+  "version": "2.1.0-autonomous",
+  "description": "ABC-IO v2.0 — Unified AI-ISP Infrastructure Platform with Autonomous Backend",
   "private": true,
   "workspaces": [
     "services/gateway",
@@ -23,6 +23,10 @@
     "heal": "bash scripts/auto-heal.sh",
     "test": "echo 'Run individual service tests'",
     "apk:build": "bash apk/build-apk-manual.sh",
+    "apk:autonomous": "bash scripts/build-autonomous-apk.sh",
+    "orchestrator": "python scripts/autonomous-orchestrator.py",
+    "orchestrator:daemon": "python scripts/autonomous-orchestrator.py --daemon",
+    "desktop:admin": "python admin-desktop/server.py",
     "deploy:vps": "bash scripts/deploy-vps-cluster.sh",
     "lint": "echo 'Linting not configured'",
     "format": "echo 'Formatting not configured'"
@@ -32,7 +36,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ccplexmath/redot2complete.git"
+    "url": "https://github.com/abc-io-enterprise/redot2.git"
   },
   "license": "PROPRIETARY"
 }

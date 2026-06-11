@@ -10,7 +10,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="ABC-IO Backup Gateway"
+        android:text="ABC-IO Autonomous Operator"
         android:textColor="#ffffff"
         android:textSize="24sp"
         android:textStyle="bold"
@@ -19,55 +19,103 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Cellular Satellite Node"
+        android:text="Owner-Only Cellular Failsafe"
         android:textColor="#888888"
         android:textSize="14sp"
         android:layout_marginTop="8dp" />
 
-    <TextView
-        android:id="@+id/statusText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Ready"
-        android:textColor="#00ff88"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:layout_marginTop="40dp" />
-
-    <Button
-        android:id="@+id/startButton"
+    <!-- Biometric lock panel -->
+    <LinearLayout
+        android:id="@+id/authPanel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="START BACKUP GATEWAY"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layout_marginTop="60dp"
+        android:visibility="visible">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔒"
+            android:textSize="48sp" />
+
+        <TextView
+            android:id="@+id/authStatusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Waiting for owner biometric..."
+            android:textColor="#00ff88"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp"
+            android:gravity="center" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="This device is registered to Christopher Porreca / redot1.\nBiometric authentication is required to operate the autonomous cellular gateway."
+            android:textColor="#667eea"
+            android:textSize="12sp"
+            android:layout_marginTop="12dp"
+            android:gravity="center" />
+    </LinearLayout>
+
+    <!-- Control panel shown after auth -->
+    <LinearLayout
+        android:id="@+id/controlPanel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
         android:layout_marginTop="40dp"
-        android:padding="16dp" />
+        android:visibility="gone">
 
-    <Button
-        android:id="@+id/stopButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="STOP GATEWAY"
-        android:layout_marginTop="16dp"
-        android:padding="16dp" />
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ready"
+            android:textColor="#00ff88"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="8dp" />
 
-    <TextView
-        android:id="@+id/deviceInfoText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Device Info"
-        android:textColor="#667eea"
-        android:textSize="11sp"
-        android:layout_marginTop="24dp"
-        android:gravity="center" />
+        <Button
+            android:id="@+id/startButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="START AUTONOMOUS GATEWAY"
+            android:layout_marginTop="24dp"
+            android:padding="16dp" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Primary: 162.254.32.142\nAI1: 192.227.212.235\nAI2: 192.227.212.237"
-        android:textColor="#666666"
-        android:textSize="12sp"
-        android:layout_marginTop="16dp"
-        android:gravity="center" />
+        <Button
+            android:id="@+id/stopButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="STOP GATEWAY"
+            android:layout_marginTop="16dp"
+            android:padding="16dp" />
+
+        <TextView
+            android:id="@+id/deviceInfoText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Device Info"
+            android:textColor="#667eea"
+            android:textSize="11sp"
+            android:layout_marginTop="24dp"
+            android:gravity="center" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Primary: 162.254.32.142\nAI1: 192.227.212.235\nAI2: 192.227.212.237"
+            android:textColor="#666666"
+            android:textSize="12sp"
+            android:layout_marginTop="16dp"
+            android:gravity="center" />
+    </LinearLayout>
 
     <TextView
         android:layout_width="wrap_content"
