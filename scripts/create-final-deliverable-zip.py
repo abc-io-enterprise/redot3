@@ -13,9 +13,12 @@ FILES = [
     "FINAL_LIVE_CONFIRMATION.md",
     "OPERATOR_STATUS_CONFIRMATION.md",
     "CLOUD_USB_TRANSFER_GUIDE.md",
+    "APK_VERIFICATION_REPORT.md",
     "apk/redot2-operator.apk",
     "apk/redot2-operator.apk.idsig",
     "apk/redot2-latest.apk",
+    "abc-io_logo_final.png",
+    "favicon.ico",
 ]
 
 

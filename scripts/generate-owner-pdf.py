@@ -20,6 +20,7 @@ SECTIONS = [
     ("SHUTDOWN_CHECKLIST.md", "Shutdown / Handoff Checklist"),
     ("SIGN_OFF.md", "System Sign-Off"),
     ("FINAL_LIVE_CONFIRMATION.md", "Final Live Confirmation"),
+    ("APK_VERIFICATION_REPORT.md", "APK Verification Report"),
 ]
 
 CSS = """

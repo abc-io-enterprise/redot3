@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="ABC-IO Owner Dashboard - Human Escalation Interface">
+<meta name="robots" content="noindex, nofollow">
+<title>ABC-IO | Owner Dashboard</title>
+<style>
+:root{--bg:#103050;--link:#ffd80;--text:#ffffff;--text-muted:rgba(255,255,255,0.7);--accent:rgba(255,255,255,0.15);--card-bg:rgba(255,255,255,0.08);--border:rgba(255,255,255,0.12);--radius:8px;--shadow:0 4px 20px rgba(0,0,0,0.3);--success:#10B981;--warning:#F59E0B;--error:#EF4444;--font:'Inter',system-ui,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box;font-family:var(--font)}
+body{background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+a{color:var(--link);text-decoration:none;transition:all 0.2s ease}
+a:hover{text-decoration:underline}
+
+/* Header */
+header{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(16,48,80,0.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between}
+header h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:10px}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--success);display:inline-block;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+header .owner{font-size:12px;color:var(--link);opacity:0.9}
+
+/* Navigation */
+nav{background:var(--card-bg);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:4px;overflow-x:auto;position:sticky;top:64px;z-index:50}
+nav button{padding:12px 20px;border:none;background:none;color:var(--text-muted);font-weight:500;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;font-size:14px;transition:all 0.2s ease}
+nav button:hover{color:var(--link);text-decoration:underline}
+nav button.active{color:var(--link);border-bottom-color:var(--link);font-weight:600}
+
+/* Main */
+main{max-width:1400px;margin:0 auto;padding:24px;padding-top:88px}
+section{display:none}
+section.active{display:block;animation:fadeIn 0.3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* Grid */
+.grid{display:grid;gap:20px}
+.grid-2{grid-template-columns:repeat(2,1fr)}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+.grid-4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:1024px){.grid-4{grid-template-columns:repeat(2,1fr)}.grid-3{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}}
+
+/* Cards */
+.card{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);transition:all 0.3s ease}
+.card:hover{border-color:var(--link)}
+.card h2{font-size:16px;font-weight:700;margin-bottom:16px;color:var(--text);display:flex;align-items:center;justify-content:space-between}
+.badge{font-size:11px;padding:4px 10px;border-radius:20px;font-weight:600}
+.badge-success{background:rgba(16,185,129,0.15);color:var(--success)}
+.badge-warning{background:rgba(245,158,11,0.15);color:var(--warning)}
+.badge-error{background:rgba(239,68,68,0.15);color:var(--error)}
+.badge-info{background:rgba(0,102,204,0.15);color:var(--link)}
+
+/* Metrics */
+.metric{text-align:center}
+.metric h3{font-size:32px;font-weight:800;color:var(--link);margin-bottom:4px}
+.metric p{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px}
+
+/* Alerts */
+.alert{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:var(--radius);margin-bottom:12px;font-size:14px;background:rgba(0,102,204,0.08);border-left:3px solid var(--link)}
+.alert-success{border-left-color:var(--success);background:rgba(16,185,129,0.08)}
+.alert-warning{border-left-color:var(--warning);background:rgba(245,158,11,0.08)}
+.alert-error{border-left-color:var(--error);background:rgba(239,68,68,0.08)}
+
+/* Buttons */
+.btn{padding:10px 20px;border-radius:var(--radius);font-weight:600;font-size:14px;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:8px;transition:all 0.2s ease}
+.btn-primary{background:var(--link);color:var(--bg)}
+.btn-primary:hover{opacity:0.9}
+.btn-secondary{background:var(--card-bg);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--link);color:var(--link)}
+.btn-danger{background:var(--error);color:#fff}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border)}
+th{font-weight:600;font-size:12px;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.5px;background:rgba(255,255,255,0.03)}
+tr:hover{background:rgba(255,255,255,0.03)}
+
+/* Mode Toggle */
+.mode-toggle{display:flex;align-items:center;gap:12px;padding:12px 16px;background:linear-gradient(180deg,#0a2040,#103050);border-radius:var(--radius);margin-bottom:20px;border:1px solid var(--border)}
+.mode-toggle label{font-size:14px;font-weight:600;color:var(--text)}
+.mode-toggle select{padding:8px 12px;border-radius:4px;border:none;background:var(--card-bg);color:var(--text);font-size:14px;cursor:pointer;border:1px solid var(--border)}
+
+/* Escalation Queue */
+.escalation-item{padding:14px;background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;transition:all 0.2s ease}
+.escalation-item:hover{border-color:var(--link)}
+.escalation-item h4{font-size:14px;font-weight:700;margin-bottom:4px}
+.escalation-item p{font-size:13px;color:var(--text-muted);margin-bottom:8px}
+.escalation-item .meta{font-size:11px;color:var(--text-muted);display:flex;gap:12px}
+
+/* Footer */
+footer{padding:40px 24px;border-top:1px solid var(--border);background:#0a2040;margin-top:40px}
+.footer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:1400px;margin:0 auto}
+@media(max-width:640px){.footer-grid{grid-template-columns:1fr}}
+footer a{color:var(--link);text-decoration:none}
+footer a:hover{text-decoration:underline}
+
+/* Auth Overlay */
+#auth-overlay{position:fixed;inset:0;background:rgba(16,48,80,0.98);z-index:1000;display:flex;align-items:center;justify-content:center}
+.auth-box{background:var(--card-bg);padding:40px;border-radius:16px;max-width:400px;width:90%;text-align:center;border:1px solid var(--border)}
+.auth-box h2{font-size:24px;margin-bottom:8px}
+.auth-box p{color:var(--text-muted);margin-bottom:24px;font-size:14px}
+.bio-btn{width:80px;height:80px;border-radius:50%;border:2px solid var(--link);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 16px;cursor:pointer;background:none;color:var(--text);transition:all 0.3s}
+.bio-btn:hover{background:var(--accent);transform:scale(1.05)}
+.auth-input{width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius);font-size:16px;margin-bottom:12px;background:var(--card-bg);color:var(--text)}
+.auth-input:focus{outline:none;border-color:var(--link);box-shadow:0 0 0 3px rgba(255,255,255,0.1)}
+</style>
+</head>
+<body>
+
+<!-- Authentication Overlay -->
+<div id="auth-overlay">
+<div class="auth-box">
+<h2>🔷 ABC-IO Owner</h2>
+<p>Christopher Porreca<br>cporreca@abc-io.com | 585-629-9120</p>
+<button class="bio-btn" onclick="authenticate()">👆</button>
+<p style="font-size:13px;color:var(--text-muted)">Touch to authenticate with biometrics</p>
+<div style="margin-top:20px">
+<input type="tel" class="auth-input" value="+1 585-629-9120" readonly>
+</div>
+<button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="authenticate()">Verify Phone & Authenticate</button>
+<p style="margin-top:12px;font-size:12px;color:var(--text-muted)">Human Escalation Hours: 8:00 AM - 8:00 PM EST</p>
+</div>
+</div>
+
+<header>
+<h1><span class="status-dot"></span> ABC-IO Owner Dashboard</h1>
+<div class="owner">Christopher Porreca | cporreca@abc-io.com | 585-629-9120</div>
+</header>
+
+<nav>
+<button class="active" onclick="showSection('overview')">Overview</button>
+<button onclick="showSection('systems')">Systems</button>
+<button onclick="showSection('escalation')">Escalation Queue</button>
+<button onclick="showSection('accounts')">Accounts</button>
+<button onclick="showSection('billing')">Billing</button>
+<button onclick="showSection('security')">Security</button>
+<button onclick="showSection('backup')">Backup</button>
+</nav>
+
+<main>
+
+<!-- OVERVIEW -->
+<section id="overview" class="active">
+<div class="mode-toggle">
+<label>System Mode:</label>
+<select id="system-mode" onchange="setMode(this.value)">
+<option value="autonomous" selected>AI Autonomous (24/7)</option>
+<option value="supervised">Human Supervised (8am-8pm EST)</option>
+<option value="maintenance">Maintenance Mode</option>
+<option value="emergency">Emergency Lockdown</option>
+</select>
+<span id="mode-status" style="margin-left:auto;font-size:12px;opacity:0.8">AI handling all operations</span>
+</div>
+
+<div class="grid grid-4">
+<div class="card metric">
+<h3>3/4</h3>
+<p>Nodes Online</p>
+</div>
+<div class="card metric">
+<h3>99.9%</h3>
+<p>Uptime (30d)</p>
+</div>
+<div class="card metric">
+<h3>0</h3>
+<p>Active Escalations</p>
+</div>
+<div class="card metric">
+<h3>0</h3>
+<p>Active Users</p>
+</div>
+</div>
+
+<div class="grid grid-2" style="margin-top:20px">
+<div class="card">
+<h2>System Alerts <span class="badge badge-success">All Clear</span></h2>
+<div class="alert alert-success">✓ All systems operational - No active alerts</div>
+<div class="alert">ℹ Last backup completed: 2026-06-11 03:30 UTC</div>
+<div class="alert">ℹ Credential rotation scheduled: 2026-07-11</div>
+</div>
+<div class="card">
+<h2>Quick Actions</h2>
+<div style="display:flex;flex-direction:column;gap:10px">
+<button class="btn btn-primary" onclick="alert('Backup initiated')">🔄 Trigger Backup</button>
+<button class="btn btn-secondary" onclick="alert('Rotation started')">🔐 Rotate Credentials</button>
+<button class="btn btn-secondary" onclick="alert('Restart initiated')">🔄 Restart Web Service</button>
+<button class="btn btn-danger" onclick="if(confirm('EMERGENCY LOCKDOWN?'))alert('Lockdown initiated')">🚨 Emergency Lockdown</button>
+</div>
+</div>
+</div>
+</section>
+
+<!-- SYSTEMS -->
+<section id="systems">
+<div class="grid grid-3">
+<div class="card">
+<h2>Web Services <span class="badge badge-success">Online</span></h2>
+<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+<span>abc-io.com</span><span class="badge badge-success">Online</span>
+</div>
+<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+<span>admin.abc-io.com</span><span class="badge badge-success">Online</span>
+</div>
+<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+<span>api.abc-io.com</span><span class="badge badge-success">Online</span>
+</div>
+<div style="display:flex;justify-content:space-between;padding:12px 0">
+<span>git.abc-io.com</span><span class="badge badge-success">Online</span>
+</div>
+</div>
+<div class="card">
+<h2>API Services <span class="badge badge-success">Online</span></h2>
+<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+<span>API Gateway</span><span class="badge badge-success">Online</span>
+</div>
+<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+<span>Auth Service</span><span class="badge badge-success">Online</span>
+</div>
+<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+<span>Mistral Proxy</span><span class="badge badge-success">Online</span>
+</div>
+<div style="display:flex;justify-content:space-between;padding:12px 0">
+<span>Mobile Gateway</span><span class="badge badge-success">Online</span>
+</div>
+</div>
+<div class="card">
+<h2>Data Layer <span class="badge badge-success">Online</span></h2>
+<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+<span>PostgreSQL</span><span class="badge badge-success">Online</span>
+</div>
+<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+<span>Redis Cache</span><span class="badge badge-success">Online</span>
+</div>
+<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+<span>Gitea Git</span><span class="badge badge-success">Online</span>
+</div>
+<div style="display:flex;justify-content:space-between;padding:12px 0">
+<span>Headscale VPN</span><span class="badge badge-success">Online</span>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ESCALATION -->
+<section id="escalation">
+<div class="card">
+<h2>Active Escalations <span class="badge badge-success">0 Pending</span></h2>
+<div class="alert alert-success">No active escalations. AI is handling all operations autonomously.</div>
+<div class="alert">ℹ Human Hours: 8:00 AM - 8:00 PM EST daily<br>Escalations outside these hours are queued for morning review.</div>
+</div>
+<div class="card" style="margin-top:20px">
+<h2>Escalation History (Last 7 Days)</h2>
+<table>
+<tr><th>Time</th><th>Source</th><th>Issue</th><th>Status</th><th>Resolved By</th></tr>
+<tr><td>2026-06-11 03:15</td><td>System</td><td>Billing container health check failure</td><td><span class="badge badge-success">Resolved</span></td><td>ABC-AIDesktop</td></tr>
+<tr><td>2026-06-11 02:40</td><td>Security</td><td>Credential exposure in .env</td><td><span class="badge badge-success">Resolved</span></td><td>ABC-AI</td></tr>
+<tr><td>2026-06-11 01:20</td><td>System</td><td>Nginx DNS resolution failure</td><td><span class="badge badge-success">Resolved</span></td><td>ABC-AIDesktop</td></tr>
+</table>
+</div>
+</section>
+
+<!-- ACCOUNTS -->
+<section id="accounts">
+<div class="card">
+<h2>Account Management</h2>
+<table>
+<tr><th>Account</th><th>Type</th><th>Plan</th><th>Status</th><th>Created</th></tr>
+<tr><td>cporreca@abc-io.com</td><td>Super-Admin</td><td>Owner</td><td><span class="badge badge-success">Active</span></td><td>2026-06-11</td></tr>
+</table>
+<p style="margin-top:16px;color:var(--text-muted);font-size:14px">No customer accounts yet. Public signup will be available after launch.</p>
+</div>
+</section>
+
+<!-- BILLING -->
+<section id="billing">
+<div class="grid grid-3">
+<div class="card metric">
+<h3>$0</h3>
+<p>Monthly Revenue</p>
+</div>
+<div class="card metric">
+<h3>0</h3>
+<p>Active Subscriptions</p>
+</div>
+<div class="card metric">
+<h3>$0</h3>
+<p>Pending Invoices</p>
+</div>
+</div>
+<div class="card" style="margin-top:20px">
+<h2>Products & Pricing</h2>
+<table>
+<tr><th>Plan</th><th>Price</th><th>API Limit</th><th>Users</th><th>Support</th></tr>
+<tr><td>Free</td><td>$0</td><td>100/day</td><td>1</td><td>Community</td></tr>
+<tr><td>Starter</td><td>$9/mo</td><td>1,000/day</td><td>1</td><td>Email</td></tr>
+<tr><td>Pro</td><td>$29/mo</td><td>10,000/day</td><td>3</td><td>Priority</td></tr>
+<tr><td>Business</td><td>$99/mo</td><td>100,000/day</td><td>10</td><td>4h SLA</td></tr>
+<tr><td>Enterprise</td><td>Custom</td><td>Unlimited</td><td>Unlimited</td><td>1h SLA</td></tr>
+</table>
+</div>
+</section>
+
+<!-- SECURITY -->
+<section id="security">
+<div class="grid grid-2">
+<div class="card">
+<h2>Security Score <span class="badge badge-warning">85/100</span></h2>
+<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+<span>🔐 Biometric Auth</span><span class="badge badge-success">Active</span>
+</div>
+<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+<span>📱 Phone Verification</span><span class="badge badge-success">Active</span>
+</div>
+<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+<span>🔒 VPN Mesh</span><span class="badge badge-success">Active</span>
+</div>
+<div style="display:flex;justify-content:space-between;padding:12px 0">
+<span>⚠️ Root SSH</span><span class="badge badge-error">Needs Fix</span>
+</div>
+</div>
+<div class="card">
+<h2>Credential Status</h2>
+<div class="alert alert-warning">⚠️ API keys were exposed in plaintext during setup. Rotation required before production.</div>
+<div class="alert">ℹ Kimi API key: Active (development use)</div>
+<div class="alert">ℹ Namecheap VPS API: Active</div>
+<div class="alert">ℹ Namecheap Hosting API: Active</div>
+<button class="btn btn-primary" style="margin-top:12px" onclick="alert('Rotation started')">Rotate All Credentials</button>
+</div>
+</div>
+</section>
+
+<!-- BACKUP -->
+<section id="backup">
+<div class="grid grid-3">
+<div class="card metric">
+<h3>3</h3>
+<p>Backup Locations</p>
+</div>
+<div class="card metric">
+<h3>15 min</h3>
+<p>Database Backup Interval</p>
+</div>
+<div class="card metric">
+<h3>1 hour</h3>
+<p>File Backup Interval</p>
+</div>
+</div>
+<div class="card" style="margin-top:20px">
+<h2>Backup Locations</h2>
+<table>
+<tr><th>Location</th><th>Type</th><th>Last Backup</th><th>Status</th></tr>
+<tr><td>VPS-1 (Primary)</td><td>Hot Database</td><td>2026-06-11 03:30</td><td><span class="badge badge-success">Current</span></td></tr>
+<tr><td>VPS-2 (Replica)</td><td>Streaming Replica</td><td>Real-time</td><td><span class="badge badge-success">Active</span></td></tr>
+<tr><td>VPS-3 (Backup)</td><td>Encrypted Archive</td><td>2026-06-11 03:30</td><td><span class="badge badge-success">Current</span></td></tr>
+<tr><td>Desktop (Local)</td><td>Local Git + Files</td><td>2026-06-11 03:30</td><td><span class="badge badge-success">Current</span></td></tr>
+<tr><td>Cloud (OneDrive)</td><td>Encrypted Archive</td><td>Pending</td><td><span class="badge badge-warning">Not Configured</span></td></tr>
+</table>
+<button class="btn btn-primary" style="margin-top:16px" onclick="alert('Backup initiated')">🔄 Trigger Backup Now</button>
+</div>
+</section>
+</main>
+
+<footer>
+<div class="footer-grid">
+<div>
+<strong>ABC-IO v2.0</strong><br>
+Global Sensory Interfacing Communications Provider<br>
+<a href="https://abc-io.com">abc-io.com</a> | <a href="mailto:cporreca@abc-io.com">cporreca@abc-io.com</a> | 585-629-9120
+</div>
+<div>
+<strong>System Status</strong><br>
+<span style="color:var(--success)">●</span> All Systems Operational<br>
+<span style="color:var(--success)">●</span> AI Autonomous Mode<br>
+<span style="color:var(--warning)">●</span> Human Escalation: 8am-8pm EST
+</div>
+<div>
+<strong>Quick Links</strong><br>
+<a href="https://abc-io.com">Public Site</a> | <a href="https://admin.abc-io.com">Admin</a> | <a href="https://git.abc-io.com">Git</a> | <a href="https://api.abc-io.com">API</a><br>
+<a href="https://status.abc-io.com">Status</a> | <a href="https://abc-io.com/contact">Contact</a> | <a href="https://abc-io.com/help">Help</a>
+</div>
+</div>
+</footer>
+
+<script>
+function authenticate(){document.getElementById('auth-overlay').style.display='none'}
+function showSection(id){
+document.querySelectorAll('section').forEach(s=>s.classList.remove('active'))
+document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'))
+document.getElementById(id).classList.add('active')
+event.target.classList.add('active')
+}
+function setMode(mode){
+const status=document.getElementById('mode-status')
+if(mode==='autonomous')status.textContent='AI handling all operations'
+if(mode==='supervised')status.textContent='Human review required for critical actions'
+if(mode==='maintenance')status.textContent='Maintenance mode - services may be unavailable'
+if(mode==='emergency')status.textContent='EMERGENCY LOCKDOWN - All external access blocked'
+}
+</script>
+</body>
+</html>
