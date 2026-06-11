@@ -2,206 +2,902 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0a0a2e">
-<title>ABC-IO Backup Gateway</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>ABC-IO Cellular Backup Network</title>
 <link rel="manifest" href="backup-gateway-manifest.json">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: #0a0a2e;
-    color: #00ff88;
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px;
+  :root {
+    --bg: #0a0a2e;
+    --panel: #111144;
+    --accent: #00ff88;
+    --accent-dim: #00cc6a;
+    --warn: #ffaa00;
+    --crit: #ff4444;
+    --info: #0af;
+    --text: #e0e0e0;
+    --text-dim: #888;
+    --border: #222266;
   }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  .container { max-width: 900px; margin: 0 auto; padding: 12px; }
+
+  /* Header */
   .header {
     text-align: center;
-    margin-bottom: 20px;
+    padding: 16px 0 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
   }
-  .header h1 { font-size: 1.5rem; color: #fff; }
-  .header p { font-size: 0.85rem; color: #888; }
-  .status-card {
-    background: #111144;
-    border: 1px solid #00ff88;
+  .header img { height: 32px; vertical-align: middle; margin-right: 10px; }
+  .header h1 { font-size: 1.3rem; display: inline; vertical-align: middle; }
+  .header p { color: var(--text-dim); font-size: 0.8rem; margin-top: 4px; }
+
+  /* Status Banner */
+  .status-banner {
+    background: var(--panel);
+    border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 20px;
-    width: 100%;
-    max-width: 400px;
-    margin-bottom: 15px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
   }
-  .status-indicator {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 8px;
-  }
-  .online { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
-  .offline { background: #ff4444; box-shadow: 0 0 8px #ff4444; }
-  .standby { background: #ffaa00; box-shadow: 0 0 8px #ffaa00; }
-  .btn {
-    background: #00ff88;
-    color: #0a0a2e;
-    border: none;
-    padding: 14px 24px;
-    border-radius: 8px;
-    font-size: 1rem;
+  .status-banner.standby { border-color: var(--accent-dim); }
+  .status-banner.active { border-color: var(--crit); background: #2a0a0a; }
+  .status-banner.recovery { border-color: var(--warn); }
+
+  .mode-badge {
+    font-size: 0.75rem;
     font-weight: bold;
-    cursor: pointer;
-    width: 100%;
-    margin-top: 10px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
-  .btn:disabled { background: #333; color: #666; cursor: not-allowed; }
-  .log {
+  .mode-standby { background: var(--accent); color: #000; }
+  .mode-active { background: var(--crit); color: #fff; }
+  .mode-recovery { background: var(--warn); color: #000; }
+
+  /* LED Grid */
+  .section-title {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 16px 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .led-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+  }
+  .led-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.8rem;
+  }
+  .led {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 6px currentColor;
+  }
+  .led-up { background: var(--accent); color: var(--accent); }
+  .led-down { background: var(--crit); color: var(--crit); }
+  .led-warn { background: var(--warn); color: var(--warn); }
+  .led-unk { background: #555; color: #555; }
+  .led-name { font-weight: 600; }
+  .led-detail { color: var(--text-dim); font-size: 0.7rem; margin-top: 2px; }
+
+  /* Buttons */
+  .btn {
+    border: none;
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: center;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-danger { background: var(--crit); color: #fff; }
+  .btn-warn { background: var(--warn); color: #000; }
+  .btn-info { background: var(--info); color: #fff; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+
+  /* Panels */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .panel h3 { font-size: 1rem; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+
+  /* Terminal / Log */
+  .terminal {
     background: #000;
     border-radius: 8px;
     padding: 10px;
-    font-family: monospace;
-    font-size: 0.75rem;
-    height: 150px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.72rem;
+    height: 160px;
     overflow-y: auto;
-    width: 100%;
-    max-width: 400px;
-    margin-top: 15px;
     color: #0f0;
+    line-height: 1.5;
   }
-  .info { color: #0af; }
-  .warn { color: #fa0; }
-  .err { color: #f44; }
+  .terminal .t-info { color: #0af; }
+  .terminal .t-warn { color: #fa0; }
+  .terminal .t-err { color: #f44; }
+  .terminal .t-ok { color: #0f0; }
+  .terminal .t-accent { color: var(--accent); }
+
+  /* Chat */
+  .chat-messages {
+    background: #000;
+    border-radius: 8px;
+    padding: 10px;
+    height: 220px;
+    overflow-y: auto;
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+  }
+  .chat-msg { margin-bottom: 8px; padding: 6px 10px; border-radius: 6px; max-width: 90%; }
+  .chat-user { background: var(--panel); margin-left: auto; text-align: right; }
+  .chat-ai { background: #0a2a1a; border-left: 3px solid var(--accent); }
+  .chat-offline { background: #2a1a0a; border-left: 3px solid var(--warn); color: var(--warn); }
+  .chat-time { font-size: 0.65rem; color: var(--text-dim); margin-top: 2px; }
+  .chat-input-row { display: flex; gap: 8px; }
+  .chat-input-row input {
+    flex: 1;
+    background: #000;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+  }
+
+  /* Beacon panel */
+  .beacon-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .beacon-grid input {
+    background: #000;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+  }
+  .beacon-grid input:read-only { opacity: 0.6; }
+
+  /* Message board */
+  .msg-list { max-height: 200px; overflow-y: auto; }
+  .msg-item {
+    background: #000;
+    border-left: 3px solid var(--info);
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.8rem;
+  }
+  .msg-item.critical { border-left-color: var(--crit); }
+  .msg-item.urgent { border-left-color: var(--warn); }
+  .msg-meta { color: var(--text-dim); font-size: 0.7rem; margin-top: 2px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 12px; overflow-x: auto; }
+  .tab {
+    padding: 10px 14px;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Stats */
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+  .stat-box {
+    background: #000;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+  }
+  .stat-val { font-size: 1.3rem; font-weight: bold; color: var(--accent); }
+  .stat-label { font-size: 0.7rem; color: var(--text-dim); margin-top: 2px; }
+
+  /* Animations */
+  @keyframes pulse-red {
+    0%, 100% { box-shadow: 0 0 6px var(--crit); }
+    50% { box-shadow: 0 0 16px var(--crit); }
+  }
+  .pulse-red { animation: pulse-red 1.2s infinite; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #000; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .led-grid { grid-template-columns: repeat(2, 1fr); }
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+    .beacon-grid { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
+<div class="container">
+
+  <!-- Header -->
   <div class="header">
-    <h1>🛡️ ABC-IO Backup Gateway</h1>
-    <p>Cellular failover when public assets go down</p>
+    <img src="/abc-io_logo.png" alt="ABC-IO">
+    <h1>Cellular Backup Network</h1>
+    <p>Emergency gateway when public infrastructure fails</p>
   </div>
 
-  <div class="status-card">
-    <div><span class="status-indicator standby" id="netStatus"></span> Network: <span id="netText">Checking...</span></div>
-    <div style="margin-top:8px"><span class="status-indicator standby" id="primaryStatus"></span> Primary: <span id="primaryText">Checking...</span></div>
-    <div style="margin-top:8px"><span class="status-indicator standby" id="cellStatus"></span> Cellular Backup: <span id="cellText">Standby</span></div>
+  <!-- Status Banner -->
+  <div class="status-banner standby" id="statusBanner">
+    <div>
+      <div style="font-size:0.9rem;font-weight:600;margin-bottom:2px">Network Status</div>
+      <div style="font-size:0.75rem;color:var(--text-dim)" id="statusText">Checking primary gateway...</div>
+    </div>
+    <div>
+      <span class="mode-badge mode-standby" id="modeBadge">STANDBY</span>
+    </div>
   </div>
 
-  <button class="btn" id="activateBtn" onclick="activateBackup()">Activate Cellular Backup</button>
-  <button class="btn" style="background:#0a4a8a;color:#fff;margin-top:8px" onclick="sendBeacon()">Send Emergency Beacon</button>
+  <!-- LED Dashboard -->
+  <div class="section-title">🌐 Node Status</div>
+  <div class="led-grid" id="ledGrid"></div>
 
-  <div class="log" id="log"></div>
+  <!-- Local Stats -->
+  <div class="section-title">📊 Local Cache</div>
+  <div class="stat-row">
+    <div class="stat-box"><div class="stat-val" id="statBeacons">0</div><div class="stat-label">Beacons</div></div>
+    <div class="stat-box"><div class="stat-val" id="statMessages">0</div><div class="stat-label">Messages</div></div>
+    <div class="stat-box"><div class="stat-val" id="statAiProxied">0</div><div class="stat-label">AI Relayed</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('dashboard')">Dashboard</button>
+    <button class="tab" onclick="switchTab('ai')">AI Fallback</button>
+    <button class="tab" onclick="switchTab('beacon')">Beacon</button>
+    <button class="tab" onclick="switchTab('messages')">Messages</button>
+    <button class="tab" onclick="switchTab('settings')">Settings</button>
+  </div>
+
+  <!-- DASHBOARD TAB -->
+  <div class="tab-content active" id="tab-dashboard">
+    <div class="panel">
+      <h3>⚡ Actions</h3>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnActivate" onclick="activateBackup()">Activate Backup</button>
+        <button class="btn btn-info" onclick="checkAllNodes()">Refresh Status</button>
+        <button class="btn btn-warn" onclick="syncCachedData()">Sync Local Cache</button>
+        <button class="btn btn-danger" onclick="exportData()">Export Data</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>📝 Event Log</h3>
+      <div class="terminal" id="eventLog"></div>
+    </div>
+  </div>
+
+  <!-- AI TAB -->
+  <div class="tab-content" id="tab-ai">
+    <div class="panel">
+      <h3>🤖 AI Chat (Backup Relay)</h3>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="Ask the AI via backup relay..." onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="btn btn-primary" onclick="sendChat()">Send</button>
+      </div>
+      <div style="margin-top:8px;font-size:0.75rem;color:var(--text-dim)">
+        Routes to AI1/AI2 when primary gateway is down. Offline fallback queued when all nodes unreachable.
+      </div>
+    </div>
+  </div>
+
+  <!-- BEACON TAB -->
+  <div class="tab-content" id="tab-beacon">
+    <div class="panel">
+      <h3>📡 Emergency Beacon</h3>
+      <div class="beacon-grid">
+        <input type="text" id="beaconDeviceId" placeholder="Device ID (e.g., OWN-DEVICE-1)" value="backup-device">
+        <input type="text" id="beaconNote" placeholder="Note / Status">
+        <input type="text" id="beaconLat" placeholder="Latitude" readonly>
+        <input type="text" id="beaconLon" placeholder="Longitude" readonly>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="getLocation()">📍 Get Location</button>
+        <button class="btn btn-warn" onclick="sendBeacon()">Send Beacon</button>
+        <button class="btn btn-info" onclick="sendBeaconRelay()">Relay to AI Nodes</button>
+      </div>
+      <div id="beaconResult" style="margin-top:8px;font-size:0.8rem;"></div>
+    </div>
+  </div>
+
+  <!-- MESSAGES TAB -->
+  <div class="tab-content" id="tab-messages">
+    <div class="panel">
+      <h3>💬 Emergency Message Board</h3>
+      <div class="chat-input-row" style="margin-bottom:10px">
+        <input type="text" id="msgFrom" placeholder="Your name / callsign" style="max-width:140px">
+        <input type="text" id="msgText" placeholder="Type emergency message..." onkeydown="if(event.key==='Enter')postMessage()">
+        <select id="msgPriority" style="background:#000;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px">
+          <option value="normal">Normal</option>
+          <option value="urgent">Urgent</option>
+          <option value="critical">Critical</option>
+        </select>
+        <button class="btn btn-primary" onclick="postMessage()">Post</button>
+      </div>
+      <div class="msg-list" id="msgList"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS TAB -->
+  <div class="tab-content" id="tab-settings">
+    <div class="panel">
+      <h3>⚙️ Settings</h3>
+      <div style="font-size:0.85rem;margin-bottom:10px">
+        <label>Primary Gateway Host</label><br>
+        <input type="text" id="cfgPrimary" value="162.254.32.142:4000" style="width:100%;background:#000;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;margin-top:4px">
+      </div>
+      <div style="font-size:0.85rem;margin-bottom:10px">
+        <label>AI Node 1 Host</label><br>
+        <input type="text" id="cfgAi1" value="192.227.212.235:5000" style="width:100%;background:#000;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;margin-top:4px">
+      </div>
+      <div style="font-size:0.85rem;margin-bottom:10px">
+        <label>AI Node 2 Host</label><br>
+        <input type="text" id="cfgAi2" value="192.227.212.237:5000" style="width:100%;background:#000;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;margin-top:4px">
+      </div>
+      <div style="font-size:0.85rem;margin-bottom:10px">
+        <label>Check Interval (seconds)</label><br>
+        <input type="number" id="cfgInterval" value="10" min="5" max="300" style="width:100%;background:#000;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;margin-top:4px">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+        <button class="btn btn-danger" onclick="clearAllData()">Clear All Local Data</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>📱 Install</h3>
+      <p style="font-size:0.85rem;color:var(--text-dim);margin-bottom:8px">
+        Add this app to your home screen for offline access. It works as a PWA with cached assets.
+      </p>
+      <button class="btn btn-info" onclick="installPwa()" id="installBtn">Install App</button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align:center;padding:16px 0;font-size:0.75rem;color:var(--text-dim)">
+    © 2026 ABC-IO — A Universal Interfacing Communications Company.<br>
+    Cellular Backup Network v2.0 | <span id="footerMode">STANDBY</span>
+  </div>
+</div>
 
 <script>
-const PRIMARY_URL = 'http://162.254.32.142:4000/health';
-const AI1_URL = 'http://192.227.212.235:5000/health';
-const AI2_URL = 'http://192.227.212.237:5000/health';
-const logEl = document.getElementById('log');
+// ========================================================================
+// CONFIG
+// ========================================================================
+const DEFAULT_CONFIG = {
+  primaryHost: '162.254.32.142:4000',
+  ai1Host: '192.227.212.235:5000',
+  ai2Host: '192.227.212.237:5000',
+  checkInterval: 10,
+};
 
-function log(msg, cls='info') {
+let config = { ...DEFAULT_CONFIG };
+let currentMode = 'standby';
+let checkTimer = null;
+let deferredPrompt = null;
+
+// Load config from localStorage
+function loadConfig() {
+  const saved = localStorage.getItem('cbn_config');
+  if (saved) {
+    try { config = { ...DEFAULT_CONFIG, ...JSON.parse(saved) }; } catch {}
+  }
+  document.getElementById('cfgPrimary').value = config.primaryHost;
+  document.getElementById('cfgAi1').value = config.ai1Host;
+  document.getElementById('cfgAi2').value = config.ai2Host;
+  document.getElementById('cfgInterval').value = config.checkInterval;
+}
+
+function saveSettings() {
+  config.primaryHost = document.getElementById('cfgPrimary').value;
+  config.ai1Host = document.getElementById('cfgAi1').value;
+  config.ai2Host = document.getElementById('cfgAi2').value;
+  config.checkInterval = Number(document.getElementById('cfgInterval').value) || 10;
+  localStorage.setItem('cbn_config', JSON.stringify(config));
+  tlog('Settings saved', 'ok');
+  restartChecks();
+}
+
+// ========================================================================
+// LOGGING
+// ========================================================================
+const logEl = document.getElementById('eventLog');
+function tlog(msg, cls='info') {
   const line = document.createElement('div');
-  line.className = cls;
+  line.className = 't-' + cls;
   line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
   logEl.appendChild(line);
   logEl.scrollTop = logEl.scrollHeight;
+  // Limit lines
+  while (logEl.children.length > 200) logEl.removeChild(logEl.firstChild);
 }
 
-function setStatus(id, textId, state, text) {
-  const dot = document.getElementById(id);
-  const txt = document.getElementById(textId);
-  dot.className = 'status-indicator ' + state;
-  txt.textContent = text;
-}
+// ========================================================================
+// NODE MONITORING
+// ========================================================================
+const NODES = [
+  { key: 'primary', name: 'Primary Gateway', url: () => `http://${config.primaryHost}/health` },
+  { key: 'ai1', name: 'AI Node 1', url: () => `http://${config.ai1Host}/health` },
+  { key: 'ai2', name: 'AI Node 2', url: () => `http://${config.ai2Host}/health` },
+  { key: 'local', name: 'Local Mobile GW', url: () => '/health' },
+];
 
-async function checkPrimary() {
+async function checkNode(node) {
   try {
     const ctrl = new AbortController();
-    setTimeout(() => ctrl.abort(), 5000);
-    const res = await fetch(PRIMARY_URL, { signal: ctrl.signal, mode: 'no-cors' });
-    setStatus('primaryStatus', 'primaryText', 'online', 'Online');
-    return true;
-  } catch (e) {
-    setStatus('primaryStatus', 'primaryText', 'offline', 'OFFLINE');
-    return false;
+    setTimeout(() => ctrl.abort(), 6000);
+    const res = await fetch(node.url(), { signal: ctrl.signal });
+    return { up: res.ok, status: res.status };
+  } catch {
+    return { up: false, status: 0 };
   }
 }
 
-function checkNetwork() {
-  const online = navigator.onLine;
-  setStatus('netStatus', 'netText', online ? 'online' : 'offline', online ? 'Connected' : 'Disconnected');
-  return online;
+async function checkAllNodes() {
+  tlog('Checking all nodes...', 'info');
+  const grid = document.getElementById('ledGrid');
+  grid.innerHTML = '';
+  let primaryUp = false;
+  let anyAiUp = false;
+
+  for (const node of NODES) {
+    const result = await checkNode(node);
+    if (node.key === 'primary') primaryUp = result.up;
+    if (node.key.startsWith('ai')) anyAiUp = anyAiUp || result.up;
+
+    const card = document.createElement('div');
+    card.className = 'led-card';
+    const ledClass = result.up ? 'led-up' : 'led-down';
+    const statusText = result.up ? 'ONLINE' : 'OFFLINE';
+    card.innerHTML = `
+      <div class="led ${ledClass}"></div>
+      <div>
+        <div class="led-name">${node.name}</div>
+        <div class="led-detail">${statusText} ${result.status ? '('+result.status+')' : ''}</div>
+      </div>
+    `;
+    grid.appendChild(card);
+  }
+
+  // Also fetch backend aggregated status
+  try {
+    const res = await fetch('/api/backup/status');
+    const data = await res.json();
+    updateMode(data.mode, primaryUp, anyAiUp);
+    document.getElementById('statBeacons').textContent = data.local?.beaconsCached ?? 0;
+    document.getElementById('statMessages').textContent = data.local?.messagesStored ?? 0;
+    document.getElementById('statAiProxied').textContent = data.local?.aiRequestsProxied ?? 0;
+  } catch {
+    // If backend status fails, use local heuristic
+    updateMode(currentMode, primaryUp, anyAiUp);
+  }
 }
 
+function updateMode(mode, primaryUp, anyAiUp) {
+  currentMode = mode;
+  const banner = document.getElementById('statusBanner');
+  const badge = document.getElementById('modeBadge');
+  const statusText = document.getElementById('statusText');
+  const footerMode = document.getElementById('footerMode');
+  const btn = document.getElementById('btnActivate');
+
+  banner.className = 'status-banner ' + mode;
+  badge.className = 'mode-badge mode-' + mode;
+  badge.textContent = mode;
+  footerMode.textContent = mode.toUpperCase();
+
+  if (mode === 'active') {
+    statusText.textContent = 'PRIMARY DOWN — Cellular backup is ACTIVE';
+    badge.classList.add('pulse-red');
+    btn.textContent = '🔴 BACKUP ACTIVE';
+    btn.className = 'btn btn-danger pulse-red';
+    btn.disabled = true;
+    tlog('ALERT: Primary gateway offline. Backup mode ACTIVE.', 'err');
+  } else if (mode === 'recovery') {
+    statusText.textContent = 'Primary recovering — monitoring before standby';
+    badge.classList.remove('pulse-red');
+    btn.textContent = 'Recovery Mode';
+    btn.className = 'btn btn-warn';
+    btn.disabled = true;
+  } else {
+    statusText.textContent = primaryUp ? 'Primary gateway online. Standing by.' : 'Checking primary...';
+    badge.classList.remove('pulse-red');
+    btn.textContent = 'Activate Backup';
+    btn.className = 'btn btn-primary';
+    btn.disabled = false;
+  }
+}
+
+// ========================================================================
+// ACTIONS
+// ========================================================================
 async function activateBackup() {
-  log('Activating cellular backup gateway...', 'warn');
-  document.getElementById('activateBtn').disabled = true;
-  setStatus('cellStatus', 'cellText', 'online', 'ACTIVE');
-
-  // Attempt to relay through available nodes
-  const nodes = [AI1_URL, AI2_URL];
-  for (const node of nodes) {
-    try {
-      const ctrl = new AbortController();
-      setTimeout(() => ctrl.abort(), 8000);
-      await fetch(node, { signal: ctrl.signal, mode: 'no-cors' });
-      log(`Backup node reachable: ${node}`, 'info');
-    } catch (e) {
-      log(`Backup node unreachable: ${node}`, 'err');
+  tlog('Activating backup mode...', 'warn');
+  try {
+    const res = await fetch('/api/backup/activate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: 'emergency-override', reason: 'manual-activation' }),
+    });
+    const data = await res.json();
+    if (data.activated) {
+      tlog('Backup mode ACTIVATED', 'ok');
+      checkAllNodes();
+    } else {
+      tlog('Activation failed: ' + (data.error || 'unknown'), 'err');
     }
+  } catch (e) {
+    tlog('Activation error: ' + e.message, 'err');
   }
+}
 
-  log('Cellular backup gateway ACTIVE. Serving local beacon API.', 'info');
+async function syncCachedData() {
+  tlog('Syncing local cache to mobile gateway...', 'info');
+  const beacons = JSON.parse(localStorage.getItem('cbn_local_beacons') || '[]');
+  const messages = JSON.parse(localStorage.getItem('cbn_local_messages') || '[]');
+  try {
+    const res = await fetch('/api/backup/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ beacons, messages, deviceId: 'web-client-' + Math.random().toString(36).slice(2,6) }),
+    });
+    const data = await res.json();
+    tlog(`Sync OK: +${data.beaconsAdded} beacons, +${data.messagesAdded} msgs`, 'ok');
+    // Clear local after successful sync
+    localStorage.removeItem('cbn_local_beacons');
+    localStorage.removeItem('cbn_local_messages');
+    checkAllNodes();
+  } catch (e) {
+    tlog('Sync failed (will retry): ' + e.message, 'err');
+  }
+}
 
-  // Start local beacon relay loop
-  setInterval(async () => {
-    if (!navigator.onLine) {
-      log('Network down — caching beacon locally', 'warn');
-      localStorage.setItem('beacon_' + Date.now(), JSON.stringify({
-        timestamp: new Date().toISOString(),
-        type: 'cached_beacon',
-        location: 'cellular_backup'
-      }));
+function exportData() {
+  const data = {
+    beacons: JSON.parse(localStorage.getItem('cbn_local_beacons') || '[]'),
+    messages: JSON.parse(localStorage.getItem('cbn_local_messages') || '[]'),
+    chat: JSON.parse(localStorage.getItem('cbn_chat_history') || '[]'),
+    exportedAt: new Date().toISOString(),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `abc-io-backup-export-${Date.now()}.json`;
+  a.click();
+  tlog('Data exported to file', 'ok');
+}
+
+function clearAllData() {
+  if (!confirm('CLEAR ALL local cached data? This cannot be undone.')) return;
+  localStorage.removeItem('cbn_local_beacons');
+  localStorage.removeItem('cbn_local_messages');
+  localStorage.removeItem('cbn_chat_history');
+  localStorage.removeItem('cbn_config');
+  tlog('All local data cleared', 'warn');
+  checkAllNodes();
+}
+
+// ========================================================================
+// AI CHAT
+// ========================================================================
+function loadChatHistory() {
+  const msgs = JSON.parse(localStorage.getItem('cbn_chat_history') || '[]');
+  const container = document.getElementById('chatMessages');
+  container.innerHTML = '';
+  for (const m of msgs) appendChatMessage(m.role, m.text, m.time, m.offline);
+}
+
+function appendChatMessage(role, text, time, offline) {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg chat-' + (offline ? 'offline' : (role === 'user' ? 'user' : 'ai'));
+  div.innerHTML = `<div>${escapeHtml(text)}</div><div class="chat-time">${time}</div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  const time = new Date().toLocaleTimeString();
+  appendChatMessage('user', text, time);
+  saveChat('user', text, time);
+
+  // Show typing indicator
+  const container = document.getElementById('chatMessages');
+  const typing = document.createElement('div');
+  typing.className = 'chat-msg chat-ai';
+  typing.id = 'typing-indicator';
+  typing.innerHTML = '<div>Thinking...</div>';
+  container.appendChild(typing);
+  container.scrollTop = container.scrollHeight;
+
+  try {
+    const res = await fetch('/api/backup/ai/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: text, maxTokens: 512 }),
+    });
+    const data = await res.json();
+    document.getElementById('typing-indicator')?.remove();
+
+    if (data.status === 'ok') {
+      const reply = data.result?.text || data.result?.choices?.[0]?.text || JSON.stringify(data.result);
+      appendChatMessage('ai', reply, new Date().toLocaleTimeString());
+      saveChat('ai', reply, new Date().toLocaleTimeString());
+      tlog(`AI relay via ${data.source}`, 'ok');
+    } else {
+      // Offline fallback
+      const fallback = data.offlineResponse?.text || 'All AI nodes offline. Message queued.';
+      appendChatMessage('ai', fallback, new Date().toLocaleTimeString(), true);
+      saveChat('ai', fallback, new Date().toLocaleTimeString(), true);
+      tlog('AI offline fallback — message queued', 'warn');
     }
-  }, 30000);
+  } catch (e) {
+    document.getElementById('typing-indicator')?.remove();
+    const errMsg = 'Network error. Message saved locally for retry.';
+    appendChatMessage('ai', errMsg, new Date().toLocaleTimeString(), true);
+    saveChat('ai', errMsg, new Date().toLocaleTimeString(), true);
+    tlog('AI request failed: ' + e.message, 'err');
+  }
+}
+
+function saveChat(role, text, time, offline) {
+  const msgs = JSON.parse(localStorage.getItem('cbn_chat_history') || '[]');
+  msgs.push({ role, text, time, offline: !!offline });
+  if (msgs.length > 200) msgs.shift();
+  localStorage.setItem('cbn_chat_history', JSON.stringify(msgs));
+}
+
+// ========================================================================
+// BEACON
+// ========================================================================
+function getLocation() {
+  if (!navigator.geolocation) {
+    tlog('Geolocation not supported', 'err');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      document.getElementById('beaconLat').value = pos.coords.latitude.toFixed(6);
+      document.getElementById('beaconLon').value = pos.coords.longitude.toFixed(6);
+      tlog(`Location: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`, 'ok');
+    },
+    (err) => tlog('Location error: ' + err.message, 'err'),
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
 }
 
 async function sendBeacon() {
-  if (!navigator.geolocation) {
-    log('Geolocation not available', 'err');
+  const deviceId = document.getElementById('beaconDeviceId').value || 'backup-device';
+  const lat = document.getElementById('beaconLat').value;
+  const lon = document.getElementById('beaconLon').value;
+  const note = document.getElementById('beaconNote').value;
+
+  const beacon = { deviceId, latitude: lat ? parseFloat(lat) : null, longitude: lon ? parseFloat(lon) : null, battery: null, note };
+
+  try {
+    const res = await fetch('/api/beacon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(beacon),
+    });
+    const data = await res.json();
+    document.getElementById('beaconResult').innerHTML = `<span style="color:var(--accent)">Beacon sent: ${data.timestamp}</span>`;
+    tlog('Beacon sent to mobile gateway', 'ok');
+  } catch (e) {
+    // Cache locally
+    const localBeacons = JSON.parse(localStorage.getItem('cbn_local_beacons') || '[]');
+    localBeacons.push({ ...beacon, timestamp: new Date().toISOString() });
+    localStorage.setItem('cbn_local_beacons', JSON.stringify(localBeacons));
+    document.getElementById('beaconResult').innerHTML = `<span style="color:var(--warn)">Offline — beacon cached locally (${localBeacons.length} total)</span>`;
+    tlog('Beacon cached locally (offline)', 'warn');
+  }
+}
+
+async function sendBeaconRelay() {
+  const deviceId = document.getElementById('beaconDeviceId').value || 'backup-device';
+  const lat = document.getElementById('beaconLat').value;
+  const lon = document.getElementById('beaconLon').value;
+  const note = document.getElementById('beaconNote').value;
+
+  try {
+    const res = await fetch('/api/backup/beacon/relay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId, latitude: lat ? parseFloat(lat) : null, longitude: lon ? parseFloat(lon) : null, note, targetNodes: ['ai1','ai2'] }),
+    });
+    const data = await res.json();
+    const reachable = data.targets?.filter(t => t.reachable).length || 0;
+    document.getElementById('beaconResult').innerHTML = `<span style="color:var(--accent)">Relayed to ${reachable}/${data.targets?.length || 0} nodes</span>`;
+    tlog(`Beacon relayed. ${reachable} nodes reachable.`, 'ok');
+  } catch (e) {
+    tlog('Beacon relay failed: ' + e.message, 'err');
+  }
+}
+
+// ========================================================================
+// MESSAGES
+// ========================================================================
+async function loadMessages() {
+  try {
+    const res = await fetch('/api/backup/messages?limit=50');
+    const data = await res.json();
+    renderMessages(data.messages || []);
+  } catch {
+    // Fallback to local
+    const localMsgs = JSON.parse(localStorage.getItem('cbn_local_messages') || '[]');
+    renderMessages(localMsgs);
+  }
+}
+
+function renderMessages(msgs) {
+  const list = document.getElementById('msgList');
+  list.innerHTML = '';
+  if (!msgs.length) {
+    list.innerHTML = '<div style="color:var(--text-dim);font-size:0.8rem">No messages yet.</div>';
     return;
   }
-  navigator.geolocation.getCurrentPosition(pos => {
-    const beacon = {
-      deviceId: 'backup-mobile-' + Math.random().toString(36).slice(2, 8),
-      latitude: pos.coords.latitude,
-      longitude: pos.coords.longitude,
-      battery: navigator.getBattery ? 'unknown' : 'unknown',
-      timestamp: new Date().toISOString()
-    };
-    log(`Beacon: ${beacon.latitude}, ${beacon.longitude}`, 'info');
-    // Cache locally and attempt relay
-    localStorage.setItem('last_beacon', JSON.stringify(beacon));
-  }, err => {
-    log('Location error: ' + err.message, 'err');
+  for (const m of msgs) {
+    const div = document.createElement('div');
+    div.className = 'msg-item ' + m.priority;
+    div.innerHTML = `
+      <div>${escapeHtml(m.text)}</div>
+      <div class="msg-meta">${escapeHtml(m.from)} — ${new Date(m.timestamp).toLocaleString()}</div>
+    `;
+    list.appendChild(div);
+  }
+}
+
+async function postMessage() {
+  const from = document.getElementById('msgFrom').value || 'Anonymous';
+  const text = document.getElementById('msgText').value.trim();
+  const priority = document.getElementById('msgPriority').value;
+  if (!text) return;
+  document.getElementById('msgText').value = '';
+
+  try {
+    const res = await fetch('/api/backup/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, text, priority }),
+    });
+    const data = await res.json();
+    tlog(`Message posted (${priority})`, 'ok');
+    loadMessages();
+  } catch (e) {
+    // Cache locally
+    const localMsgs = JSON.parse(localStorage.getItem('cbn_local_messages') || '[]');
+    localMsgs.unshift({ from, text, priority, timestamp: new Date().toISOString(), id: 'local-' + Date.now() });
+    localStorage.setItem('cbn_local_messages', JSON.stringify(localMsgs));
+    tlog('Message cached locally (offline)', 'warn');
+    renderMessages(localMsgs);
+  }
+}
+
+// ========================================================================
+// TABS
+// ========================================================================
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'messages') loadMessages();
+  if (name === 'ai') loadChatHistory();
+}
+
+// ========================================================================
+// PWA INSTALL
+// ========================================================================
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const btn = document.getElementById('installBtn');
+  if (btn) btn.style.display = 'inline-flex';
+});
+
+function installPwa() {
+  if (!deferredPrompt) {
+    tlog('Install not available on this browser', 'warn');
+    return;
+  }
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then((choice) => {
+    if (choice.outcome === 'accepted') {
+      tlog('PWA installed successfully', 'ok');
+    } else {
+      tlog('PWA install dismissed', 'warn');
+    }
+    deferredPrompt = null;
   });
 }
 
-// Auto-check loop
-setInterval(async () => {
-  checkNetwork();
-  const primaryUp = await checkPrimary();
-  if (!primaryUp && navigator.onLine) {
-    log('PRIMARY GATEWAY DOWN — ready to activate cellular backup', 'warn');
-    document.getElementById('activateBtn').disabled = false;
-    document.getElementById('activateBtn').style.background = '#ff4444';
-    document.getElementById('activateBtn').textContent = '🔴 ACTIVATE BACKUP NOW';
-  }
-}, 10000);
+// ========================================================================
+// SERVICE WORKER
+// ========================================================================
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/backup-gateway-sw.js')
+    .then(() => tlog('Service Worker registered', 'ok'))
+    .catch(err => tlog('SW registration failed: ' + err.message, 'err'));
+}
 
-checkNetwork();
-checkPrimary();
-log('Backup Gateway initialized');
-log('Primary: ' + PRIMARY_URL);
-log('Monitoring every 10s...');
+// ========================================================================
+// INIT
+// ========================================================================
+function restartChecks() {
+  if (checkTimer) clearInterval(checkTimer);
+  checkAllNodes();
+  checkTimer = setInterval(checkAllNodes, config.checkInterval * 1000);
+}
+
+loadConfig();
+loadChatHistory();
+checkAllNodes();
+restartChecks();
+tlog('Cellular Backup Network initialized', 'ok');
+tlog('Monitoring: ' + config.primaryHost, 'info');
 </script>
 </body>
 </html>
