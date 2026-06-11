@@ -3,7 +3,7 @@
 Deploy AI worker nodes (ai1, ai2).
 Starts kimi + worker + redis on each node.
 """
-import os, sys, time, paramiko, subprocess, tempfile
+import os, sys, time, paramiko, subprocess, tempfile, tarfile, fnmatch
 
 NODES = [
     {"host": "192.227.212.235", "env_var": "VPS_AI1_PASSWORD", "name": "ai1"},
@@ -50,12 +50,27 @@ def deploy_node(node):
         ".git", "node_modules", "__pycache__", ".pyc", "repositories",
         "*.tar.gz", "*.zip", "apk/*.apk", "android-sdk",
     ]
-    excludes = " ".join(f"--exclude={p}" for p in exclude_patterns)
-    rc = subprocess.call(
-        f'cd "{LOCAL_PROJECT}" && tar czf "{bundle_path}" {excludes} .',
-        shell=True,
-    )
-    if rc != 0 or not os.path.exists(bundle_path):
+
+    def should_exclude(rel_path):
+        for pat in exclude_patterns:
+            if fnmatch.fnmatch(rel_path, pat) or fnmatch.fnmatch(os.path.basename(rel_path), pat):
+                return True
+            parts = rel_path.split(os.sep)
+            for part in parts:
+                if fnmatch.fnmatch(part, pat):
+                    return True
+        return False
+
+    with tarfile.open(bundle_path, "w:gz") as tar:
+        for root, dirs, files in os.walk(LOCAL_PROJECT):
+            for file in files:
+                full_path = os.path.join(root, file)
+                rel_path = os.path.relpath(full_path, LOCAL_PROJECT)
+                if should_exclude(rel_path):
+                    continue
+                tar.add(full_path, arcname=rel_path)
+
+    if not os.path.exists(bundle_path):
         log("ERROR: Failed to build bundle")
         return False
     size_mb = os.path.getsize(bundle_path) / (1024 * 1024)
