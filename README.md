@@ -2,7 +2,7 @@
 
 ## Overview
 
-ABC-IO v2.0 is a containerized system package for local development, production deployment, and release packaging.
+ABC-IO v2.0 is a containerized multi-service system for local development, production deployment, and release packaging. It is designed to run on a single primary VPS or as a multi-host deployment behind external DNS.
 
 ## Quick Start (Local Development)
 
@@ -16,7 +16,7 @@ sleep 20
 ## Local Validation
 
 - API gateway health: `http://localhost:4000/health`
-- Gateway AI proxy: `POST http://localhost:4000/api/ai`
+- Gateway AI proxy: `POST http://localhost:4000/api/v1/ai/generate`
 - Kimi service health: `http://localhost:5000/health`
 - Kimi AI endpoint: `POST http://localhost:5000/ai/generate`
 - Operator Station UI: `http://localhost:8080/`
@@ -28,6 +28,32 @@ sleep 20
 - Prometheus: `http://localhost:9091`
 - Grafana: `http://localhost:14000`
 - Jaeger UI: `http://localhost:16686`
+
+## Enterprise Setup
+
+This repository is prepared for the `abc-io-enterprise` GitHub organization. See the enterprise runbooks for full setup, migration, and security procedures:
+
+- [`docs/ENTERPRISE_SETUP_RUNBOOK.md`](./docs/ENTERPRISE_SETUP_RUNBOOK.md) — Create the org, migrate the repo, configure teams.
+- [`docs/GITHUB_ENTERPRISE_MIGRATION.md`](./docs/GITHUB_ENTERPRISE_MIGRATION.md) — Step-by-step migration plan.
+- [`docs/SECURITY_RUNBOOK.md`](./docs/SECURITY_RUNBOOK.md) — Security operations and incident response.
+- [`docs/DISASTER_RECOVERY.md`](./docs/DISASTER_RECOVERY.md) — Backup and restore procedures.
+- [`docs/ONBOARDING.md`](./docs/ONBOARDING.md) — New team member guide.
+
+Automation helpers:
+
+```bash
+# Print the enterprise setup checklist
+./scripts/setup-github-enterprise.sh
+
+# Migrate this repo to abc-io-enterprise/redot2
+./scripts/migrate-to-enterprise.sh
+
+# Apply branch protection
+./scripts/apply-branch-protection.sh abc-io-enterprise/redot2 master
+
+# Upload secrets from .env to GitHub Repository Secrets
+./scripts/set-github-secrets.sh abc-io-enterprise/redot2
+```
 
 ## Release Packaging
 
@@ -42,24 +68,30 @@ To create a packaged ZIP archive for distribution, run:
 Before production deployment:
 
 1. Copy `.env.example` to `.env`.
-2. Set `POSTGRES_PASSWORD` in `.env`.
-3. Set `MISTRAL_API_KEY`, `MISTRAL_MODEL`, and `MISTRAL_API_BASE_URL` in `.env` for the Kimi AI service.
-4. Review `DEPLOYMENT.md` for VPS provisioning and live rollout.
-5. Use `docker compose -f compose.prod.yml up -d`.
+2. Fill in all required secrets per `.security/SECRETS_INVENTORY.md`.
+3. Review `DEPLOYMENT.md` and `docs/ENTERPRISE_DEPLOYMENT.md` for VPS provisioning and rollout.
+4. Use `docker compose -f compose.prod.yml up -d`.
 
-## Project structure
+## Project Structure
 
-- `docker-compose.yml` — primary 10-service orchestration.
-- `compose.dev.yml` — developer environment.
-- `compose.prod.yml` — production environment.
-- `config/` — NGINX and Prometheus configuration.
-- `services/` — gateway, dashboard, AI service, owner and mobile portals, and DB schema.
-- `scripts/` — release, operations, self-heal, and validation automation.
-- `.github/workflows/` — CI and release automation templates.
+- `docker-compose.yml` — primary 17-service orchestration.
+- `compose.dev.yml` — developer environment with live-reload mounts.
+- `compose.prod.yml` — production environment with resource limits.
+- `config/` — NGINX, Prometheus, and Headscale configuration.
+- `services/` — gateway, dashboard, AI services, owner/mobile/public portals, beacon, beacon PWA, worker, ai-isp, and DB schema.
+- `scripts/` — release, operations, self-heal, validation, and enterprise setup automation.
+- `.github/workflows/` — CI, dependency review, CodeQL, secret scanning, deploy, release, and GCP workflows.
+- `.security/` — enterprise security policies, secrets inventory, branch protection, SAML/SSO templates, audit streaming, and IP allowlist guidance.
+
+## Security
+
+- Never commit `.env`, keys, or secrets. See `.security/SECRETS_INVENTORY.md` for the canonical list.
+- Branch protection, required reviews, and status checks are defined in `.security/BRANCH_PROTECTION.md`.
+- Report vulnerabilities via the [Security tab](../../security/advisories/new) or email `security@abc-io.com`.
 
 ## Consolidated Repositories
 
-This project now contains a unified index of all 10 ABC-IO ecosystem repositories under `repositories/`.
+This project contains a unified index of all 10 ABC-IO ecosystem repositories under `repositories/`.
 
 | # | Repository | Status | Description |
 |---|------------|--------|-------------|
@@ -78,7 +110,7 @@ See [`REPOSITORIES.md`](./REPOSITORIES.md) for the full consolidation map, git r
 
 ## Notes
 
-- This environment cannot publish to GitHub or Namecheap automatically without user credentials.
-- Use `README.md` and `DEPLOYMENT.md` together when moving to production.
-- Review `KEY_SIGNING.md` for the independent owner/mobile/public signing and privacy verification model.
+- Review `AGENTS.md` for agent-focused conventions and the full service matrix.
+- Review `CONTRIBUTING.md` before opening pull requests.
+- Review `SECURITY.md` for the security architecture and responsible disclosure policy.
 - All 10 repository remotes are configured; run `git remote -v` to view them.
