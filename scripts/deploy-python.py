@@ -65,11 +65,16 @@ def deploy_node(name, config):
             pass
 
         log("  Docker check...")
-        out, err, code = run_cmd(ssh, "docker compose version || docker-compose version || which docker")
+        out, err, code = run_cmd(ssh, "docker compose version")
         if code != 0:
-            log("  [WARN] Docker missing. Installing...")
-            run_cmd(ssh, "apt-get update -qq && apt-get install -y -qq docker.io docker-compose 2>/dev/null || true", timeout=300)
-            run_cmd(ssh, "systemctl start docker 2>/dev/null || service docker start 2>/dev/null || true", timeout=30)
+            out2, err2, code2 = run_cmd(ssh, "docker-compose version || which docker")
+            if code2 != 0:
+                log("  [WARN] Docker missing. Installing...")
+                run_cmd(ssh, "apt-get update -qq && apt-get install -y -qq docker.io docker-compose-plugin 2>/dev/null || true", timeout=300)
+                run_cmd(ssh, "systemctl start docker 2>/dev/null || service docker start 2>/dev/null || true", timeout=30)
+            else:
+                log("  [WARN] Docker Compose v2 missing. Installing plugin...")
+                run_cmd(ssh, "apt-get update -qq && apt-get install -y -qq docker-compose-plugin 2>/dev/null || mkdir -p /usr/local/lib/docker/cli-plugins && curl -SL https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose && chmod +x /usr/local/lib/docker/cli-plugins/docker-compose", timeout=120)
         else:
             log("    Docker OK: {}".format(out.strip().split('\n')[0]))
 

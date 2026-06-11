@@ -72,13 +72,20 @@ if [ "$disk_usage" -gt 80 ]; then
     docker system prune -af --volumes || true
 fi
 
-echo "[1/4] Pruning old images..."
+echo "[1/4] Docker Compose check..."
+if ! docker compose version >/dev/null 2>&1; then
+    echo "Installing Docker Compose v2..."
+    apt-get update -qq && apt-get install -y -qq docker-compose-plugin 2>/dev/null || \
+    (mkdir -p /usr/local/lib/docker/cli-plugins && curl -SL https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose && chmod +x /usr/local/lib/docker/cli-plugins/docker-compose)
+fi
+
+echo "[2/4] Pruning old images..."
 docker system prune -af --volumes >/dev/null 2>&1 || true
 
-echo "[2/4] Pulling images..."
+echo "[3/4] Pulling images..."
 docker compose -f compose.prod.yml pull
 
-echo "[3/4] Starting services..."
+echo "[4/4] Starting services..."
 docker compose -f compose.prod.yml up -d
 
 echo "[4/4] Waiting for services..."
