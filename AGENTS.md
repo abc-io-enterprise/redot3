@@ -19,6 +19,10 @@ ABC-IO v2.0 (codename `redot2`) is a containerized multi-service system designed
 - **`kimi`** — Python/Flask AI adapter that proxies to Mistral or Kimi with circuit breaker, response cache, retry logic, and offline fallback. Also includes a small standalone Redis consumer (`worker.py`) for `abc_io_tasks`.
 - **`worker`** — Background Python worker that consumes the Redis list `redot2:jobs:queue` for `ai_inference` and `health_check` jobs, storing results with a 1-hour TTL.
 - **`ai-isp`** — Cross-sensory translation service (Braille, Morse, Haptic, speech-to-text stubs, sign-language stubs) served by Gunicorn.
+- **`autonomous`** — Self-healing orchestrator that monitors all services, restarts failed containers, and queues alerts via Redis.
+- **Desktop orchestrator** — `scripts/autonomous-orchestrator.py` monitors public endpoints from the owner's machine and activates cellular fallback.
+- **Desktop admin backend** — `admin-desktop/server.py` serves the offline-capable admin UI and proxies local commands.
+- **Autonomous APK** — `apk/android-project/` owner-only Android app with biometric login and hardcoded cellular failsafe gateway.
 - **Infrastructure services** — `postgres`, `redis`, `nginx`, `prometheus`, `grafana`, `tracer` (Jaeger), `headscale` (VPN), and a placeholder `logger` (busybox).
 
 The entire stack is intended to run on a single primary VPS or as a multi-host deployment with external DNS.
@@ -46,6 +50,7 @@ The entire stack is intended to run on a single primary VPS or as a multi-host d
 | `grafana` | grafana/grafana | — | — | 14000 |
 | `tracer` | jaegertracing/all-in-one | — | — | 16686 |
 | `headscale` | headscale/headscale | — | — | 8085 |
+| `autonomous` | python:3.12-alpine | — | Python 3 | headless |
 
 **Key architectural notes:**
 - All Node.js frontends are vanilla HTML/CSS/JS. There is no React, Vue, TypeScript, or bundler anywhere in the project.
@@ -63,7 +68,7 @@ The entire stack is intended to run on a single primary VPS or as a multi-host d
 
 ```
 .
-├── docker-compose.yml          # Primary 17-service orchestration (local ports)
+├── docker-compose.yml          # Primary 19-service orchestration (local ports)
 ├── compose.dev.yml             # Dev environment with volume mounts for gateway + operator-station + postgres
 ├── compose.prod.yml            # Production environment (ports 80/443, resource limits, json-file logging, healthchecks)
 ├── .env.example                # Template for required secrets
@@ -85,8 +90,12 @@ The entire stack is intended to run on a single primary VPS or as a multi-host d
 │   ├── kimi/app.py, worker.py, requirements.txt
 │   ├── worker/worker.py, requirements.txt
 │   ├── ai-isp/src/app.py (+ src/translators/), Dockerfile, requirements.txt
+│   ├── autonomous/orchestrator.py, Dockerfile, requirements.txt
 │   └── postgres/init.sql
 ├── scripts/
+│   ├── autonomous-orchestrator.py # Desktop autonomous monitor + cellular fallback
+│   ├── build-autonomous-apk.sh    # Build owner-only biometric APK
+│   ├── full-system-audit.py       # Complete system audit script
 │   ├── health-check.sh         # Curl all service /health endpoints
 │   ├── self-heal.sh            # Restart stack if containers are exited
 │   ├── auto-heal.sh            # 7-phase health monitor with auto-restart
@@ -101,6 +110,9 @@ The entire stack is intended to run on a single primary VPS or as a multi-host d
 │   ├── github-setup.sh         # Interactive GitHub Enterprise setup
 │   ├── build-mobile-apk.ps1   # Build/sign Android APK
 │   └── package-release.ps1    # Create release ZIP archive
+├── admin-desktop/
+│   ├── index.html            # Offline-capable local admin UI
+│   └── server.py             # Local backend for deployment/backup/orchestrator control
 └── .github/workflows/          # CI/CD definitions (see below)
 ```
 
@@ -428,6 +440,9 @@ Automation helpers:
 ## Notes for Agents
 
 - Do not assume the presence of npm build steps, bundlers, or frontend frameworks. Most Node.js services are run directly with `node src/index.js` (or `server.js` for `beacon-pwa`).
+- The `autonomous` service requires Docker socket access (`/var/run/docker.sock`) to restart failed containers.
+- The desktop orchestrator expects SSH passwords in environment variables (`VPS_REDOT1_PASSWORD`, `VPS_AI1_PASSWORD`, `VPS_AI2_PASSWORD`).
+- The autonomous APK uses `androidx.biometric` and NanoHTTPD; build via `scripts/build-autonomous-apk.sh` or Android Studio.
 - Do not assume test files exist. Validation is done via shell scripts and CI compose validation.
 - When modifying a Node.js service, remember that `compose.dev.yml` only includes `gateway`, `operator-station`, and `postgres`. Other services must be tested with the full `docker-compose.yml` or `compose.prod.yml`.
 - The `ai-isp` service directory is fully implemented and deployed; it is **not** a placeholder.

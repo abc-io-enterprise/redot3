@@ -47,11 +47,6 @@ pre code{background:none;border:none;padding:0;color:#e2e8f0}
   </div>
 </header>
 <main>
-
-<nav class="nav">
-  <a href="/" class="logo">ABC<span>-IO</span></a>
-  <a href="/dashboard">Dashboard →</a>
-</nav>
 <div class="container">
   <h1>API Documentation</h1>
   <p>Base URL: <code>https://abc-io.com/api/v1</code></p>
@@ -119,26 +114,12 @@ x-api-key: &lt;api-key&gt;</code></pre>
   <h2>Support</h2>
   <p>Email: <a href="mailto:support@abc-io.com">support@abc-io.com</a> · <a href="https://github.com/ccplexmath/redot2complete" target="_blank">GitHub</a></p>
 </div>
-<footer class="footer">© 2026 ABC-IO · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/help">Help</a> · <a href="/faq">FAQ</a> · <a href="/about">About</a></footer>
-<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#0f1633;border-top:1px solid #1e293b;padding:16px 24px;z-index:1000">
-  <div style="max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
-    <span style="font-size:13px;color:#94a3b8">We use cookies to improve your experience. By continuing, you agree to our use of cookies.</span>
-    <button onclick="acceptCookies()" style="padding:8px 16px;border-radius:6px;background:#00ff88;color:#0a0a2e;font-size:13px;font-weight:600;border:none;cursor:pointer;white-space:nowrap">Accept</button>
-  </div>
-</div>
-<script>
-function acceptCookies(){localStorage.setItem('abcio_cookie_consent','1');document.getElementById('cookieBanner').style.display='none';}
-if(!localStorage.getItem('abcio_cookie_consent')){var el=document.getElementById('cookieBanner');if(el)el.style.display='block';}
-</script>
-</body>
-</html>
-
 </main>
 <footer class="brand-footer">
   <div class="footer-inner">
     <div>
       <h4>ABC-IO</h4>
-      <p>Global Sensory Interface Communications Provider and AI Software ISP System. Private operational system by redot1.</p>
+      <p>Global Sensory Interface Communications Provider and AI Software ISP System.</p>
     </div>
     <div>
       <h4>Contact</h4>
@@ -154,3 +135,29 @@ if(!localStorage.getItem('abcio_cookie_consent')){var el=document.getElementById
     <p class="copyright">&copy; 2026 ABC-IO by Christopher Porreca / redot1. All rights reserved. Private operational system.</p>
   </div>
 </footer>
+
+
+
+
+
+
+
+
+
+
+
+<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#0f1633;border-top:1px solid #1e293b;padding:16px 24px;z-index:1000">
+  <div style="max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+    <span style="font-size:13px;color:#94a3b8">We use cookies to improve your experience. By continuing, you agree to our use of cookies.</span>
+    <button onclick="acceptCookies()" style="padding:8px 16px;border-radius:6px;background:#00ff88;color:#0a0a2e;font-size:13px;font-weight:600;border:none;cursor:pointer;white-space:nowrap">Accept</button>
+  </div>
+</div>
+<script>
+function acceptCookies(){localStorage.setItem('abcio_cookie_consent','1');document.getElementById('cookieBanner').style.display='none';}
+if(!localStorage.getItem('abcio_cookie_consent')){var el=document.getElementById('cookieBanner');if(el)el.style.display='block';}
+</script>
+</body>
+</html>
+
+
+

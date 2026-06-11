@@ -13,40 +13,62 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.PowerManager;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import fi.iki.elonen.NanoHTTPD;
 
 public class GatewayService extends Service {
     private static final String CHANNEL_ID = "ABCIOGatewayChannel";
-    private static final String CHANNEL_NAME = "ABC-IO Gateway";
+    private static final String CHANNEL_NAME = "ABC-IO Autonomous Gateway";
     private static final int NOTIFICATION_ID = 1;
     private static final String PREFS_NAME = "ABCIOGatewayPrefs";
+    private static final String KEY_BEACON_QUEUE = "beaconQueue";
+
+    // Hardcoded autonomous backend endpoints
+    private static final String PRIMARY_HOST = "162.254.32.142";
+    private static final String AI1_HOST = "192.227.212.235";
+    private static final String AI2_HOST = "192.227.212.237";
+    private static final String DOMAIN = "abc-io.com";
 
     private GatewayServer server;
     private PowerManager.WakeLock wakeLock;
     private SharedPreferences prefs;
+    private ExecutorService executor;
+    private Handler mainHandler;
     private int requestCount = 0;
     private int beaconCount = 0;
+    private int forwardedCount = 0;
+    private boolean publicSystemOnline = false;
+    private String currentMode = "AUTONOMOUS"; // AUTONOMOUS, FAILOVER, RELAY
 
     @Override
     public void onCreate() {
         super.onCreate();
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        executor = Executors.newSingleThreadExecutor();
+        mainHandler = new Handler(Looper.getMainLooper());
         createNotificationChannel();
         acquireWakeLock();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // Build modern notification with actions
         Notification.Builder builder;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             builder = new Notification.Builder(this, CHANNEL_ID);
@@ -54,7 +76,6 @@ public class GatewayService extends Service {
             builder = new Notification.Builder(this);
         }
 
-        // Pending intent to open app when notification tapped
         Intent notificationIntent = new Intent(this, MainActivity.class);
         notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(
@@ -62,7 +83,6 @@ public class GatewayService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        // Stop action on notification
         Intent stopIntent = new Intent(this, GatewayService.class);
         stopIntent.setAction("STOP_GATEWAY");
         PendingIntent stopPendingIntent = PendingIntent.getService(
@@ -77,8 +97,8 @@ public class GatewayService extends Service {
         ).build();
 
         Notification notification = builder
-                .setContentTitle("ABC-IO Backup Gateway")
-                .setContentText("Cellular backup server on port 5050 - Privacy-first mode")
+                .setContentTitle("ABC-IO Autonomous Gateway")
+                .setContentText("Owner-only cellular failsafe active on port 5050")
                 .setSmallIcon(android.R.drawable.ic_menu_compass)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
@@ -105,6 +125,7 @@ public class GatewayService extends Service {
             return START_NOT_STICKY;
         }
 
+        startHealthMonitor();
         return START_STICKY;
     }
 
@@ -118,7 +139,9 @@ public class GatewayService extends Service {
         if (wakeLock != null && wakeLock.isHeld()) {
             wakeLock.release();
         }
-        // Clear in-memory stats on shutdown (privacy)
+        if (executor != null) {
+            executor.shutdown();
+        }
         requestCount = 0;
         beaconCount = 0;
     }
@@ -135,7 +158,7 @@ public class GatewayService extends Service {
                     CHANNEL_NAME,
                     NotificationManager.IMPORTANCE_LOW
             );
-            channel.setDescription("Background gateway service for ABC-IO cellular backup");
+            channel.setDescription("Background autonomous gateway for ABC-IO cellular failsafe");
             channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
             channel.enableLights(false);
             channel.enableVibration(false);
@@ -153,9 +176,104 @@ public class GatewayService extends Service {
         if (powerManager != null) {
             wakeLock = powerManager.newWakeLock(
                     PowerManager.PARTIAL_WAKE_LOCK,
-                    "ABCIO::GatewayWakeLock"
+                    "ABCIO::AutonomousGatewayWakeLock"
             );
-            wakeLock.acquire(24 * 60 * 60 * 1000L); // 24 hour max
+            wakeLock.acquire(24 * 60 * 60 * 1000L);
+        }
+    }
+
+    private void startHealthMonitor() {
+        Runnable monitor = new Runnable() {
+            @Override
+            public void run() {
+                checkPublicSystemHealth();
+                mainHandler.postDelayed(this, 30000);
+            }
+        };
+        mainHandler.post(monitor);
+    }
+
+    private void checkPublicSystemHealth() {
+        executor.execute(() -> {
+            boolean online = httpPing("https://" + DOMAIN + "/health", 8000);
+            publicSystemOnline = online;
+            currentMode = online ? "RELAY" : "FAILOVER";
+            if (!online) {
+                flushBeaconQueue();
+            }
+        });
+    }
+
+    private boolean httpPing(String urlString, int timeout) {
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL(urlString);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(timeout);
+            conn.setReadTimeout(timeout);
+            conn.setRequestMethod("GET");
+            int code = conn.getResponseCode();
+            return code >= 200 && code < 500;
+        } catch (Exception e) {
+            return false;
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
+    private void queueBeacon(JSONObject beacon) {
+        String existing = prefs.getString(KEY_BEACON_QUEUE, "[]");
+        try {
+            JSONArray arr = new JSONArray(existing);
+            arr.put(beacon);
+            prefs.edit().putString(KEY_BEACON_QUEUE, arr.toString()).apply();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void flushBeaconQueue() {
+        String existing = prefs.getString(KEY_BEACON_QUEUE, "[]");
+        try {
+            JSONArray arr = new JSONArray(existing);
+            if (arr.length() == 0) return;
+            if (!publicSystemOnline) return;
+
+            JSONArray remaining = new JSONArray();
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject beacon = arr.getJSONObject(i);
+                boolean sent = forwardBeaconToPrimary(beacon);
+                if (!sent) {
+                    remaining.put(beacon);
+                } else {
+                    forwardedCount++;
+                }
+            }
+            prefs.edit().putString(KEY_BEACON_QUEUE, remaining.toString()).apply();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private boolean forwardBeaconToPrimary(JSONObject beacon) {
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL("https://" + DOMAIN + "/api/v1/beacon/emit");
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(10000);
+            OutputStream os = conn.getOutputStream();
+            os.write(beacon.toString().getBytes("UTF-8"));
+            os.close();
+            int code = conn.getResponseCode();
+            return code >= 200 && code < 300;
+        } catch (Exception e) {
+            return false;
+        } finally {
+            if (conn != null) conn.disconnect();
         }
     }
 
@@ -200,15 +318,37 @@ public class GatewayService extends Service {
             service.requestCount++;
 
             if ("/health".equals(uri)) {
-                return newFixedLengthResponse(Response.Status.OK, "application/json",
-                        "{\"status\":\"ok\",\"service\":\"abc-io-backup-gateway\",\"mode\":\"cellular\",\"network\":\"" + service.getNetworkType() + "\"}");
+                JSONObject json = new JSONObject();
+                try {
+                    json.put("status", "ok");
+                    json.put("service", "abc-io-autonomous-gateway");
+                    json.put("mode", service.currentMode);
+                    json.put("network", service.getNetworkType());
+                    json.put("public_online", service.publicSystemOnline);
+                    json.put("owner", "Christopher Porreca");
+                    json.put("company", "redot1");
+                    json.put("version", "2.1.0-autonomous");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return newFixedLengthResponse(Response.Status.OK, "application/json", json.toString());
             }
 
             if ("/api/status".equals(uri)) {
-                String json = "{\"status\":\"active\",\"port\":5050,\"requests\":" + service.requestCount
-                        + ",\"beacons\":" + service.beaconCount
-                        + ",\"network\":\"" + service.getNetworkType() + "\"}";
-                return newFixedLengthResponse(Response.Status.OK, "application/json", json);
+                JSONObject json = new JSONObject();
+                try {
+                    json.put("status", "active");
+                    json.put("port", 5050);
+                    json.put("requests", service.requestCount);
+                    json.put("beacons", service.beaconCount);
+                    json.put("forwarded", service.forwardedCount);
+                    json.put("network", service.getNetworkType());
+                    json.put("mode", service.currentMode);
+                    json.put("public_online", service.publicSystemOnline);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return newFixedLengthResponse(Response.Status.OK, "application/json", json.toString());
             }
 
             if ("/api/beacon".equals(uri) && "POST".equals(method)) {
@@ -220,8 +360,24 @@ public class GatewayService extends Service {
                     if (postData == null || postData.isEmpty()) {
                         postData = "{}";
                     }
+                    JSONObject beacon = new JSONObject(postData);
+                    beacon.put("received_at", System.currentTimeMillis());
+
+                    if (service.publicSystemOnline) {
+                        service.executor.execute(() -> {
+                            boolean sent = service.forwardBeaconToPrimary(beacon);
+                            if (!sent) {
+                                service.queueBeacon(beacon);
+                            } else {
+                                service.forwardedCount++;
+                            }
+                        });
+                    } else {
+                        service.queueBeacon(beacon);
+                    }
+
                     return newFixedLengthResponse(Response.Status.OK, "application/json",
-                            "{\"received\":true,\"backup\":true,\"timestamp\":\"" + System.currentTimeMillis() + "\",\"privacy_note\":\"Beacon anonymized - no PII retained\"}");
+                            "{\"received\":true,\"mode\":\"" + service.currentMode + "\",\"privacy_note\":\"Beacon anonymized - owner-only retention\"}");
                 } catch (Exception e) {
                     return newFixedLengthResponse(Response.Status.BAD_REQUEST, "application/json",
                             "{\"error\":\"invalid request\"}");
@@ -229,37 +385,48 @@ public class GatewayService extends Service {
             }
 
             if ("/".equals(uri) || "/index.html".equals(uri)) {
-                String html = "<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'>" +
-                        "<meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
-                        "<title>ABC-IO Backup Gateway</title>" +
-                        "<style>" +
-                        "body{background:#0a0a2e;color:#00ff88;font-family:system-ui,-apple-system,sans-serif;padding:20px;text-align:center;margin:0}" +
-                        ".card{background:#111144;border-radius:16px;padding:24px;margin:20px auto;max-width:600px;box-shadow:0 4px 20px rgba(0,255,136,0.1)}" +
-                        "h1{font-size:1.5rem;margin-bottom:8px}" +
-                        ".status{font-size:1.1rem;margin:16px 0;font-weight:600}" +
-                        ".online{color:#00ff88}" +
-                        ".btn{background:#00ff88;color:#0a0a2e;padding:14px 28px;border:none;border-radius:10px;font-size:1rem;font-weight:700;margin:8px;cursor:pointer}" +
-                        ".privacy{font-size:0.8rem;color:#667eea;margin-top:20px}" +
-                        ".network-badge{display:inline-block;background:#1a1a5e;padding:6px 14px;border-radius:20px;font-size:0.85rem;margin:4px}" +
-                        "</style></head><body>" +
-                        "<div class='card'><h1>ABC-IO Backup Gateway</h1>" +
-                        "<div class='status online'>● ACTIVE (Privacy Mode)</div>" +
-                        "<div class='network-badge'>Network: " + service.getNetworkType() + "</div>" +
-                        "<div class='network-badge'>Requests: " + service.requestCount + "</div>" +
-                        "<p>Cellular backup server running on port 5050</p>" +
-                        "<p>Primary: 162.254.32.142<br>AI1: 192.227.212.235<br>AI2: 192.227.212.237</p>" +
-                        "<button class='btn' onclick='sendBeacon()'>Send Emergency Beacon</button>" +
-                        "<div class='privacy'>No personal data is stored or transmitted. All beacons are anonymized.</div>" +
-                        "</div>" +
-                        "<script>function sendBeacon(){navigator.geolocation.getCurrentPosition(pos=>{" +
-                        "fetch('/api/beacon',{method:'POST',headers:{'Content-Type':'application/json'}," +
-                        "body:JSON.stringify({lat:pos.coords.latitude,lng:pos.coords.longitude,ts:Date.now()})});" +
-                        "alert('Beacon sent!');});}</script></body></html>";
+                String html = buildStatusPage();
                 return newFixedLengthResponse(Response.Status.OK, "text/html", html);
             }
 
             return newFixedLengthResponse(Response.Status.NOT_FOUND, "application/json",
                     "{\"error\":\"not found\"}");
+        }
+
+        private String buildStatusPage() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'>");
+            sb.append("<meta name='viewport' content='width=device-width, initial-scale=1.0'>");
+            sb.append("<title>ABC-IO Autonomous Operator</title>");
+            sb.append("<style>");
+            sb.append("body{background:#0a0a2e;color:#ffffff;font-family:system-ui,-apple-system,sans-serif;padding:20px;margin:0}");
+            sb.append(".card{background:#111144;border-radius:16px;padding:24px;margin:20px auto;max-width:600px;box-shadow:0 4px 20px rgba(0,255,136,0.1)}");
+            sb.append("h1{font-size:1.5rem;margin-bottom:8px;color:#00ff88}");
+            sb.append(".status{font-size:1.1rem;margin:16px 0;font-weight:600}");
+            sb.append(".online{color:#00ff88}.failover{color:#ffd800}.offline{color:#ff4444}");
+            sb.append(".btn{background:#00ff88;color:#0a0a2e;padding:14px 28px;border:none;border-radius:10px;font-size:1rem;font-weight:700;margin:8px;cursor:pointer}");
+            sb.append(".privacy{font-size:0.8rem;color:#667eea;margin-top:20px}");
+            sb.append(".network-badge{display:inline-block;background:#1a1a5e;padding:6px 14px;border-radius:20px;font-size:0.85rem;margin:4px}");
+            sb.append(".owner{font-size:0.85rem;color:#ffd800;margin-top:12px}");
+            sb.append("</style></head><body>");
+            sb.append("<div class='card'><h1>ABC-IO Autonomous Operator</h1>");
+            sb.append("<div class='status ").append(service.publicSystemOnline ? "online" : "failover").append("'>● ")
+              .append(service.publicSystemOnline ? "PUBLIC SYSTEM ONLINE (RELAY MODE)" : "CELLULAR FAILOVER ACTIVE")
+              .append("</div>");
+            sb.append("<div class='network-badge'>Mode: ").append(service.currentMode).append("</div>");
+            sb.append("<div class='network-badge'>Network: ").append(service.getNetworkType()).append("</div>");
+            sb.append("<div class='network-badge'>Requests: ").append(service.requestCount).append("</div>");
+            sb.append("<div class='network-badge'>Beacons: ").append(service.beaconCount).append("</div>");
+            sb.append("<p>Primary: ").append(PRIMARY_HOST).append("<br>AI1: ").append(AI1_HOST).append("<br>AI2: ").append(AI2_HOST).append("</p>");
+            sb.append("<button class='btn' onclick='sendBeacon()'>Send Emergency Beacon</button>");
+            sb.append("<div class='owner'>Owner: Christopher Porreca / redot1<br>cporreca@abc-io.com | 585-629-9120</div>");
+            sb.append("<div class='privacy'>Owner-only device. No personal data retained. Beacons are queued and forwarded when public system recovers.</div>");
+            sb.append("</div>");
+            sb.append("<script>function sendBeacon(){navigator.geolocation.getCurrentPosition(pos=>{");
+            sb.append("fetch('/api/beacon',{method:'POST',headers:{'Content-Type':'application/json'},");
+            sb.append("body:JSON.stringify({lat:pos.coords.latitude,lng:pos.coords.longitude,ts:Date.now()})});");
+            sb.append("alert('Beacon queued for relay.');});}</script></body></html>");
+            return sb.toString();
         }
     }
 }

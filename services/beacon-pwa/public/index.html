@@ -37,18 +37,22 @@
   <div class="header-inner">
     <a href="/" class="logo-link">
       <img src="/abc-io_logo.png" alt="ABC-IO" class="logo-img">
-      <span class="brand-name">ABC-IO Beacon</span>
+      <span class="brand-name">ABC-IO</span>
     </a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/features.html">Features</a>
+      <a href="/pricing.html">Pricing</a>
+      <a href="/docs.html">API Docs</a>
+      <a href="/help.html">Help</a>
+      <a href="/dashboard.html">Dashboard</a>
+    </nav>
   </div>
 </header>
+
 <main>
-
-  <header>
-    <h1><img src="/abc-io_logo.png" alt="ABC-IO"> ABC-IO Beacon</h1>
-    <small id="ts"></small>
-  </header>
-
-  <div class="card">
+<p style="text-align:right;color:var(--text-muted);margin:0 0 0.5rem 0"><small id="ts"></small></p>
+<div class="card">
     <h2>Emit Beacon</h2>
     <form id="emitForm">
       <label for="deviceType">Device Type</label>
@@ -80,8 +84,28 @@
     <button class="secondary" id="refreshBtn">Refresh Nearby</button>
     <div id="beaconList"><p class="small">Click refresh to load active beacons near you.</p></div>
   </div>
-
-  <script>
+</main>
+<footer class="brand-footer">
+  <div class="footer-inner">
+    <div>
+      <h4>ABC-IO</h4>
+      <p>Global Sensory Interface Communications Provider and AI Software ISP System.</p>
+    </div>
+    <div>
+      <h4>Contact</h4>
+      <p>Christopher Porreca / redot1</p>
+      <p><a href="mailto:cporreca@abc-io.com">cporreca@abc-io.com</a></p>
+      <p><a href="tel:585-629-9120">585-629-9120</a></p>
+    </div>
+    <div>
+      <h4>Legal</h4>
+      <p><a href="/privacy.html">Privacy Policy</a></p>
+      <p><a href="/terms.html">Terms of Service</a></p>
+    </div>
+    <p class="copyright">&copy; 2026 ABC-IO by Christopher Porreca / redot1. All rights reserved. Private operational system.</p>
+  </div>
+</footer>
+<script>
     document.getElementById('ts').textContent = new Date().toLocaleString();
 
     if ('serviceWorker' in navigator) {
@@ -209,12 +233,8 @@
       );
     });
   </script>
-</main>
-<footer class="brand-footer">
-  <div class="footer-inner">
-    <p class="copyright">&copy; 2026 ABC-IO by Christopher Porreca / redot1. Private safety beacon system.</p>
-  </div>
-</footer>
+
+
 
 </body>
 </html>

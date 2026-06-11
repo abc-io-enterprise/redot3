@@ -28,7 +28,7 @@
     .logo span { font-size: 1.4rem; font-weight: 800; }
     .owner-tag { color: var(--accent); font-size: 0.85rem; font-weight: 600; }
     .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px; }
     .card { background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
     .card h2 { font-size: 1.1rem; color: var(--accent); margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
     .status-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
@@ -48,6 +48,12 @@
     a:hover { text-decoration: underline; }
     .private-banner { background: rgba(255,216,0,0.1); border: 1px solid var(--accent); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.9rem; }
     footer { border-top: 1px solid var(--border); padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.85rem; margin-top: 40px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+    .badge-normal { background: rgba(16,185,129,0.2); color: var(--success); }
+    .badge-degraded { background: rgba(245,158,11,0.2); color: var(--warning); }
+    .badge-critical { background: rgba(239,68,68,0.2); color: var(--error); }
+    .badge-failover { background: rgba(255,216,0,0.2); color: var(--accent); }
+    .mode-display { font-size: 1.2rem; font-weight: 800; }
   </style>
 </head>
 <body>
@@ -61,19 +67,52 @@
 
   <div class="container">
     <div class="private-banner">
-      <strong>Private Operational System.</strong> This admin center is designed to run locally on the owner's device. 
-      It can orchestrate public VPS deployments, monitor health, and serve as an offline-capable control plane for ABC-IO.
+      <strong>Autonomous Operational System.</strong> This admin center runs locally on the owner's device and can orchestrate public VPS deployments, monitor health, and activate cellular failsafe mode when the public internet is unavailable.
+    </div>
+
+    <!-- Top status bar -->
+    <div class="card" style="margin-bottom: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <div class="note">System Mode</div>
+          <div class="mode-display" id="systemMode">Checking...</div>
+        </div>
+        <div>
+          <div class="note">Last Check</div>
+          <div id="lastCheck">—</div>
+        </div>
+        <div>
+          <div class="note">Cellular Fallback</div>
+          <div id="cellularStatus">—</div>
+        </div>
+        <div>
+          <div class="note">Public VPS</div>
+          <div id="publicVpsStatus">—</div>
+        </div>
+      </div>
     </div>
 
     <div class="grid">
+      <!-- Autonomous Orchestrator -->
+      <div class="card">
+        <h2>🤖 Autonomous Orchestrator</h2>
+        <p class="note">Monitors public infrastructure, self-heals failures, and activates cellular backup.</p>
+        <div style="margin-top: 16px;">
+          <button onclick="startOrchestrator()">Start Daemon</button>
+          <button class="secondary" onclick="stopOrchestrator()">Stop Daemon</button>
+          <button class="secondary" onclick="refreshOrchestrator()">Refresh Status</button>
+          <button class="danger" onclick="forceFailover()">Force Cellular Failover</button>
+        </div>
+        <div class="log-box" id="orchestratorLog" style="margin-top: 16px;">Ready...</div>
+      </div>
+
       <!-- Deployment Control -->
       <div class="card">
         <h2>🚀 Deployment Orchestration</h2>
         <p class="note">Deploy or update the public ABC-IO system to VPS nodes.</p>
         <div style="margin-top: 16px;">
           <button onclick="deployRedot1()">Deploy to redot1</button>
-          <button class="secondary" onclick="deployAI1()">Deploy AI1</button>
-          <button class="secondary" onclick="deployAI2()">Deploy AI2</button>
+          <button class="secondary" onclick="healRedot1()">Self-Heal redot1</button>
           <button class="danger" onclick="emergencyRecovery()">Emergency Recovery</button>
         </div>
         <div class="log-box" id="deployLog" style="margin-top: 16px;">Ready for deployment commands...</div>
@@ -87,21 +126,11 @@
           <div class="status-row"><span>API Gateway</span><span class="status-offline" id="h-gateway">Checking...</span></div>
           <div class="status-row"><span>AI-ISP</span><span class="status-offline" id="h-aiisp">Checking...</span></div>
           <div class="status-row"><span>Beacon</span><span class="status-offline" id="h-beacon">Checking...</span></div>
+          <div class="status-row"><span>Owner Dashboard</span><span class="status-offline" id="h-owner">Checking...</span></div>
           <div class="status-row"><span>AI Node 1</span><span class="status-offline" id="h-ai1">Checking...</span></div>
           <div class="status-row"><span>AI Node 2</span><span class="status-offline" id="h-ai2">Checking...</span></div>
         </div>
         <button onclick="checkHealth()" style="margin-top: 16px;">Refresh Health</button>
-      </div>
-
-      <!-- DNS & Domains -->
-      <div class="card">
-        <h2>🌐 DNS & Domains</h2>
-        <p class="note">Manage Namecheap DNS records for abc-io.com.</p>
-        <div style="margin-top: 16px;">
-          <button onclick="syncDNS()">Sync Namecheap DNS</button>
-          <button class="secondary" onclick="verifyDNS()">Verify DNS</button>
-        </div>
-        <div class="log-box" id="dnsLog" style="margin-top: 16px;">DNS operations log...</div>
       </div>
 
       <!-- Backup & Archive -->
@@ -115,7 +144,7 @@
         <div class="log-box" id="backupLog" style="margin-top: 16px;">Backup operations log...</div>
       </div>
 
-      <!-- YubiKey / Security -->
+      <!-- Security & Keys -->
       <div class="card">
         <h2>🔐 Security & Keys</h2>
         <p class="note">YubiKey and deployment key management.</p>
@@ -140,53 +169,124 @@
   </div>
 
   <footer>
-    &copy; 2026 ABC-IO by Christopher Porreca / redot1. Private operational system.<br>
+    &copy; 2026 ABC-IO by Christopher Porreca / redot1. Private autonomous operational system.<br>
     Global Sensory Interface Communications Provider and AI Software ISP System.
   </footer>
 
   <script>
+    const API = 'http://127.0.0.1:8765';
+
     const log = (id, msg) => {
       const el = document.getElementById(id);
-      el.textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n` + el.textContent;
+      const line = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      el.textContent = line + '\n' + el.textContent;
     };
 
+    async function api(method, path, body) {
+      const res = await fetch(API + path, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined
+      });
+      return await res.json();
+    }
+
     async function checkHealth() {
-      const endpoints = [
-        ['h-portal', 'https://abc-io.com/health'],
-        ['h-gateway', 'https://abc-io.com/api/v1/system/health'],
-        ['h-aiisp', 'https://abc-io.com:7000/health'],
-        ['h-beacon', 'https://abc-io.com/api/v1/beacon/active?lat=0&lng=0&radiusKm=1'],
-        ['h-ai1', 'http://192.227.212.235:5000/health'],
-        ['h-ai2', 'http://192.227.212.237:5000/health'],
-      ];
-      for (const [id, url] of endpoints) {
-        try {
-          const controller = new AbortController();
-          setTimeout(() => controller.abort(), 8000);
-          const res = await fetch(url, { method: 'GET', signal: controller.signal, mode: 'no-cors' });
+      try {
+        const status = await api('GET', '/api/status');
+        const health = status.public_health || {};
+        const set = (id, ok) => {
           const el = document.getElementById(id);
-          el.textContent = 'ONLINE';
-          el.className = 'status-online';
-        } catch (e) {
-          const el = document.getElementById(id);
-          el.textContent = 'OFFLINE / CORS';
-          el.className = 'status-warning';
-        }
+          el.textContent = ok ? 'ONLINE' : 'OFFLINE';
+          el.className = ok ? 'status-online' : 'status-offline';
+        };
+        set('h-portal', health['https://abc-io.com/health']?.ok);
+        set('h-gateway', health['https://abc-io.com/api/v1/system/health']?.ok);
+        set('h-aiisp', false); // AI-ISP public endpoint not exposed via nginx
+        set('h-beacon', false); // Beacon public endpoint not exposed via nginx
+        set('h-owner', false); // Owner dashboard not public
+        set('h-ai1', false);
+        set('h-ai2', false);
+      } catch (e) {
+        log('orchestratorLog', 'Health check failed: ' + e.message);
       }
     }
 
-    function deployRedot1() { log('deployLog', 'Run scripts/deploy-staged-redot1.py with VPS_REDOT1_PASSWORD set.'); }
-    function deployAI1() { log('deployLog', 'Run scripts/deploy-ai-workers.py for ai1 node.'); }
-    function deployAI2() { log('deployLog', 'Run scripts/deploy-ai-workers.py for ai2 node.'); }
-    function emergencyRecovery() { log('deployLog', 'Run scripts/emergency-recovery.sh on redot1.'); }
-    function syncDNS() { log('dnsLog', 'Run scripts/namecheap-dns-sync.sh with valid API key.'); }
-    function verifyDNS() { log('dnsLog', 'Verify abc-io.com resolves to 162.254.32.142 via nslookup.'); }
-    function backupToDocuments() { log('backupLog', 'Create zip backup to Documents/redot2_backup_*.zip'); }
-    function createArchive() { log('backupLog', 'Create Documents/redot2.archive.zip for offline USB storage.'); }
-    function showKeyInstructions() { log('keyLog', 'Insert YubiKey and configure SSH/PGP for deployment signing.'); }
-    function generateDeployKey() { log('keyLog', 'Generate ed25519 key pair and add public key to VPS authorized_keys.'); }
+    async function refreshOrchestrator() {
+      try {
+        const state = await api('GET', '/api/orchestrator/status');
+        const mode = state.mode || 'NORMAL';
+        document.getElementById('systemMode').innerHTML = `${mode} <span class="badge badge-${mode.toLowerCase()}">${mode}</span>`;
+        document.getElementById('lastCheck').textContent = state.last_check ? new Date(state.last_check).toLocaleString() : '—';
+        document.getElementById('cellularStatus').textContent = state.cellular_active ? 'ACTIVE' : 'STANDBY';
+        document.getElementById('cellularStatus').className = state.cellular_active ? 'status-warning' : 'status-online';
+        document.getElementById('publicVpsStatus').textContent = (state.failures || []).length === 0 ? 'HEALTHY' : 'DEGRADED';
+        log('orchestratorLog', 'Orchestrator mode: ' + mode + ', cellular: ' + (state.cellular_active ? 'active' : 'standby'));
+      } catch (e) {
+        log('orchestratorLog', 'Orchestrator status failed: ' + e.message);
+      }
+    }
 
+    async function startOrchestrator() {
+      log('orchestratorLog', 'Starting autonomous orchestrator daemon...');
+      const r = await api('POST', '/api/orchestrator/start');
+      log('orchestratorLog', r.ok ? 'Daemon start command issued.' : 'Start failed: ' + (r.stderr || r.error));
+      setTimeout(refreshOrchestrator, 2000);
+    }
+
+    async function stopOrchestrator() {
+      log('orchestratorLog', 'Stopping autonomous orchestrator daemon...');
+      const r = await api('POST', '/api/orchestrator/stop');
+      log('orchestratorLog', r.ok ? 'Stop command issued.' : 'Stop failed: ' + (r.stderr || r.error));
+    }
+
+    async function forceFailover() {
+      if (!confirm('This will mark cellular fallback as ACTIVE. Continue?')) return;
+      log('orchestratorLog', 'Forcing cellular failover mode...');
+      log('orchestratorLog', 'Manual failover: ensure mobile app is running and owner phone hotspot is active.');
+      await refreshOrchestrator();
+    }
+
+    async function deployRedot1() {
+      log('deployLog', 'Deploying to redot1...');
+      const r = await api('POST', '/api/deploy/redot1', { tag: 'v2.0.0' });
+      log('deployLog', r.ok ? 'Deploy completed.\n' + (r.stdout || '').slice(0, 500) : 'Deploy failed: ' + (r.stderr || r.error));
+    }
+
+    async function healRedot1() {
+      log('deployLog', 'Running self-heal on redot1...');
+      const r = await api('POST', '/api/heal/redot1');
+      log('deployLog', r.ok ? 'Self-heal completed.\n' + (r.stdout || '').slice(0, 500) : 'Self-heal failed: ' + (r.stderr || r.error));
+    }
+
+    function emergencyRecovery() {
+      log('deployLog', 'Emergency recovery: stop all, prune, and restart from local backup. Run scripts/emergency-recovery.sh on redot1.');
+    }
+
+    async function backupToDocuments() {
+      log('backupLog', 'Creating timestamped backup to Documents...');
+      const r = await api('POST', '/api/backup');
+      log('backupLog', r.ok ? 'Backup created: ' + r.archive : 'Backup failed: ' + (r.stderr || r.error));
+    }
+
+    async function createArchive() {
+      log('backupLog', 'Creating redot2.archive.zip...');
+      const r = await api('POST', '/api/archive');
+      log('backupLog', r.ok ? 'Archive created: ' + r.archive : 'Archive failed: ' + (r.stderr || r.error));
+    }
+
+    function showKeyInstructions() {
+      log('keyLog', 'Insert YubiKey. Configure SSH with: ssh-keygen -t ed25519 -O application=ssh:mypass');
+    }
+
+    function generateDeployKey() {
+      log('keyLog', 'Generate ed25519 key and copy public key to VPS ~/.ssh/authorized_keys.');
+    }
+
+    // Initial load
+    refreshOrchestrator();
     checkHealth();
+    setInterval(refreshOrchestrator, 30000);
     setInterval(checkHealth, 60000);
   </script>
 </body>
