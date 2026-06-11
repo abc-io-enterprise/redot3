@@ -1,16 +1,23 @@
-ABC-IO v2.0 - PRODUCTION LIVE
+ABC-IO v2.0 / redot1 - PRODUCTION LIVE
 ================================
 
 Status: REDOT2 COMPLETE SYSTEM BUILT AND LIVE
 Domain: https://abc-io.com
 Date: 2026-06-11
 Version: 2.1.0-autonomous
+Tag: v2.1.0
 
+Owner: Christopher Porreca / redot1
+Company: redot1 — A Personal Communications Provider
 Contact:
-  Owner: Christopher Porreca / redot1
   Email: cporreca@abc-io.com
   Website: https://abc-io.com
   Phone: 585-629-9120
+
+System Definition:
+  redot1 by Christopher Porreca — a global interfacing and communications
+  provider created in 2026 with an AI-autonomous ISP backend system for
+  private and business use.
 
 Infrastructure:
   Primary Node (redot1): 162.254.32.142 - Full stack (19 services, autonomous backend included)
@@ -23,12 +30,21 @@ Autonomous Systems:
   - Biometric owner-only Android APK with hardcoded cellular failsafe gateway
   - Offline-capable desktop admin center with local backend
 
+Public Services:
+  - Community Hub / Human Interaction Portal: https://abc-io.com/community.html
+  - Solutions: https://abc-io.com/solutions.html
+  - Customer Area: https://abc-io.com/customer-area.html
+  - Family Dashboard: https://abc-io.com/family-dashboard.html
+  - Free Beacon PWA: https://abc-io.com/beacon/
+  - Help Center API: https://abc-io.com/api/v1/help/articles
+  - Beacon Awareness API: https://abc-io.com/api/v1/beacon/awareness
+
 SSL: Let's Encrypt valid through 2026-09-09
 DNS: abc-io.com and www.abc-io.com resolving to 162.254.32.142
 
 All services verified and operational.
 Desktop may disconnect; public VPS runs autonomously.
 
-See docs/ABC_IO_V2_PRODUCTION_RUNBOOK.md and AUTONOMOUS_SYSTEM.md for full details.
+See SYSTEM_DEFINITION.md, FINAL_STATUS.md, and AUTONOMOUS_SYSTEM.md for full details.
 
-#abcio #live #production #autonomous #complete
+#redot1 #abcio #live #production #autonomous #complete
