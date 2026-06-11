@@ -1,0 +1,4 @@
+# YubiKey Public SSH Key Placeholder
+# Replace this file with the actual yubikey-ssh.pub after running scripts/setup-yubikey.sh
+# Owner: Christopher Porreca / redot1
+# Contact: cporreca@abc-io.com | 585-629-9120

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ABC-IO Admin Center | redot1</title>
+  <link rel="icon" type="image/x-icon" href="../services/public-portal/src/public/favicon.ico">
+  <style>
+    :root {
+      --bg: #103050;
+      --bg-dark: #0a2438;
+      --bg-light: #1a4a70;
+      --text: #ffffff;
+      --text-muted: #8fb8d8;
+      --accent: #ffd800;
+      --accent-light: #fff0a3;
+      --border: rgba(255,255,255,0.15);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); }
+    body { background: linear-gradient(180deg, var(--bg) 0%, var(--bg-dark) 100%); background-attachment: fixed; }
+    header { background: rgba(10,36,56,0.95); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo img { height: 40px; }
+    .logo span { font-size: 1.4rem; font-weight: 800; }
+    .owner-tag { color: var(--accent); font-size: 0.85rem; font-weight: 600; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+    .card { background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+    .card h2 { font-size: 1.1rem; color: var(--accent); margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    .status-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    .status-row:last-child { border-bottom: none; }
+    .status-online { color: var(--success); font-weight: 700; }
+    .status-offline { color: var(--error); font-weight: 700; }
+    .status-warning { color: var(--warning); font-weight: 700; }
+    button { background: var(--accent); color: var(--bg-dark); border: none; padding: 12px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; margin-right: 8px; margin-bottom: 8px; transition: all 0.2s; }
+    button:hover { background: var(--accent-light); transform: translateY(-2px); }
+    button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    button.secondary:hover { background: rgba(255,255,255,0.1); }
+    button.danger { background: var(--error); color: white; }
+    input, select, textarea { width: 100%; padding: 12px; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; color: var(--text); margin-bottom: 10px; }
+    .log-box { background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.8rem; height: 180px; overflow-y: auto; white-space: pre-wrap; }
+    .note { color: var(--text-muted); font-size: 0.85rem; margin-top: 8px; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .private-banner { background: rgba(255,216,0,0.1); border: 1px solid var(--accent); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.9rem; }
+    footer { border-top: 1px solid var(--border); padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.85rem; margin-top: 40px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <img src="../services/public-portal/src/public/abc-io_logo.png" alt="ABC-IO">
+      <span>ABC-IO Admin Center</span>
+    </div>
+    <div class="owner-tag">PRIVATE — redot1 / Christopher Porreca</div>
+  </header>
+
+  <div class="container">
+    <div class="private-banner">
+      <strong>Private Operational System.</strong> This admin center is designed to run locally on the owner's device. 
+      It can orchestrate public VPS deployments, monitor health, and serve as an offline-capable control plane for ABC-IO.
+    </div>
+
+    <div class="grid">
+      <!-- Deployment Control -->
+      <div class="card">
+        <h2>🚀 Deployment Orchestration</h2>
+        <p class="note">Deploy or update the public ABC-IO system to VPS nodes.</p>
+        <div style="margin-top: 16px;">
+          <button onclick="deployRedot1()">Deploy to redot1</button>
+          <button class="secondary" onclick="deployAI1()">Deploy AI1</button>
+          <button class="secondary" onclick="deployAI2()">Deploy AI2</button>
+          <button class="danger" onclick="emergencyRecovery()">Emergency Recovery</button>
+        </div>
+        <div class="log-box" id="deployLog" style="margin-top: 16px;">Ready for deployment commands...</div>
+      </div>
+
+      <!-- Health Monitor -->
+      <div class="card">
+        <h2>📊 Public Health Monitor</h2>
+        <div id="healthRows">
+          <div class="status-row"><span>Public Portal</span><span class="status-offline" id="h-portal">Checking...</span></div>
+          <div class="status-row"><span>API Gateway</span><span class="status-offline" id="h-gateway">Checking...</span></div>
+          <div class="status-row"><span>AI-ISP</span><span class="status-offline" id="h-aiisp">Checking...</span></div>
+          <div class="status-row"><span>Beacon</span><span class="status-offline" id="h-beacon">Checking...</span></div>
+          <div class="status-row"><span>AI Node 1</span><span class="status-offline" id="h-ai1">Checking...</span></div>
+          <div class="status-row"><span>AI Node 2</span><span class="status-offline" id="h-ai2">Checking...</span></div>
+        </div>
+        <button onclick="checkHealth()" style="margin-top: 16px;">Refresh Health</button>
+      </div>
+
+      <!-- DNS & Domains -->
+      <div class="card">
+        <h2>🌐 DNS & Domains</h2>
+        <p class="note">Manage Namecheap DNS records for abc-io.com.</p>
+        <div style="margin-top: 16px;">
+          <button onclick="syncDNS()">Sync Namecheap DNS</button>
+          <button class="secondary" onclick="verifyDNS()">Verify DNS</button>
+        </div>
+        <div class="log-box" id="dnsLog" style="margin-top: 16px;">DNS operations log...</div>
+      </div>
+
+      <!-- Backup & Archive -->
+      <div class="card">
+        <h2>💾 Backup & Archive</h2>
+        <p class="note">Create local backups and offline archives.</p>
+        <div style="margin-top: 16px;">
+          <button onclick="backupToDocuments()">Backup to Documents</button>
+          <button class="secondary" onclick="createArchive()">Create redot2.archive.zip</button>
+        </div>
+        <div class="log-box" id="backupLog" style="margin-top: 16px;">Backup operations log...</div>
+      </div>
+
+      <!-- YubiKey / Security -->
+      <div class="card">
+        <h2>🔐 Security & Keys</h2>
+        <p class="note">YubiKey and deployment key management.</p>
+        <div style="margin-top: 16px;">
+          <button onclick="showKeyInstructions()">YubiKey Setup</button>
+          <button class="secondary" onclick="generateDeployKey()">Generate Deploy Key</button>
+        </div>
+        <div class="log-box" id="keyLog" style="margin-top: 16px;">Security operations log...</div>
+      </div>
+
+      <!-- Contacts & Info -->
+      <div class="card">
+        <h2>📇 Ownership</h2>
+        <div class="status-row"><span>Company</span><span>redot1</span></div>
+        <div class="status-row"><span>Owner</span><span>Christopher Porreca</span></div>
+        <div class="status-row"><span>Email</span><span><a href="mailto:cporreca@abc-io.com">cporreca@abc-io.com</a></span></div>
+        <div class="status-row"><span>Phone</span><span><a href="tel:585-629-9120">585-629-9120</a></span></div>
+        <div class="status-row"><span>Domain</span><span><a href="https://abc-io.com" target="_blank">abc-io.com</a></span></div>
+        <div class="status-row"><span>GitHub</span><span><a href="https://github.com/abc-io-enterprise/redot2" target="_blank">abc-io-enterprise/redot2</a></span></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    &copy; 2026 ABC-IO by Christopher Porreca / redot1. Private operational system.<br>
+    Global Sensory Interface Communications Provider and AI Software ISP System.
+  </footer>
+
+  <script>
+    const log = (id, msg) => {
+      const el = document.getElementById(id);
+      el.textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n` + el.textContent;
+    };
+
+    async function checkHealth() {
+      const endpoints = [
+        ['h-portal', 'https://abc-io.com/health'],
+        ['h-gateway', 'https://abc-io.com/api/v1/system/health'],
+        ['h-aiisp', 'https://abc-io.com:7000/health'],
+        ['h-beacon', 'https://abc-io.com/api/v1/beacon/active?lat=0&lng=0&radiusKm=1'],
+        ['h-ai1', 'http://192.227.212.235:5000/health'],
+        ['h-ai2', 'http://192.227.212.237:5000/health'],
+      ];
+      for (const [id, url] of endpoints) {
+        try {
+          const controller = new AbortController();
+          setTimeout(() => controller.abort(), 8000);
+          const res = await fetch(url, { method: 'GET', signal: controller.signal, mode: 'no-cors' });
+          const el = document.getElementById(id);
+          el.textContent = 'ONLINE';
+          el.className = 'status-online';
+        } catch (e) {
+          const el = document.getElementById(id);
+          el.textContent = 'OFFLINE / CORS';
+          el.className = 'status-warning';
+        }
+      }
+    }
+
+    function deployRedot1() { log('deployLog', 'Run scripts/deploy-staged-redot1.py with VPS_REDOT1_PASSWORD set.'); }
+    function deployAI1() { log('deployLog', 'Run scripts/deploy-ai-workers.py for ai1 node.'); }
+    function deployAI2() { log('deployLog', 'Run scripts/deploy-ai-workers.py for ai2 node.'); }
+    function emergencyRecovery() { log('deployLog', 'Run scripts/emergency-recovery.sh on redot1.'); }
+    function syncDNS() { log('dnsLog', 'Run scripts/namecheap-dns-sync.sh with valid API key.'); }
+    function verifyDNS() { log('dnsLog', 'Verify abc-io.com resolves to 162.254.32.142 via nslookup.'); }
+    function backupToDocuments() { log('backupLog', 'Create zip backup to Documents/redot2_backup_*.zip'); }
+    function createArchive() { log('backupLog', 'Create Documents/redot2.archive.zip for offline USB storage.'); }
+    function showKeyInstructions() { log('keyLog', 'Insert YubiKey and configure SSH/PGP for deployment signing.'); }
+    function generateDeployKey() { log('keyLog', 'Generate ed25519 key pair and add public key to VPS authorized_keys.'); }
+
+    checkHealth();
+    setInterval(checkHealth, 60000);
+  </script>
+</body>
+</html>
