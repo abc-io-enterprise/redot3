@@ -591,6 +591,131 @@ app.get('/api/v1/beacon/stats', async (req, res) => {
   }
 });
 
+// ─── Free Locational Awareness Endpoint ───────────────────────────────────────
+// No account required. Location is used only to generate the response and is
+// not stored or linked to any identity. All suggestions are deterministic
+// pseudo-public data derived from the coordinates for demo/utility purposes.
+
+async function fetchOpenMeteoWeather(lat, lng) {
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&temperature_unit=fahrenheit&windspeed_unit=mph`;
+    const response = await fetch(url, { headers: { 'User-Agent': 'ABC-IO-Beacon/1.0' } });
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (!data.current_weather) return null;
+    const codes = {
+      0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
+      45: 'Fog', 48: 'Depositing rime fog', 51: 'Light drizzle', 53: 'Moderate drizzle',
+      55: 'Dense drizzle', 61: 'Slight rain', 63: 'Moderate rain', 65: 'Heavy rain',
+      71: 'Slight snow', 73: 'Moderate snow', 75: 'Heavy snow', 95: 'Thunderstorm'
+    };
+    return {
+      source: 'open-meteo.com',
+      temperatureF: data.current_weather.temperature,
+      windSpeedMph: data.current_weather.windspeed,
+      condition: codes[data.current_weather.weathercode] || 'Unknown',
+      isDay: data.current_weather.is_day === 1,
+    };
+  } catch (e) {
+    console.log('[AWARENESS] Open-Meteo fetch failed:', e.message);
+    return null;
+  }
+}
+
+function mockWeather(lat, lng) {
+  const hash = Math.abs(Math.sin(lat * 12.9898 + lng * 78.233) * 43758.5453) % 1;
+  const conditions = ['Clear sky', 'Partly cloudy', 'Overcast', 'Light rain', 'Sunny'];
+  const temp = Math.round(45 + hash * 55);
+  return {
+    source: 'mock-fallback',
+    temperatureF: temp,
+    windSpeedMph: Math.round(hash * 15),
+    condition: conditions[Math.floor(hash * conditions.length)],
+    isDay: true,
+  };
+}
+
+function publicSuggestions(lat, lng) {
+  const hash = Math.abs(Math.sin(lat * 45.123 + lng * 12.789) * 43758.5453) % 1;
+  const categories = [
+    'Public park or recreation area nearby',
+    'Local transit stop within walking distance',
+    'Community center or library',
+    'Hospital or urgent care facility',
+    'Police or fire station nearby',
+    'Grocery or convenience store',
+    'School zone - reduced speed',
+    'Bike lane or pedestrian path',
+  ];
+  const events = [
+    'Farmer\'s market this weekend',
+    'Community safety meeting',
+    'Local weather advisory check',
+    'Free public Wi-Fi hotspot',
+    'Public charging station',
+    'Neighborhood watch active',
+  ];
+  const start = Math.floor(hash * categories.length);
+  const start2 = Math.floor(hash * events.length);
+  return {
+    nearbySuggestions: [
+      categories[start % categories.length],
+      categories[(start + 1) % categories.length],
+      categories[(start + 2) % categories.length],
+    ],
+    publicEvents: [
+      events[start2 % events.length],
+      events[(start2 + 1) % events.length],
+    ],
+  };
+}
+
+app.get('/api/v1/beacon/awareness', async (req, res) => {
+  const lat = parseFloat(req.query.lat);
+  const lng = parseFloat(req.query.lng);
+  const radiusKm = parseFloat(req.query.radiusKm) || 10;
+
+  if (Number.isNaN(lat) || Number.isNaN(lng)) {
+    return res.status(400).json({ error: 'Bad Request', message: 'lat and lng are required numbers.' });
+  }
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Invalid coordinates.' });
+  }
+
+  try {
+    // Public safety alerts from active beacons in the area (anonymized)
+    const beacons = await getActiveBeacons(lat, lng, Math.min(radiusKm, 50));
+    const safetyAlerts = beacons.slice(0, 5).map((b) => ({
+      type: b.beacon_type,
+      distanceKm: b.distance ? parseFloat(b.distance).toFixed(2) : null,
+      message: b.message,
+      status: b.status,
+    }));
+
+    // Weather (free Open-Meteo, fallback to deterministic mock)
+    let weather = await fetchOpenMeteoWeather(lat, lng);
+    if (!weather) {
+      weather = mockWeather(lat, lng);
+    }
+
+    // Nearby suggestions and public events
+    const { nearbySuggestions, publicEvents } = publicSuggestions(lat, lng);
+
+    return res.status(200).json({
+      location: { latitude: lat, longitude: lng, radiusKm },
+      privacyNote: 'Location is used only to generate this response. No PII is stored.',
+      weather,
+      safetyAlerts,
+      nearbySuggestions,
+      publicEvents,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.error('[AWARENESS] Error:', e.message);
+    return res.status(500).json({ error: 'Internal Server Error', message: 'Failed to generate awareness response.' });
+  }
+});
+
 // ─── Error Handling ───────────────────────────────────────────────────────────
 
 app.use((req, res) => {
