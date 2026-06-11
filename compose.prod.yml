@@ -420,12 +420,8 @@ services:
       - ./config/headscale:/etc/headscale:ro
       - headscale-data:/var/lib/headscale
     command: serve
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080 || curl -sf http://localhost:8080 || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 60s
+    # Note: headscale image is distroless — no shell/wget/curl available.
+    # Healthcheck disabled; container health inferred from process state.
     restart: unless-stopped
     logging:
       driver: 'json-file'
