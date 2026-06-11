@@ -19,7 +19,10 @@ BUNDLE_PATH = os.path.join(PROJECT_DIR, BUNDLE_NAME)
 ENV_PATH = os.path.join(PROJECT_DIR, ".env")
 
 def log(msg):
-    print(msg)
+    try:
+        print(msg.encode('utf-8', errors='replace').decode('utf-8'))
+    except:
+        print(msg.encode('ascii', errors='replace').decode('ascii'))
     sys.stdout.flush()
 
 def run_cmd(ssh, command, timeout=60):
