@@ -1,6 +1,7 @@
 """ABC-IO Cross-Sensory Translation Engine (5x5x25 Matrix)."""
 
 import os
+import datetime
 from flask import Flask, jsonify, request
 
 from translators.braille import text_to_braille, braille_to_text
@@ -266,6 +267,38 @@ def api_universal():
         'input_modality': input_modality,
         'output_modality': output_modality,
         'result': result
+    })
+
+
+@app.route('/api/v1/matrix/process', methods=['POST'])
+def api_matrix_process():
+    data = request.get_json(silent=True) or {}
+    matrix = data.get('matrix')
+    metadata = data.get('metadata', {})
+
+    if not matrix or not isinstance(matrix, list) or len(matrix) != 5 or not all(isinstance(row, list) and len(row) == 5 for row in matrix):
+        return jsonify({'error': 'Invalid input payload. Must be standard 5x5c25 matrix configuration.'}), 400
+
+    flat_matrix = [item for row in matrix for item in row]
+    text_mapping = "ABCDEFGHIJKLMNOPQRSTUVWXY"
+    target_sense = metadata.get('targetSense', 'text')
+    sender_id = metadata.get('senderId', 'anonymous')
+
+    if target_sense == 'text':
+        structural_output = ''.join(
+            text_mapping[idx % len(text_mapping)] if val > 0 else ' '
+            for idx, val in enumerate(flat_matrix)
+        ).strip()
+    else:
+        structural_output = f"Sensory Stream Decoded: Key Density Vector {sum(flat_matrix)}"
+
+    return jsonify({
+        'status': 'Success',
+        'compressionRatio': '25:1',
+        'decodedPayload': structural_output,
+        'senderId': sender_id,
+        'targetSense': target_sense,
+        'executionTimestamp': datetime.datetime.utcnow().isoformat() + 'Z'
     })
 
 
