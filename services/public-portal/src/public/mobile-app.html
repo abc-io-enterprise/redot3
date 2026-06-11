@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ABC-IO — Mobile App & APK Download</title>
-<meta name="description" content="Download the ABC-IO mobile app and Android APK. Owner-only cellular failsafe gateway with biometric authentication.">
+<title>ABC-IO — Mobile App</title>
+<meta name="description" content="ABC-IO mobile experience: free beacon PWA, public safety awareness, and community tools. No account required.">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="stylesheet" href="/brand.css">
 <style>
@@ -24,10 +24,9 @@
 .steps li{margin-bottom:12px;color:var(--text-secondary)}
 .status-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#10b981;padding:6px 14px;border-radius:20px;font-size:.85rem;font-weight:600;margin-bottom:16px}
 .status-badge::before{content:'';width:6px;height:6px;background:#10b981;border-radius:50%}
-.warning{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.4);padding:16px;border-radius:var(--radius-md);margin:16px 0}
-.warning p{margin:0;color:var(--text-secondary)}
-.warning strong{color:#f59e0b}
-.file-meta{color:var(--text-muted);font-size:.85rem;margin-top:8px}
+.owner-note{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);padding:16px;border-radius:var(--radius-md);margin:16px 0}
+.owner-note p{margin:0;color:var(--text-secondary)}
+.owner-note strong{color:#00d4ff}
 </style>
 </head>
 <body>
@@ -51,58 +50,42 @@
 </header>
 
 <main class="container">
-  <div class="status-badge">APK Verified & Signed</div>
+  <div class="status-badge">Free · No Account Required</div>
   <h1 class="page-title">ABC-IO Mobile</h1>
-  <p class="page-sub">Take the global mesh network with you. Emergency beacon, cellular backup gateway, and owner controls — all from your Android device.</p>
+  <p class="page-sub">Public safety awareness, community tools, and free beacon services — available on any device.</p>
 
   <div class="card">
-    <h2>📱 Progressive Web App (PWA)</h2>
-    <p>The fastest way to use ABC-IO on mobile. No download required.</p>
+    <h2>📡 Free Beacon & Awareness PWA</h2>
+    <p>The ABC-IO Beacon is a free, installable web app that shares public events, weather, and important local information when you choose to share your location. <strong>We do not track you.</strong> Your location is only used at the moment you submit it to return relevant public information.</p>
     <ol class="steps">
-      <li>Open <strong>https://abc-io.com/beacon/</strong> in Chrome on your Android phone.</li>
-      <li>Tap the Chrome menu (⋮) and choose <strong>Add to Home Screen</strong>.</li>
-      <li>Launch ABC-IO from your home screen like a native app.</li>
+      <li>Open <strong>https://abc-io.com/beacon/</strong> on your phone or computer.</li>
+      <li>Tap <strong>Share Location</strong> if you want local awareness info.</li>
+      <li>Tap your browser menu and choose <strong>Add to Home Screen</strong> to install the PWA.</li>
+      <li>Re-submit your location anytime to refresh the public information.</li>
     </ol>
-    <a href="/beacon/" class="btn btn-outline">Open Beacon PWA →</a>
+    <a href="/beacon/" class="btn btn-primary">Open Free Beacon PWA</a>
+    <a href="/beacon.html" class="btn btn-outline" style="margin-left:12px">Learn More</a>
   </div>
 
   <div class="card">
-    <h2>🛡️ Owner APK — Cellular Failsafe Gateway</h2>
-    <p>The owner-only Android APK turns a phone into an autonomous cellular backup gateway for the ABC-IO mesh. It includes biometric authentication and hardcoded failsafe routes to the production VPS.</p>
-
-    <div class="warning">
-      <p><strong>Owner use only.</strong> This APK requires fingerprint or face unlock to operate and is tied to the redot1 / ABC-IO owner account.</p>
+    <h2>🔒 Owner & Operator Tools</h2>
+    <p>Owner-only applications and cellular backup tools are not distributed on the public website. If you are the system owner or an authorized operator, access these through the secure owner dashboard.</p>
+    <div class="owner-note">
+      <p><strong>Owner access only.</strong> The cellular failsafe APK and biometric gateway are available via the owner dashboard after authentication. They are intentionally not linked from public pages.</p>
     </div>
-
     <p>
-      <a href="/download/redot2-operator.apk" class="btn btn-primary" download>Download Owner APK</a>
-      <a href="/download/redot2-operator.apk.idsig" class="btn btn-outline" download style="margin-left:12px">Download Signature</a>
+      <a href="/login.html" class="btn btn-outline">Account Login</a>
+      <a href="/dashboard.html" class="btn btn-outline" style="margin-left:12px">Dashboard</a>
     </p>
-    <p class="file-meta">redot2-operator.apk • 45 KB • signed with META-INF/ABCIO.RSA • version 2.0.0</p>
-
-    <h3 style="margin-top:24px;font-size:1.2rem">Installation Steps</h3>
-    <ol class="steps">
-      <li>Download <code>redot2-operator.apk</code> to your Android device.</li>
-      <li>Go to <strong>Settings → Security → Install unknown apps</strong> and allow your browser or file manager.</li>
-      <li>Open the APK file and tap <strong>Install</strong>.</li>
-      <li>Launch <strong>ABC-IO Gateway</strong> and authenticate with biometrics.</li>
-      <li>Confirm the dashboard shows Primary, AI1, and AI2 nodes as online.</li>
-    </ol>
-  </div>
-
-  <div class="card">
-    <h2>📲 Latest APK Build</h2>
-    <p>For reference and testing, the latest signed APK build is also available.</p>
-    <p><a href="/download/redot2-latest.apk" class="btn btn-outline" download>Download Latest APK</a></p>
-    <p class="file-meta">redot2-latest.apk • 45 KB • signed</p>
   </div>
 
   <div class="card">
     <h2>🔗 Related Links</h2>
     <p>
-      <a href="/beacon.html">Free Beacon Landing</a> •
+      <a href="/beacon.html">Free Beacon</a> •
+      <a href="/features.html">Features</a> •
+      <a href="/pricing.html">Pricing</a> •
       <a href="/help.html">Help Center</a> •
-      <a href="/dashboard.html">Owner Dashboard</a> •
       <a href="/contact.html">Contact Support</a>
     </p>
   </div>

@@ -51,7 +51,7 @@ input::placeholder{color:#475569}
 <main>
 <div class="card">
   <div class="logo">ABC<span>-IO</span></div>
-  <p class="subtitle">Create your account — free forever</p>
+  <p class="subtitle" id="subtitle">Create your account — free forever</p>
   <div class="error" id="error"></div>
   <div class="success" id="success"></div>
   <form id="signupForm">
@@ -72,11 +72,29 @@ input::placeholder{color:#475569}
       <input type="text" id="accountName" placeholder="Optional — defaults to your email">
     </div>
     <button type="submit" class="btn btn-primary" id="btn">Create Account</button>
+    <input type="hidden" id="selectedTier" value="">
   </form>
   <p class="link">Already have an account? <a href="/login">Log in</a></p>
 </div>
 <script>
 const API = '/api';
+
+const urlParams = new URLSearchParams(window.location.search);
+const tier = urlParams.get('tier') || 'free';
+const selectedTierInput = document.getElementById('selectedTier');
+selectedTierInput.value = tier;
+
+const tierNames = {
+  free: 'Free', basic: 'Basic', standard: 'Standard', pro: 'Pro',
+  business: 'Business', team: 'Team', corporate: 'Corporate',
+  enterprise: 'Enterprise', agency: 'Agency', global: 'Global'
+};
+
+if (tier && tier !== 'free') {
+  document.getElementById('subtitle').textContent = 'Create your account — selected plan: ' + (tierNames[tier] || tier);
+  document.getElementById('btn').textContent = 'Create Account & Continue to Payment';
+}
+
 document.getElementById('signupForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = document.getElementById('btn');
@@ -98,9 +116,27 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
     const data = await res.json();
     if (res.ok) {
       localStorage.setItem('abcio_token', data.token);
-      succ.textContent = 'Account created! Redirecting...';
-      succ.style.display = 'block';
-      setTimeout(() => location.href = '/dashboard', 800);
+      const selectedTier = selectedTierInput.value.toLowerCase();
+      if (selectedTier && selectedTier !== 'free') {
+        succ.textContent = 'Account created! Opening secure checkout...';
+        succ.style.display = 'block';
+        const checkoutRes = await fetch(`${API}/v1/billing/checkout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + data.token },
+          body: JSON.stringify({ tier: selectedTier })
+        });
+        const checkoutData = await checkoutRes.json();
+        if (checkoutData.url) {
+          location.href = checkoutData.url;
+        } else {
+          succ.textContent = 'Account created! Redirecting to dashboard...';
+          setTimeout(() => location.href = '/dashboard', 800);
+        }
+      } else {
+        succ.textContent = 'Account created! Redirecting...';
+        succ.style.display = 'block';
+        setTimeout(() => location.href = '/dashboard', 800);
+      }
     } else {
       err.textContent = data.error || 'Registration failed';
       err.style.display = 'block';
