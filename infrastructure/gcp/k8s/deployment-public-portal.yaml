@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: public-portal
+  namespace: abc-io
+  labels:
+    app: public-portal
+    tier: frontend
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: public-portal
+  template:
+    metadata:
+      labels:
+        app: public-portal
+        tier: frontend
+    spec:
+      containers:
+        - name: public-portal
+          image: gcr.io/abc-io-project/public-portal:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8090
+              name: http
+          env:
+            - name: PORT
+              value: "8090"
+            - name: NODE_ENV
+              value: "production"
+            - name: PUBLIC_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: public_signing_key
+            - name: PUBLIC_SIGNING_FINGERPRINT
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: public_signing_fingerprint
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: database_url
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8090
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8090
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: public-portal
+  namespace: abc-io
+  labels:
+    app: public-portal
+spec:
+  type: ClusterIP
+  selector:
+    app: public-portal
+  ports:
+    - port: 8090
+      targetPort: 8090
+      protocol: TCP
+      name: http

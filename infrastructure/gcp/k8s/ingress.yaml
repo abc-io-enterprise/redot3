@@ -9,30 +9,44 @@ metadata:
     networking.gke.io/v1beta1.FrontendConfig: "abc-io-frontend-config"
 spec:
   rules:
-    - host: abc-io.example.com
+    - host: abc-io.com
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
+                name: nginx
+                port:
+                  number: 80
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
                 name: gateway
                 port:
-                  number: 8080
-          - path: /owner
+                  number: 4000
+          - path: /admin
             pathType: Prefix
             backend:
               service:
                 name: owner-dashboard
                 port:
                   number: 8500
-          - path: /ai
+          - path: /grafana
             pathType: Prefix
             backend:
               service:
-                name: kimi
+                name: grafana
                 port:
-                  number: 8600
+                  number: 3000
+          - path: /prometheus
+            pathType: Prefix
+            backend:
+              service:
+                name: prometheus
+                port:
+                  number: 9090
 ---
 apiVersion: networking.gke.io/v1
 kind: ManagedCertificate
@@ -41,7 +55,8 @@ metadata:
   namespace: abc-io
 spec:
   domains:
-    - abc-io.example.com
+    - abc-io.com
+    - www.abc-io.com
 ---
 apiVersion: networking.gke.io/v1beta1
 kind: FrontendConfig

@@ -1,0 +1,131 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: abc-io
+  labels:
+    app: gateway
+    tier: backend
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+        tier: backend
+    spec:
+      containers:
+        - name: gateway
+          image: gcr.io/abc-io-project/gateway:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4000
+              name: http
+          env:
+            - name: PORT
+              value: "4000"
+            - name: NODE_ENV
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: database_url
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: jwt_secret
+            - name: OWNER_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: owner_signing_key
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: stripe_secret_key
+            - name: STRIPE_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: stripe_webhook_secret
+            - name: STRIPE_PRICE_ID_PRO
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: stripe_price_id_pro
+            - name: STRIPE_PRICE_ID_ENTERPRISE
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: stripe_price_id_enterprise
+            - name: PUBLIC_URL
+              value: "https://abc-io.com"
+            - name: CORS_ORIGIN
+              value: "https://abc-io.com"
+            - name: MISTRAL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: mistral_api_key
+            - name: GATEWAY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: api_key
+            - name: SELF_HEAL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: owner_session_token
+            - name: SMTP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: smtp_url
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: abc-io
+  labels:
+    app: gateway
+spec:
+  type: ClusterIP
+  selector:
+    app: gateway
+  ports:
+    - port: 4000
+      targetPort: 4000
+      protocol: TCP
+      name: http

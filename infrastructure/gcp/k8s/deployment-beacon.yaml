@@ -1,10 +1,11 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: owner-dashboard
+  name: beacon
   namespace: abc-io
   labels:
-    app: owner-dashboard
+    app: beacon
+    tier: backend
 spec:
   replicas: 2
   strategy:
@@ -14,48 +15,65 @@ spec:
       maxUnavailable: 0
   selector:
     matchLabels:
-      app: owner-dashboard
+      app: beacon
   template:
     metadata:
       labels:
-        app: owner-dashboard
+        app: beacon
+        tier: backend
     spec:
       containers:
-        - name: owner-dashboard
-          image: gcr.io/abc-io-project/owner-dashboard:latest
+        - name: beacon
+          image: gcr.io/abc-io-project/beacon:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 8500
+            - containerPort: 3006
               name: http
-          envFrom:
-            - configMapRef:
-                name: abc-io-config
           env:
-            - name: DB_PASSWORD
+            - name: PORT
+              value: "3006"
+            - name: NODE_ENV
+              value: "production"
+            - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: abc-io-secrets
-                  key: db_password
-            - name: DB_HOST
+                  key: database_url
+            - name: SMTP_URL
               valueFrom:
                 secretKeyRef:
                   name: abc-io-secrets
-                  key: db_host
-            - name: REDIS_HOST
+                  key: smtp_url
+            - name: SMTP_HOST
               valueFrom:
                 secretKeyRef:
                   name: abc-io-secrets
-                  key: redis_host
-            - name: REDIS_PASSWORD
+                  key: smtp_host
+            - name: SMTP_PORT
               valueFrom:
                 secretKeyRef:
                   name: abc-io-secrets
-                  key: redis_password
-            - name: JWT_SECRET
+                  key: smtp_port
+            - name: SMTP_USER
               valueFrom:
                 secretKeyRef:
                   name: abc-io-secrets
-                  key: jwt_secret
+                  key: smtp_user
+            - name: SMTP_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: smtp_pass
+            - name: SMTP_FROM
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: smtp_from
+            - name: OWNER_ACCOUNT_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: owner_account_email
           resources:
             requests:
               memory: "256Mi"
@@ -66,29 +84,29 @@ spec:
           livenessProbe:
             httpGet:
               path: /health
-              port: 8500
+              port: 3006
             initialDelaySeconds: 10
             periodSeconds: 15
           readinessProbe:
             httpGet:
-              path: /ready
-              port: 8500
+              path: /health
+              port: 3006
             initialDelaySeconds: 5
             periodSeconds: 10
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: owner-dashboard
+  name: beacon
   namespace: abc-io
   labels:
-    app: owner-dashboard
+    app: beacon
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
-    app: owner-dashboard
+    app: beacon
   ports:
-    - port: 8500
-      targetPort: 8500
+    - port: 3006
+      targetPort: 3006
       protocol: TCP
       name: http

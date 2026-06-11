@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Features — ABC-IO</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#0a0a2e;color:#e2e8f0;line-height:1.6}
+a{color:#00ff88;text-decoration:none}
+.container{max-width:1200px;margin:0 auto;padding:0 24px}
+.nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0}
+.nav .logo{font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.5px}
+.nav .logo span{color:#00ff88}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:#94a3b8;font-size:14px;font-weight:500;transition:.2s}
+.nav-links a:hover{color:#fff}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:.2s}
+.btn-primary{background:#00ff88;color:#0a0a2e}
+.btn-primary:hover{background:#00dd77}
+.btn-outline{background:transparent;border:1px solid #334155;color:#e2e8f0}
+.btn-outline:hover{border-color:#00ff88;color:#00ff88}
+.btn-sm{padding:6px 14px;font-size:13px}
+.hero{padding:80px 0 40px;text-align:center}
+.hero h1{font-size:42px;font-weight:700;color:#fff;line-height:1.1;letter-spacing:-1px}
+.hero p{font-size:16px;color:#94a3b8;margin:16px auto 32px;max-width:560px}
+.section{padding:60px 0}
+.feature-row{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;margin-bottom:80px}
+.feature-row:nth-child(even) .feature-text{order:2}
+.feature-row:nth-child(even) .feature-visual{order:1}
+.feature-icon{width:56px;height:56px;background:rgba(0,255,136,.1);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:16px}
+.feature-text h2{font-size:28px;font-weight:700;color:#fff;margin-bottom:12px}
+.feature-text p{font-size:15px;color:#94a3b8;margin-bottom:16px}
+.feature-list{list-style:none}
+.feature-list li{padding:6px 0;color:#cbd5e1;font-size:14px;display:flex;align-items:center;gap:8px}
+.feature-list li::before{content:'✓';color:#00ff88;font-weight:700}
+.feature-visual{background:#0f1633;border:1px solid #1e293b;border-radius:14px;padding:40px;text-align:center;min-height:240px;display:flex;align-items:center;justify-content:center}
+.screenshot-placeholder{color:#475569;font-size:14px}
+.footer{border-top:1px solid #1e293b;padding:40px 0;text-align:center;color:#64748b;font-size:14px;margin-top:40px}
+.footer-links{display:flex;gap:20px;justify-content:center;margin-bottom:16px;flex-wrap:wrap}
+.footer-links a{color:#94a3b8;font-size:14px}
+.footer-links a:hover{color:#fff}
+@media(max-width:768px){
+  .feature-row{grid-template-columns:1fr}
+  .feature-row:nth-child(even) .feature-text,.feature-row:nth-child(even) .feature-visual{order:unset}
+  .hero h1{font-size:32px}
+  .nav-links{display:none}
+}
+</style>
+</head>
+<body>
+<nav class="nav container">
+  <a href="/" class="logo"><img src="/abc-io_logo.png" alt="ABC-IO" style="height:28px;margin-right:8px;vertical-align:middle">ABC<span>-IO</span></a>
+  <div class="nav-links">
+    <a href="/features">Features</a>
+    <a href="/pricing">Pricing</a>
+    <a href="/docs">API Docs</a>
+    <a href="/contact">Contact</a>
+    <a href="/login" class="btn btn-outline btn-sm">Log In</a>
+    <a href="/signup" class="btn btn-primary btn-sm">Get Started</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="container">
+    <h1>Everything You Need to <span style="color:#00ff88">Interface</span></h1>
+    <p>A complete platform for AI-powered global communications, safety, and monitoring.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="feature-row">
+      <div class="feature-text">
+        <div class="feature-icon">🤖</div>
+        <h2>AI Translation</h2>
+        <p>Dual-provider AI with Mistral and Kimi support. Automatic failover, circuit breaker, and intelligent caching keep your operations running even when providers are down.</p>
+        <ul class="feature-list">
+          <li>5-minute response cache</li>
+          <li>Circuit breaker with retry logic</li>
+          <li>Offline fallback mode</li>
+          <li>Custom model selection per request</li>
+        </ul>
+      </div>
+      <div class="feature-visual">
+        <div class="screenshot-placeholder">[Screenshot: AI Translation Dashboard]</div>
+      </div>
+    </div>
+
+    <div class="feature-row">
+      <div class="feature-text">
+        <div class="feature-icon">🚨</div>
+        <h2>Beacon Safety</h2>
+        <p>Public safety beacon system with real-time location sharing, 24-hour TTL, and responder acknowledgments. Built for disaster zones and emergency response.</p>
+        <ul class="feature-list">
+          <li>GPS-accurate location emission</li>
+          <li>Haversine region search</li>
+          <li>Responder ETA tracking</li>
+          <li>Multi-channel notifications</li>
+        </ul>
+      </div>
+      <div class="feature-visual">
+        <div class="screenshot-placeholder">[Screenshot: Beacon Map View]</div>
+      </div>
+    </div>
+
+    <div class="feature-row">
+      <div class="feature-text">
+        <div class="feature-icon">🌐</div>
+        <h2>API Gateway</h2>
+        <p>Centralized API gateway with JWT and API-key authentication, per-tier rate limiting, and versioned routes. Route traffic securely to all backend services.</p>
+        <ul class="feature-list">
+          <li>JWT + API key dual auth</li>
+          <li>Per-tier rate limiting</li>
+          <li>Versioned API routes</li>
+          <li>Usage tracking & audit logs</li>
+        </ul>
+      </div>
+      <div class="feature-visual">
+        <div class="screenshot-placeholder">[Screenshot: API Gateway Overview]</div>
+      </div>
+    </div>
+
+    <div class="feature-row">
+      <div class="feature-text">
+        <div class="feature-icon">📊</div>
+        <h2>Real-time Monitoring</h2>
+        <p>Prometheus and Grafana powered observability with Jaeger distributed tracing. Monitor every service, every endpoint, every request.</p>
+        <ul class="feature-list">
+          <li>Service health dashboards</li>
+          <li>Distributed request tracing</li>
+          <li>Custom alert rules</li>
+          <li>99.9% uptime SLA on Pro+</li>
+        </ul>
+      </div>
+      <div class="feature-visual">
+        <div class="screenshot-placeholder">[Screenshot: Grafana Dashboard]</div>
+      </div>
+    </div>
+
+    <div class="feature-row">
+      <div class="feature-text">
+        <div class="feature-icon">♿</div>
+        <h2>Cross-sensory Communication</h2>
+        <p>AI-ISP translates between text, Braille, Morse code, haptic feedback, speech, and sign language. Making technology accessible to everyone.</p>
+        <ul class="feature-list">
+          <li>Text ↔ Braille translation</li>
+          <li>Text ↔ Morse code</li>
+          <li>Speech-to-text & haptic output</li>
+          <li>Universal modality matrix</li>
+        </ul>
+      </div>
+      <div class="feature-visual">
+        <div class="screenshot-placeholder">[Screenshot: Translation Interface]</div>
+      </div>
+    </div>
+
+    <div class="feature-row">
+      <div class="feature-text">
+        <div class="feature-icon">🔒</div>
+        <h2>Secure Authentication</h2>
+        <p>Enterprise-grade security with HMAC-SHA256 signing, biometric tokens, bcrypt password hashing, and comprehensive audit logging.</p>
+        <ul class="feature-list">
+          <li>Role-based access control</li>
+          <li>API key scope management</li>
+          <li>Session revocation</li>
+          <li>Full audit trail</li>
+        </ul>
+      </div>
+      <div class="feature-visual">
+        <div class="screenshot-placeholder">[Screenshot: Security Settings]</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-links">
+      <a href="/features">Features</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/docs">API Docs</a>
+      <a href="/terms">Terms</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/help">Help</a>
+      <a href="/faq">FAQ</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+      <a href="https://github.com/ccplexmath/redot2complete" target="_blank">GitHub</a>
+    </div>
+    <p>© 2026 ABC-IO — A Universal Interfacing Communications Company. All rights reserved.</p>
+  </div>
+</footer>
+
+<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#0f1633;border-top:1px solid #1e293b;padding:16px 24px;z-index:1000">
+  <div style="max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+    <span style="font-size:13px;color:#94a3b8">We use cookies to improve your experience. By continuing, you agree to our use of cookies.</span>
+    <button onclick="acceptCookies()" style="padding:8px 16px;border-radius:6px;background:#00ff88;color:#0a0a2e;font-size:13px;font-weight:600;border:none;cursor:pointer;white-space:nowrap">Accept</button>
+  </div>
+</div>
+<script>
+function acceptCookies(){localStorage.setItem('abcio_cookie_consent','1');document.getElementById('cookieBanner').style.display='none';}
+if(!localStorage.getItem('abcio_cookie_consent')){var el=document.getElementById('cookieBanner');if(el)el.style.display='block';}
+</script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mobile-gateway
+  namespace: abc-io
+  labels:
+    app: mobile-gateway
+    tier: backend
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: mobile-gateway
+  template:
+    metadata:
+      labels:
+        app: mobile-gateway
+        tier: backend
+    spec:
+      containers:
+        - name: mobile-gateway
+          image: gcr.io/abc-io-project/mobile-gateway:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5050
+              name: http
+          env:
+            - name: PORT
+              value: "5050"
+            - name: NODE_ENV
+              value: "production"
+            - name: MOBILE_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: mobile_signing_key
+            - name: MOBILE_SIGNING_FINGERPRINT
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: mobile_signing_fingerprint
+            - name: OWNER_SESSION_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: abc-io-secrets
+                  key: owner_session_token
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5050
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5050
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mobile-gateway
+  namespace: abc-io
+  labels:
+    app: mobile-gateway
+spec:
+  type: ClusterIP
+  selector:
+    app: mobile-gateway
+  ports:
+    - port: 5050
+      targetPort: 5050
+      protocol: TCP
+      name: http

@@ -9,6 +9,7 @@ const { Pool } = require('pg');
 const nodemailer = require('nodemailer');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const crypto = require('crypto');
+const https = require('https');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
@@ -78,6 +79,95 @@ async function sendEmail(to, subject, html, text) {
 }
 
 // ============================================
+// PAYPAL HELPERS
+// ============================================
+function paypalBaseUrl() {
+  return process.env.PAYPAL_MODE === 'live' ? 'https://api.paypal.com' : 'https://api.sandbox.paypal.com';
+}
+
+async function paypalAccessToken() {
+  const auth = Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString('base64');
+  return new Promise((resolve, reject) => {
+    const req = https.request(`${paypalBaseUrl()}/v1/oauth2/token`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          if (json.access_token) resolve(json.access_token);
+          else reject(new Error(json.error_description || 'PayPal auth failed'));
+        } catch (e) { reject(e); }
+      });
+    });
+    req.on('error', reject);
+    req.write('grant_type=client_credentials');
+    req.end();
+  });
+}
+
+async function paypalRequest(path, method = 'GET', body = null) {
+  const token = await paypalAccessToken();
+  return new Promise((resolve, reject) => {
+    const req = https.request(`${paypalBaseUrl()}${path}`, {
+      method,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); }
+        catch (e) { reject(e); }
+      });
+    });
+    req.on('error', reject);
+    if (body) req.write(JSON.stringify(body));
+    req.end();
+  });
+}
+
+async function verifyPayPalWebhook(reqBody, headers) {
+  const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+  if (!webhookId) return true;
+
+  const transmissionId = headers['paypal-transmission-id'];
+  const certId = headers['paypal-cert-id'];
+  const authAlgo = headers['paypal-auth-algo'];
+  const transmissionTime = headers['paypal-transmission-time'];
+  const transmissionSig = headers['paypal-transmission-sig'];
+
+  if (!transmissionId || !certId || !authAlgo || !transmissionTime || !transmissionSig) {
+    return false;
+  }
+
+  const payload = {
+    auth_algo: authAlgo,
+    cert_id: certId,
+    transmission_id: transmissionId,
+    transmission_sig: transmissionSig,
+    transmission_time: transmissionTime,
+    webhook_id: webhookId,
+    webhook_event: reqBody,
+  };
+
+  try {
+    const result = await paypalRequest('/v1/notifications/verify-webhook-signature', 'POST', payload);
+    return result.verification_status === 'SUCCESS';
+  } catch (e) {
+    console.error('PayPal webhook verification error:', e.message);
+    return false;
+  }
+}
+
+// ============================================
 // MIDDLEWARE
 // ============================================
 app.use(helmet());
@@ -87,6 +177,55 @@ app.use(morgan(NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use('/api/v1/billing/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// ============================================
+// FAMILY-SAFE CONTENT FILTER
+// ============================================
+const PROFANITY_LIST = [
+  'damn', 'hell', 'crap', 'ass', 'bastard', 'bitch', 'shit', 'fuck',
+  'douche', 'jerk', 'moron', 'idiot', 'stupid', 'dumb', 'loser',
+  'retard', 'slut', 'whore', 'pimp', 'piss', 'cunt', 'dick',
+  'cock', 'pussy', 'tits', 'boobs', 'nigger', 'nigga', 'chink',
+  'fag', 'faggot', 'dyke', 'tranny', 'kike', 'spic', 'wetback',
+  'cracker', 'honky', 'gook', 'raghead', 'towelhead', 'cameljockey',
+  'skank', 'ho', 'thot', 'simp', 'incel', 'cuck',
+  'snowflake', 'libtard', 'trumptard', 'deplorable'
+];
+
+const profanityPattern = '\\b(' + PROFANITY_LIST.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\b';
+
+function scanText(text) {
+  if (typeof text !== 'string') return false;
+  return new RegExp(profanityPattern, 'i').test(text);
+}
+
+function censorText(text) {
+  if (typeof text !== 'string') return text;
+  return text.replace(new RegExp(profanityPattern, 'gi'), '[filtered]');
+}
+
+function deepCensor(obj) {
+  if (typeof obj === 'string') return censorText(obj);
+  if (Array.isArray(obj)) return obj.map(deepCensor);
+  if (obj && typeof obj === 'object') {
+    const out = {};
+    for (const key of Object.keys(obj)) {
+      out[key] = deepCensor(obj[key]);
+    }
+    return out;
+  }
+  return obj;
+}
+
+function familySafeMiddleware(req, res, next) {
+  const fieldsToScan = ['message', 'text', 'content', 'prompt'];
+  for (const field of fieldsToScan) {
+    if (req.body && req.body[field] && scanText(req.body[field])) {
+      return res.status(400).json({ error: 'Content violates family-safe usage policy' });
+    }
+  }
+  next();
+}
 
 // Public health
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'gateway', version: '2.0.0' }));
@@ -186,6 +325,40 @@ function tierRateLimit(req) {
   return limits[tier] || 30;
 }
 
+function tierMonthlyQuota(req) {
+  const tier = req.tier || 'free';
+  const quotas = {
+    free: 1000, basic: 5000, standard: 10000, pro: 50000,
+    business: 100000, team: 200000, corporate: 500000,
+    enterprise: 1000000, agency: 5000000, global: 10000000,
+  };
+  return quotas[tier] || 1000;
+}
+
+async function usageQuotaMiddleware(req, res, next) {
+  try {
+    if (!req.accountId) return next();
+    const quota = tierMonthlyQuota(req);
+    const subResult = await pool.query(
+      `SELECT current_period_start FROM subscriptions WHERE account_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [req.accountId]
+    );
+    const periodStart = subResult.rows[0]?.current_period_start || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const result = await pool.query(
+      `SELECT COUNT(*) as count FROM usage_logs WHERE account_id = $1 AND created_at >= $2`,
+      [req.accountId, periodStart]
+    );
+    const used = parseInt(result.rows[0].count);
+    if (used >= quota) {
+      return res.status(429).json({ error: 'Monthly usage quota exceeded', tier: req.tier || 'free', used, quota });
+    }
+    next();
+  } catch (e) {
+    console.error('Usage quota check error:', e);
+    next();
+  }
+}
+
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: (req) => tierRateLimit(req),
@@ -198,7 +371,7 @@ const apiLimiter = rateLimit({
 // ============================================
 
 // Register
-app.post('/api/v1/auth/register', async (req, res) => {
+app.post('/api/v1/auth/register', familySafeMiddleware, async (req, res) => {
   try {
     const { email, password, firstName, lastName, accountName } = req.body;
     if (!email || !password || password.length < 8) {
@@ -544,6 +717,35 @@ app.post('/api/v1/billing/webhook', async (req, res) => {
          ON CONFLICT (stripe_invoice_id) DO NOTHING`,
         [inv.metadata?.account_id, inv.id, inv.amount_due, inv.amount_paid, inv.currency, inv.status, inv.invoice_pdf, inv.created]
       );
+    } else if (event.type === 'invoice.payment_failed') {
+      const inv = event.data.object;
+      const accountId = inv.metadata?.account_id;
+      const subscriptionId = inv.subscription;
+      if (accountId && subscriptionId) {
+        await pool.query("UPDATE subscriptions SET status = 'past_due' WHERE stripe_subscription_id = $1", [subscriptionId]);
+        const acc = await pool.query('SELECT billing_email FROM accounts WHERE id = $1', [accountId]);
+        const email = acc.rows[0]?.billing_email;
+        if (email) {
+          await sendEmail(
+            email,
+            'Payment Failed — ABC-IO Subscription',
+            `<p>We were unable to process your payment. Please update your payment method to avoid service interruption.</p>`,
+            'Payment failed. Please update your payment method to avoid service interruption.'
+          );
+        }
+        if (inv.attempt_count >= 3) {
+          await pool.query("UPDATE subscriptions SET status = 'cancelled' WHERE stripe_subscription_id = $1", [subscriptionId]);
+          await pool.query("UPDATE accounts SET tier = 'free' WHERE id = $1", [accountId]);
+          if (email) {
+            await sendEmail(
+              email,
+              'Subscription Cancelled — ABC-IO',
+              `<p>Your subscription has been cancelled after multiple failed payment attempts. Your account has been downgraded to the free tier.</p>`,
+              'Your subscription has been cancelled after multiple failed payment attempts. Your account has been downgraded to the free tier.'
+            );
+          }
+        }
+      }
     } else if (event.type === 'customer.subscription.deleted') {
       const sub = event.data.object;
       await pool.query("UPDATE subscriptions SET status = 'cancelled' WHERE stripe_subscription_id = $1", [sub.id]);
@@ -589,17 +791,105 @@ app.get('/api/v1/billing/invoices', authMiddleware, async (req, res) => {
   }
 });
 
+// Subscription status
+app.get('/api/v1/billing/subscription', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT tier, status, current_period_end, cancel_at_period_end
+       FROM subscriptions WHERE account_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [req.accountId]
+    );
+    if (result.rows.length === 0) {
+      return res.json({ tier: req.tier || 'free', status: 'none', current_period_end: null, cancel_at_period_end: false });
+    }
+    res.json(result.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load subscription' });
+  }
+});
+
+// Change plan
+app.post('/api/v1/billing/change-plan', authMiddleware, async (req, res) => {
+  try {
+    const { tier } = req.body;
+    const priceEnvMap = {
+      free: process.env.STRIPE_PRICE_ID_FREE,
+      basic: process.env.STRIPE_PRICE_ID_BASIC,
+      standard: process.env.STRIPE_PRICE_ID_STANDARD,
+      pro: process.env.STRIPE_PRICE_ID_PRO,
+      business: process.env.STRIPE_PRICE_ID_BUSINESS,
+      team: process.env.STRIPE_PRICE_ID_TEAM,
+      corporate: process.env.STRIPE_PRICE_ID_CORPORATE,
+      enterprise: process.env.STRIPE_PRICE_ID_ENTERPRISE,
+      agency: process.env.STRIPE_PRICE_ID_AGENCY,
+      global: process.env.STRIPE_PRICE_ID_GLOBAL,
+    };
+    const newPriceId = priceEnvMap[tier];
+    if (!newPriceId) {
+      return res.status(400).json({ error: 'Invalid tier' });
+    }
+
+    const subResult = await pool.query(
+      "SELECT stripe_subscription_id FROM subscriptions WHERE account_id = $1 AND status = 'active' ORDER BY created_at DESC LIMIT 1",
+      [req.accountId]
+    );
+    if (subResult.rows.length === 0) {
+      return res.status(400).json({ error: 'No active subscription found' });
+    }
+
+    const subId = subResult.rows[0].stripe_subscription_id;
+    const sub = await stripe.subscriptions.retrieve(subId);
+    const itemId = sub.items.data[0].id;
+
+    await stripe.subscriptions.update(subId, {
+      items: [{ id: itemId, price: newPriceId }],
+      proration_behavior: 'create_prorations',
+    });
+
+    res.json({ message: 'Plan change initiated', tier });
+  } catch (e) {
+    console.error('Change plan error:', e);
+    res.status(500).json({ error: 'Plan change failed' });
+  }
+});
+
+// Usage
+app.get('/api/v1/billing/usage', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT COUNT(*) as total_requests, COALESCE(SUM(tokens_used), 0) as total_tokens
+       FROM usage_logs WHERE account_id = $1 AND created_at > date_trunc('month', now())`,
+      [req.accountId]
+    );
+    res.json(result.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load usage' });
+  }
+});
+
 // ============================================
-// PAYPAL BILLING (Skeleton)
+// PAYPAL BILLING
 // ============================================
-// NOTE: Real PayPal SDK integration goes here using PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET
 
 app.post('/api/v1/billing/paypal/create-order', authMiddleware, async (req, res) => {
   try {
-    const { amount, currency = 'USD', tier } = req.body;
-    // TODO: Integrate PayPal Orders v2 API
-    const orderId = 'mock-paypal-order-' + Date.now();
-    res.json({ orderId, status: 'CREATED', approvalUrl: '/dashboard/billing' });
+    const { amount, currency = 'USD', tier = 'pro' } = req.body;
+    if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
+      return res.status(500).json({ error: 'PayPal not configured' });
+    }
+    const order = await paypalRequest('/v2/checkout/orders', 'POST', {
+      intent: 'CAPTURE',
+      purchase_units: [{
+        amount: { currency_code: currency, value: String(amount) },
+        custom_id: req.accountId,
+        description: `ABC-IO ${tier} tier`,
+      }],
+      application_context: {
+        return_url: `${process.env.PUBLIC_URL || 'https://abc-io.com'}/dashboard/billing?paypal=success`,
+        cancel_url: `${process.env.PUBLIC_URL || 'https://abc-io.com'}/pricing?paypal=cancel`,
+      },
+    });
+    res.json({ orderId: order.id, status: order.status, approvalUrl: order.links?.find(l => l.rel === 'approve')?.href });
   } catch (e) {
     console.error('PayPal create-order error:', e);
     res.status(500).json({ error: 'PayPal order creation failed' });
@@ -609,8 +899,33 @@ app.post('/api/v1/billing/paypal/create-order', authMiddleware, async (req, res)
 app.post('/api/v1/billing/paypal/capture-order', authMiddleware, async (req, res) => {
   try {
     const { orderId } = req.body;
-    // TODO: Integrate PayPal capture API
-    res.json({ orderId, status: 'COMPLETED', tier: req.body.tier || 'pro' });
+    if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
+      return res.status(500).json({ error: 'PayPal not configured' });
+    }
+    const capture = await paypalRequest(`/v2/checkout/orders/${orderId}/capture`, 'POST');
+    const purchaseUnit = capture.purchase_units?.[0];
+    const payment = purchaseUnit?.payments?.captures?.[0];
+    const payer = capture.payer;
+
+    const exists = await pool.query('SELECT id FROM paypal_transactions WHERE paypal_order_id = $1', [orderId]);
+    if (exists.rows.length > 0) {
+      await pool.query(
+        `UPDATE paypal_transactions SET status = $1, captured_at = now() WHERE id = $2`,
+        [capture.status, exists.rows[0].id]
+      );
+    } else {
+      await pool.query(
+        `INSERT INTO paypal_transactions (account_id, paypal_order_id, paypal_payer_id, amount, currency, tier, status, captured_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, now())`,
+        [req.accountId, orderId, payer?.payer_id, payment?.amount?.value || 0, payment?.amount?.currency_code || 'USD', req.body.tier || 'pro', capture.status]
+      );
+    }
+
+    if (capture.status === 'COMPLETED') {
+      await pool.query('UPDATE accounts SET tier = $1 WHERE id = $2', [req.body.tier || 'pro', req.accountId]);
+    }
+
+    res.json({ orderId, status: capture.status, tier: req.body.tier || 'pro' });
   } catch (e) {
     console.error('PayPal capture-order error:', e);
     res.status(500).json({ error: 'PayPal capture failed' });
@@ -619,8 +934,22 @@ app.post('/api/v1/billing/paypal/capture-order', authMiddleware, async (req, res
 
 app.post('/api/v1/billing/paypal/webhook', async (req, res) => {
   try {
-    // TODO: Verify PayPal webhook signature using PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET
-    console.log('PayPal webhook received:', req.body);
+    const verified = await verifyPayPalWebhook(req.body, req.headers);
+    if (!verified) {
+      return res.status(400).json({ error: 'Webhook verification failed' });
+    }
+
+    const event = req.body;
+    if (event.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
+      const resource = event.resource;
+      const orderId = resource.supplementary_data?.related_ids?.order_id || resource.id;
+      const txn = await pool.query('SELECT account_id, tier FROM paypal_transactions WHERE paypal_order_id = $1', [orderId]);
+      if (txn.rows.length > 0) {
+        await pool.query('UPDATE paypal_transactions SET status = $1, captured_at = now() WHERE paypal_order_id = $2', ['COMPLETED', orderId]);
+        await pool.query('UPDATE accounts SET tier = $1 WHERE id = $2', [txn.rows[0].tier, txn.rows[0].account_id]);
+      }
+    }
+
     res.json({ received: true });
   } catch (e) {
     console.error('PayPal webhook error:', e);
@@ -675,7 +1004,7 @@ app.get('/api/v1/system/health', async (req, res) => {
 // ============================================
 // MOBILE STATUS
 // ============================================
-app.get('/api/v1/mobile/status', authMiddleware, apiLimiter, (req, res) => {
+app.get('/api/v1/mobile/status', authMiddleware, usageQuotaMiddleware, apiLimiter, (req, res) => {
   res.json({
     connected: true,
     gatewayVersion: '2.0.0',
@@ -689,7 +1018,7 @@ app.get('/api/v1/mobile/status', authMiddleware, apiLimiter, (req, res) => {
 // ============================================
 
 // AI generation
-app.post('/api/v1/ai/generate', authMiddleware, apiLimiter, async (req, res) => {
+app.post('/api/v1/ai/generate', authMiddleware, usageQuotaMiddleware, apiLimiter, familySafeMiddleware, async (req, res) => {
   try {
     const start = Date.now();
     const response = await fetch('http://kimi:5000/ai/generate', {
@@ -700,6 +1029,13 @@ app.post('/api/v1/ai/generate', authMiddleware, apiLimiter, async (req, res) => 
     const data = await response.json();
     const rt = Date.now() - start;
 
+    // Censor AI response if needed
+    const censored = deepCensor(data);
+    const filtered = JSON.stringify(censored) !== JSON.stringify(data);
+    if (filtered) {
+      censored.content_filtered = true;
+    }
+
     // Log usage
     await pool.query(
       `INSERT INTO usage_logs (account_id, user_id, api_key_id, endpoint, method, status_code, response_time_ms)
@@ -707,7 +1043,7 @@ app.post('/api/v1/ai/generate', authMiddleware, apiLimiter, async (req, res) => 
       [req.accountId, req.userId, req.apiKeyId || null, '/api/v1/ai/generate', 'POST', response.status, rt]
     );
 
-    res.status(response.status).json(data);
+    res.status(response.status).json(filtered ? censored : data);
   } catch (e) {
     res.status(502).json({ error: 'AI service unavailable', details: e.message });
   }
@@ -725,7 +1061,7 @@ app.get('/api/v1/ai/health', async (req, res) => {
 });
 
 // Cross-sensory translation
-app.post('/api/v1/translate/:modality', authMiddleware, apiLimiter, async (req, res) => {
+app.post('/api/v1/translate/:modality', authMiddleware, usageQuotaMiddleware, apiLimiter, familySafeMiddleware, async (req, res) => {
   try {
     const start = Date.now();
     const response = await fetch(`http://ai-isp:7000/api/v1/translate/${req.params.modality}`, {
@@ -746,7 +1082,7 @@ app.post('/api/v1/translate/:modality', authMiddleware, apiLimiter, async (req, 
 });
 
 // Beacon
-app.post('/api/v1/beacon/emit', async (req, res) => {
+app.post('/api/v1/beacon/emit', familySafeMiddleware, async (req, res) => {
   try {
     const response = await fetch('http://beacon:3000/api/v1/beacon/emit', {
       method: 'POST',
@@ -811,7 +1147,7 @@ app.get('/api/v1/admin/metrics', authMiddleware, requireOwner, async (req, res) 
 });
 
 // Escalation queue — 8AM-8PM EST human routing
-app.post('/api/v1/admin/escalate', authMiddleware, requireOwner, async (req, res) => {
+app.post('/api/v1/admin/escalate', authMiddleware, requireOwner, familySafeMiddleware, async (req, res) => {
   try {
     const { ticketId, userMessage } = req.body;
     const currentHourEst = new Date().getUTCHours() - 4; // Conversion framework for New York Time
@@ -848,6 +1184,201 @@ app.post('/api/v1/admin/self-heal', authMiddleware, requireOwner, async (req, re
     res.json({ status: 'Steady State Architecture Maintained' });
   } catch (e) {
     res.status(500).json({ error: 'Self-heal failed' });
+  }
+});
+
+// ============================================
+// HELP CENTER
+// ============================================
+
+// List help articles
+app.get('/api/v1/help/articles', async (req, res) => {
+  try {
+    const { category, search } = req.query;
+    const limit = Number(req.query.limit) || 20;
+    const offset = Number(req.query.offset) || 0;
+
+    let query = `
+      SELECT ha.id, ha.slug, ha.title, ha.summary, ha.content, ha.view_count, ha.created_at, ha.updated_at,
+             hc.id as category_id, hc.name as category_name, hc.slug as category_slug
+      FROM help_articles ha
+      LEFT JOIN help_categories hc ON ha.category_id = hc.id
+      WHERE ha.published = true
+    `;
+    const params = [];
+    let idx = 1;
+
+    if (category) {
+      query += ` AND (hc.slug = $${idx} OR hc.name = $${idx})`;
+      params.push(category);
+      idx++;
+    }
+
+    if (search) {
+      query += ` AND (ha.title ILIKE $${idx} OR ha.content ILIKE $${idx})`;
+      params.push(`%${search}%`);
+      idx++;
+    }
+
+    query += ` ORDER BY ha.created_at DESC LIMIT $${idx} OFFSET $${idx + 1}`;
+    params.push(limit, offset);
+
+    const result = await pool.query(query, params);
+    res.json({ articles: result.rows });
+  } catch (e) {
+    console.error('Help articles error:', e);
+    res.status(500).json({ error: 'Failed to load articles' });
+  }
+});
+
+// Get single help article
+app.get('/api/v1/help/articles/:slug', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT ha.id, ha.slug, ha.title, ha.summary, ha.content, ha.view_count, ha.created_at, ha.updated_at,
+              hc.id as category_id, hc.name as category_name, hc.slug as category_slug
+       FROM help_articles ha
+       LEFT JOIN help_categories hc ON ha.category_id = hc.id
+       WHERE ha.slug = $1 AND ha.published = true`,
+      [req.params.slug]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+    await pool.query('UPDATE help_articles SET view_count = view_count + 1 WHERE id = $1', [result.rows[0].id]);
+    res.json({ article: result.rows[0] });
+  } catch (e) {
+    console.error('Help article error:', e);
+    res.status(500).json({ error: 'Failed to load article' });
+  }
+});
+
+// ============================================
+// CHAT
+// ============================================
+
+// List chat rooms
+app.get('/api/v1/chat/rooms', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, name, description, created_at, updated_at
+       FROM chat_rooms WHERE active = true ORDER BY created_at DESC`
+    );
+    res.json({ rooms: result.rows });
+  } catch (e) {
+    console.error('Chat rooms error:', e);
+    res.status(500).json({ error: 'Failed to load rooms' });
+  }
+});
+
+// Get messages for a room
+app.get('/api/v1/chat/rooms/:roomId/messages', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, room_id, sender_name, sender_role, message, created_at
+       FROM chat_messages WHERE room_id = $1 ORDER BY created_at DESC LIMIT 100`,
+      [req.params.roomId]
+    );
+    res.json({ messages: result.rows });
+  } catch (e) {
+    console.error('Chat messages error:', e);
+    res.status(500).json({ error: 'Failed to load messages' });
+  }
+});
+
+// Post message to a room
+app.post('/api/v1/chat/rooms/:roomId/messages', familySafeMiddleware, async (req, res) => {
+  try {
+    const { sender_name, message, sender_role = 'guest' } = req.body;
+    if (!sender_name || !message) {
+      return res.status(400).json({ error: 'sender_name and message required' });
+    }
+    const result = await pool.query(
+      `INSERT INTO chat_messages (room_id, sender_name, sender_role, message)
+       VALUES ($1, $2, $3, $4) RETURNING id, room_id, sender_name, sender_role, message, created_at`,
+      [req.params.roomId, sender_name, sender_role, message]
+    );
+    res.status(201).json({ message: result.rows[0] });
+  } catch (e) {
+    console.error('Chat post error:', e);
+    res.status(500).json({ error: 'Failed to post message' });
+  }
+});
+
+// ============================================
+// INTERVENTION TICKETS
+// ============================================
+
+// Create intervention ticket
+app.post('/api/v1/intervention', familySafeMiddleware, async (req, res) => {
+  try {
+    const { user_message, email } = req.body;
+    if (!user_message) {
+      return res.status(400).json({ error: 'user_message required' });
+    }
+    const ticketId = 'TICKET-' + crypto.randomBytes(8).toString('hex').toUpperCase();
+    const currentHourEst = new Date().getUTCHours() - 4;
+    const isBusinessHours = currentHourEst >= 8 && currentHourEst < 20;
+    const status = isBusinessHours ? 'Pending Human Operator Escalation' : 'Queued for Next Business Day';
+
+    const result = await pool.query(
+      `INSERT INTO intervention_queue (ticket_id, user_message, email, status, timezone)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id, ticket_id, user_message, email, status, created_at`,
+      [ticketId, user_message, email || null, status, 'America/New_York']
+    );
+    res.status(201).json({ ticket: result.rows[0] });
+  } catch (e) {
+    console.error('Intervention create error:', e);
+    res.status(500).json({ error: 'Failed to create ticket' });
+  }
+});
+
+// Get intervention ticket
+app.get('/api/v1/intervention/:ticketId', async (req, res) => {
+  try {
+    const ticketResult = await pool.query(
+      `SELECT id, ticket_id, user_message, email, status, created_at, updated_at
+       FROM intervention_queue WHERE ticket_id = $1`,
+      [req.params.ticketId]
+    );
+    if (ticketResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+    const messagesResult = await pool.query(
+      `SELECT id, sender, message, created_at
+       FROM intervention_messages WHERE ticket_id = $1 ORDER BY created_at ASC`,
+      [req.params.ticketId]
+    );
+    res.json({ ticket: ticketResult.rows[0], messages: messagesResult.rows });
+  } catch (e) {
+    console.error('Intervention get error:', e);
+    res.status(500).json({ error: 'Failed to load ticket' });
+  }
+});
+
+// Add message to intervention ticket
+app.post('/api/v1/intervention/:ticketId/message', familySafeMiddleware, async (req, res) => {
+  try {
+    const { message, sender } = req.body;
+    if (!message || !sender) {
+      return res.status(400).json({ error: 'message and sender required' });
+    }
+    const ticketResult = await pool.query(
+      `SELECT id FROM intervention_queue WHERE ticket_id = $1`,
+      [req.params.ticketId]
+    );
+    if (ticketResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+    const result = await pool.query(
+      `INSERT INTO intervention_messages (ticket_id, sender, message)
+       VALUES ($1, $2, $3) RETURNING id, ticket_id, sender, message, created_at`,
+      [req.params.ticketId, sender, message]
+    );
+    res.status(201).json({ message: result.rows[0] });
+  } catch (e) {
+    console.error('Intervention message error:', e);
+    res.status(500).json({ error: 'Failed to add message' });
   }
 });
 

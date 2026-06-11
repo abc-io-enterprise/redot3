@@ -3,31 +3,200 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>ABC-IO Beacon</title>
+  <meta name="theme-color" content="#c0392b">
+  <title>ABC-IO Public Safety Beacon</title>
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="manifest" href="/manifest.json">
-  <style>body{font-family:system-ui,Arial;margin:1rem;}header{display:flex;justify-content:space-between;align-items:center}</style>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, Arial, sans-serif; margin: 0; padding: 1rem; background: #f8f9fa; color: #1a1a1a; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    h1 { font-size: 1.25rem; margin: 0; }
+    h1 img { height: 28px; vertical-align: middle; margin-right: 8px; }
+    .card { background: #fff; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    label { display: block; font-size: 0.875rem; font-weight: 600; margin: 0.5rem 0 0.25rem; }
+    input, select, textarea { width: 100%; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px; font-family: inherit; }
+    button { padding: 0.5rem 1rem; border: none; border-radius: 4px; background: #c0392b; color: #fff; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
+    button.secondary { background: #2980b9; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; color: #fff; margin-right: 4px; }
+    .emergency { background: #c0392b; }
+    .transit { background: #2980b9; }
+    .sos { background: #f39c12; }
+    .beacon-item { border-bottom: 1px solid #e9ecef; padding: 0.75rem 0; }
+    .beacon-item:last-child { border-bottom: none; }
+    .small { font-size: 0.8rem; color: #6c757d; }
+    .status { margin-top: 0.5rem; font-size: 0.875rem; }
+    .status.ok { color: #27ae60; }
+    .status.err { color: #c0392b; }
+  </style>
 </head>
 <body>
   <header>
-    <h1><img src="/abc-io_logo.png" alt="ABC-IO" style="height:24px;vertical-align:middle;margin-right:8px"> ABC-IO Beacon (Public)</h1>
+    <h1><img src="/abc-io_logo.png" alt="ABC-IO"> ABC-IO Beacon</h1>
     <small id="ts"></small>
   </header>
-  <main>
-    <p>This public beacon provides location-aware status without requiring an account.</p>
-    <button id="loc">Get local beacon</button>
-    <pre id="out"></pre>
-  </main>
+
+  <div class="card">
+    <h2>Emit Beacon</h2>
+    <form id="emitForm">
+      <label for="deviceType">Device Type</label>
+      <select id="deviceType">
+        <option value="mobile">Mobile</option>
+        <option value="wearable">Wearable</option>
+        <option value="vehicle">Vehicle</option>
+        <option value="drone">Drone</option>
+        <option value="unknown">Unknown</option>
+      </select>
+
+      <label for="beaconType">Beacon Type</label>
+      <select id="beaconType">
+        <option value="emergency">Emergency</option>
+        <option value="transit">Transit</option>
+        <option value="sos">SOS</option>
+      </select>
+
+      <label for="message">Message</label>
+      <textarea id="message" rows="3" maxlength="500" placeholder="Describe your situation..."></textarea>
+
+      <button type="submit" id="emitBtn">Emit Beacon with Location</button>
+      <div class="status" id="emitStatus"></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Active Beacons</h2>
+    <button class="secondary" id="refreshBtn">Refresh Nearby</button>
+    <div id="beaconList"><p class="small">Click refresh to load active beacons near you.</p></div>
+  </div>
+
   <script>
-  document.getElementById('ts').textContent = new Date().toISOString()
-  document.getElementById('loc').addEventListener('click', ()=>{
-    navigator.geolocation.getCurrentPosition(pos=>{
-      const {latitude:lat, longitude:lon} = pos.coords
-      fetch(`/api/beacon?lat=${lat}&lon=${lon}`).then(r=>r.json()).then(j=>{
-        document.getElementById('out').textContent = JSON.stringify(j,null,2)
+    document.getElementById('ts').textContent = new Date().toLocaleString();
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(err => console.error('SW registration failed:', err));
+    }
+
+    const emitForm = document.getElementById('emitForm');
+    const emitStatus = document.getElementById('emitStatus');
+    const beaconList = document.getElementById('beaconList');
+    const refreshBtn = document.getElementById('refreshBtn');
+
+    function setStatus(el, text, isError) {
+      el.textContent = text;
+      el.className = 'status ' + (isError ? 'err' : 'ok');
+    }
+
+    emitForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      emitStatus.textContent = 'Acquiring location...';
+      emitStatus.className = 'status';
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const payload = {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            altitude: pos.coords.altitude,
+            accuracy: pos.coords.accuracy,
+            deviceType: document.getElementById('deviceType').value,
+            beaconType: document.getElementById('beaconType').value,
+            message: document.getElementById('message').value,
+            battery: null,
+          };
+
+          fetch('/api/v1/beacon/emit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+            .then(r => r.json())
+            .then(data => {
+              if (data.beaconId) {
+                setStatus(emitStatus, 'Beacon emitted! ID: ' + data.beaconId, false);
+                emitForm.reset();
+              } else {
+                setStatus(emitStatus, 'Error: ' + (data.message || 'Unknown'), true);
+              }
+            })
+            .catch(err => setStatus(emitStatus, 'Network error: ' + err.message, true));
+        },
+        (err) => setStatus(emitStatus, 'Location error: ' + err.message, true)
+      );
+    });
+
+    function renderBeacon(b) {
+      const div = document.createElement('div');
+      div.className = 'beacon-item';
+      const typeClass = b.beaconType === 'emergency' ? 'emergency' : b.beaconType === 'transit' ? 'transit' : 'sos';
+      div.innerHTML = '<div>' +
+        '<span class="badge ' + typeClass + '">' + b.beaconType.toUpperCase() + '</span>' +
+        '<span class="small">' + new Date(b.createdAt).toLocaleString() + '</span>' +
+        '</div>' +
+        '<div class="small">ID: ' + escapeHtml(b.beaconId) + '</div>' +
+        '<div class="small">Lat: ' + b.latitude.toFixed(5) + ', Lng: ' + b.longitude.toFixed(5) + '</div>' +
+        (b.message ? '<div>' + escapeHtml(b.message) + '</div>' : '') +
+        '<button class="secondary" data-bid="' + escapeHtml(b.beaconId) + '">Acknowledge</button>' +
+        '<div class="status" id="ack-' + escapeHtml(b.beaconId) + '"></div>';
+      div.querySelector('button').addEventListener('click', function() {
+        acknowledge(this.getAttribute('data-bid'));
+      });
+      return div;
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function acknowledge(beaconId) {
+      const type = prompt('Responder type (police, medical, fire, civilian):', 'civilian');
+      if (!type) return;
+      const statusEl = document.getElementById('ack-' + beaconId);
+      statusEl.textContent = 'Sending...';
+
+      fetch('/api/v1/beacon/acknowledge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ beaconId, responderType: type }),
       })
-    }, err => { document.getElementById('out').textContent = String(err) })
-  })
+        .then(r => r.json())
+        .then(data => {
+          if (data.status === 'acknowledged') {
+            setStatus(statusEl, 'Acknowledged!', false);
+          } else {
+            setStatus(statusEl, 'Error: ' + (data.message || 'Unknown'), true);
+          }
+        })
+        .catch(err => setStatus(statusEl, 'Network error: ' + err.message, true));
+    }
+
+    refreshBtn.addEventListener('click', () => {
+      beaconList.innerHTML = '<p class="small">Acquiring location...</p>';
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          fetch('/api/v1/beacon/active?lat=' + lat + '&lng=' + lng + '&radiusKm=50')
+            .then(r => r.json())
+            .then(data => {
+              beaconList.innerHTML = '';
+              if (!data.beacons || data.beacons.length === 0) {
+                beaconList.innerHTML = '<p class="small">No active beacons in this region.</p>';
+                return;
+              }
+              data.beacons.forEach(b => beaconList.appendChild(renderBeacon(b)));
+            })
+            .catch(err => {
+              beaconList.innerHTML = '<p class="small err">Error loading beacons: ' + escapeHtml(err.message) + '</p>';
+            });
+        },
+        (err) => {
+          beaconList.innerHTML = '<p class="small err">Location error: ' + escapeHtml(err.message) + '</p>';
+        }
+      );
+    });
   </script>
 </body>
 </html>

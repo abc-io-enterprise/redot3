@@ -6,7 +6,7 @@ from flask import Flask, jsonify, request
 
 from translators.braille import text_to_braille, braille_to_text
 from translators.morse import text_to_morse, morse_to_text, text_to_morse_timing
-from translators.haptic import text_to_haptic, text_to_morse_haptic
+from translators.haptic import text_to_haptic, text_to_morse_haptic, haptic_to_text
 from translators.speech import speech_to_text, text_to_speech
 from translators.sign import sign_to_text, text_to_sign
 
@@ -209,13 +209,13 @@ def api_haptic_to_text():
     text = data.get('text', '')
     if not text:
         return jsonify({'error': 'text required'}), 400
-    # haptic_to_text exists in haptic.py but is not imported; use pass-through note
+    result = haptic_to_text(text)
     return jsonify({
         'status': 'ok',
         'input': text,
-        'output': text,
+        'output': result,
         'modality': 'text',
-        'note': 'haptic-to-text decoding requires pattern classifier. Pass-through returned.'
+        'type': 'plain'
     })
 
 
@@ -228,6 +228,17 @@ def api_text_to_speech():
         return jsonify({'error': 'text required'}), 400
     result = text_to_speech(text, voice=voice)
     return jsonify({'status': 'ok', 'input': text, 'output': result, 'modality': 'speech'})
+
+
+@app.route('/api/v1/translate/text-to-sign', methods=['POST'])
+def api_text_to_sign():
+    data = request.get_json(silent=True) or {}
+    text = data.get('text', '')
+    language = data.get('language', 'asl')
+    if not text:
+        return jsonify({'error': 'text required'}), 400
+    result = text_to_sign(text, language=language)
+    return jsonify({'status': 'ok', 'translation': result})
 
 
 @app.route('/api/v1/translate/sign-to-text', methods=['POST'])
