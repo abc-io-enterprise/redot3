@@ -1,36 +1,65 @@
-name: "Privacy & Data Handling Checks"
+name: Privacy & Data Handling Checks
 
 on:
   push:
-    branches: [ master ]
+    branches: [main, master]
   pull_request:
-    branches: [ master ]
+    branches: [main, master]
+
+permissions:
+  contents: read
 
 jobs:
   privacy-audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Check for PII patterns
+      - name: Check for tracked sensitive files
         run: |
-          echo "Scanning for common PII patterns..."
-          # Warn if any .env-like files are tracked
-          if git ls-files | grep -E '\.(env|key|secret)'; then
-            echo "⚠️ WARNING: Sensitive files detected in Git!"
+          echo "Scanning for tracked .env / .key / .secret files..."
+          tracked=$(git ls-files | grep -E '\.(env|key|secret)$' || true)
+          if [ -n "$tracked" ]; then
+            echo "❌ ERROR: Sensitive files detected in Git:"
+            echo "$tracked"
+            exit 1
+          fi
+          echo "✅ No sensitive files tracked."
+
+      - name: Verify .gitignore exclusions
+        run: |
+          echo "Verifying .gitignore has required entries..."
+          required=("^\.env" "^\.key" "^\.secret" "postgres-data" "redis-data" "node_modules" "\.pem" "\.p12")
+          failed=0
+          for item in "${required[@]}"; do
+            if ! grep -qE "$item" .gitignore; then
+              echo "❌ Missing .gitignore entry matching: $item"
+              failed=1
+            fi
+          done
+          if [ "$failed" -eq 0 ]; then
+            echo "✅ .gitignore exclusions look good."
+          else
             exit 1
           fi
 
-      - name: Verify .gitignore completeness
+      - name: Check documentation for credential patterns
         run: |
-          echo "Verifying .gitignore..."
-          grep -E '^\.env|^\.key|^\.secret|^postgres-data' .gitignore || echo "✓ Secrets properly excluded"
+          echo "Scanning docs/ for high-risk credential patterns..."
+          hits=$(grep -riE '(password[[:space:]]*=[[:space:]]*[^\s]|api[_-]?key[[:space:]]*=[[:space:]]*[^\s]|secret[[:space:]]*=[[:space:]]*[^\s])' docs/ || true)
+          if [ -n "$hits" ]; then
+            echo "⚠️ WARNING: Potential credential patterns found in docs/:"
+            echo "$hits"
+            exit 1
+          fi
+          echo "✅ No credential patterns found in docs/."
 
-      - name: Check documentation for PII
+      - name: License compliance spot check
         run: |
-          echo "Scanning docs for patterns..."
-          grep -r 'password\|api.key\|secret' docs/ || echo "✓ No PII found in docs"
-
-      - name: License compliance check
-        run: |
-          echo "✓ All files use proper headers/licenses"
+          echo "Checking for LICENSE file..."
+          if [ -f LICENSE ] || [ -f LICENSE.md ]; then
+            echo "✅ LICENSE file present."
+          else
+            echo "ℹ️ No LICENSE file found at root. Consider adding one."
+          fi

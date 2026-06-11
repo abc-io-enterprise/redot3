@@ -2,20 +2,56 @@ name: GCP Deploy
 
 on:
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'GCP environment to deploy'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
   build-and-deploy:
+    name: Deploy to GCP (${{ github.event.inputs.environment }})
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
+        uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configure Docker for GCR / Artifact Registry
+        run: gcloud auth configure-docker
+
       - name: Build and push images
         run: |
-          echo "Build step placeholder"
-      - name: Apply k8s manifests
+          echo "Build and push images to GCP Artifact Registry"
+          # Example:
+          # docker build -t gcr.io/$GCP_PROJECT_ID/abc-io-gateway:${{ github.sha }} ./services/gateway
+          # docker push gcr.io/$GCP_PROJECT_ID/abc-io-gateway:${{ github.sha }}
+
+      - name: Apply Kubernetes manifests
         run: |
-          kubectl apply -f infrastructure/gcp/k8s/
+          echo "Applying manifests from infrastructure/gcp/k8s/"
+          # kubectl apply -f infrastructure/gcp/k8s/
+          # Smoke tests should follow here before marking successful
+
+      - name: Post-deploy smoke test
+        run: |
+          echo "Run kubectl rollout status and endpoint health checks here."

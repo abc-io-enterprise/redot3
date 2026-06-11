@@ -1,33 +1,56 @@
-name: "Branch Protection Checks"
+name: Branch Protection Checks
 
 on:
   pull_request:
-    branches: [ master ]
+    branches: [main, master]
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
   required-checks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Verify PR has description
         run: |
-          if [ -z "${{ github.event.pull_request.body }}" ]; then
-            echo "❌ PR description required"
+          body="${{ github.event.pull_request.body }}"
+          if [ -z "$body" ]; then
+            echo "❌ PR description is required."
             exit 1
           fi
-          echo "✓ PR description present"
+          echo "✅ PR description present."
 
-      - name: Enforce commit message format
+      - name: Enforce semantic PR title
         run: |
-          echo "✓ Semantic commits enforced (feat:, fix:, docs:, etc.)"
-
-      - name: Require code review
-        run: |
-          echo "✓ Code review required by codeowners"
+          title="${{ github.event.pull_request.title }}"
+          pattern='^(feat|fix|docs|style|refactor|test|chore|perf|security|revert)(\(.+\))?!?: .+'
+          if [[ "$title" =~ $pattern ]]; then
+            echo "✅ PR title follows Conventional Commits: $title"
+          else
+            echo "❌ PR title must follow Conventional Commits."
+            echo "   Allowed prefixes: feat:, fix:, docs:, style:, refactor:, test:, chore:, perf:, security:, revert:"
+            exit 1
+          fi
 
       - name: Check for WIP marker
         run: |
-          if ${{ contains(github.event.pull_request.title, 'WIP') }}; then
-            echo "⚠️ WIP PR detected - may need additional review"
+          title="${{ github.event.pull_request.title }}"
+          if echo "$title" | grep -qiE '\bWIP\b|Draft:'; then
+            echo "⚠️ WIP/Draft marker detected — convert to ready for review before merging."
+            exit 1
+          fi
+          echo "✅ PR is not marked WIP."
+
+      - name: Require linked issue or discussion
+        run: |
+          body="${{ github.event.pull_request.body }}"
+          if echo "$body" | grep -qE '(fixes|closes|refs|references)[[:space:]]*#?[0-9]+|https://github\.com/.+/issues/[0-9]+'; then
+            echo "✅ Linked issue or discussion found."
+          else
+            echo "ℹ️ Consider linking an issue or discussion in the PR body."
           fi

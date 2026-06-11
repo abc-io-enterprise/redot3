@@ -262,7 +262,7 @@ All workflows are in `.github/workflows/`:
 | `secret-scanning.yml` | Push/PR to `master` | Install `truffleHog3` and scan for leaked secrets. |
 | `secrets-rotation-reminder.yml` | Monthly (1st @ 08:00 UTC) | Auto-create GitHub issue reminding operators to rotate secrets. |
 
-**Branch naming inconsistency:** `ci.yml` triggers on `main`; `branch-protection.yml`, `codeql-analysis.yml`, `privacy-checks.yml`, and `secret-scanning.yml` trigger on `master`.
+**Branch triggers:** All workflows now trigger on both `main` and `master` to support migration. After the repository is migrated to `abc-io-enterprise/redot2`, standardize on one default branch and update workflow filters accordingly.
 
 ---
 
@@ -271,8 +271,8 @@ All workflows are in `.github/workflows/`:
 ### Secrets and Environment Variables
 - **Never commit `.env`**. It is excluded by `.gitignore`.
 - Copy `.env.example` to `.env` and fill in production values before deploying.
-- Required secrets in `.env.example` include: `POSTGRES_PASSWORD`, `MISTRAL_API_KEY`, `MISTRAL_MODEL`, `MISTRAL_API_BASE_URL`, `KIMI_API_KEY`, `KIMI_MODEL`, `KIMI_API_BASE_URL`, owner/mobile/public signing keys and fingerprints, `OWNER_SESSION_TOKEN`, `OWNER_ACCOUNT_EMAIL`, `OWNER_ACCOUNT_PASSWORD`, `OWNER_BIOMETRIC_SECRET`, `GATEWAY_API_KEY`, `SELF_HEAL_TOKEN`, and Headscale/Gitea/Namecheap placeholders.
-- The running gateway also depends on additional runtime variables that are **not** in `.env.example`: `JWT_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID_PRO`, `STRIPE_PRICE_ID_ENTERPRISE`, `PUBLIC_URL`, `CORS_ORIGIN`, and `SMTP_*` (`SMTP_URL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`). Make sure these are set in the actual `.env` for production.
+- Required secrets in `.env.example` include: `POSTGRES_PASSWORD`, `MISTRAL_API_KEY`, `MISTRAL_MODEL`, `MISTRAL_API_BASE_URL`, `KIMI_API_KEY`, `KIMI_MODEL`, `KIMI_API_BASE_URL`, owner/mobile/public signing keys and fingerprints, `OWNER_SESSION_TOKEN`, `OWNER_ACCOUNT_EMAIL`, `OWNER_ACCOUNT_PASSWORD`, `OWNER_BIOMETRIC_SECRET`, `GATEWAY_API_KEY`, `SELF_HEAL_TOKEN`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID_PRO`, `STRIPE_PRICE_ID_ENTERPRISE`, `PUBLIC_URL`, `CORS_ORIGIN`, and `SMTP_*` (`SMTP_URL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`), plus Headscale/Gitea/Namecheap placeholders. See `.security/SECRETS_INVENTORY.md` for the canonical list and rotation schedule.
+- Production secrets are stored in **GitHub Repository Secrets** and synchronized to the VPS `.env` at deploy time via `scripts/set-github-secrets.sh`.
 
 ### Signing and Privacy Verification
 The project uses independent HMAC-SHA256 signing keys for three roles:
@@ -342,6 +342,12 @@ The gateway connects via `DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@
 | Mobile APK build | `scripts/build-mobile-apk.ps1` |
 | Add cross-sensory translation | `services/ai-isp/src/app.py` and `src/translators/*.py` |
 | Change beacon behavior | `services/beacon/src/index.js` |
+| Set up / migrate GitHub Enterprise org | `docs/ENTERPRISE_SETUP_RUNBOOK.md`, `docs/GITHUB_ENTERPRISE_MIGRATION.md`, `scripts/setup-github-enterprise.sh`, `scripts/migrate-to-enterprise.sh` |
+| Apply branch protection | `.security/BRANCH_PROTECTION.md`, `scripts/apply-branch-protection.sh` |
+| Manage production secrets | `.security/SECRETS_INVENTORY.md`, `scripts/set-github-secrets.sh` |
+| Security incident response | `docs/SECURITY_RUNBOOK.md` |
+| Disaster recovery | `docs/DISASTER_RECOVERY.md` |
+| Onboard a new team member | `docs/ONBOARDING.md` |
 
 ---
 
@@ -366,6 +372,41 @@ All remotes are pre-configured. Run `git remote -v` to view them. Private repos 
 
 **Important:** When editing the active v2.0 services, work in the root `services/` and `scripts/` directories. The `repositories/` folder is an archive for reference and future migration; changes there do not affect the running Docker Compose stack unless explicitly promoted.
 
+## Enterprise Configuration
+
+The repository is prepared for migration to the `abc-io-enterprise` GitHub organization. Key artifacts:
+
+- **Organization setup runbook**: `docs/ENTERPRISE_SETUP_RUNBOOK.md`
+- **Migration plan**: `docs/GITHUB_ENTERPRISE_MIGRATION.md`
+- **Security runbook**: `docs/SECURITY_RUNBOOK.md`
+- **Disaster recovery**: `docs/DISASTER_RECOVERY.md`
+- **Onboarding**: `docs/ONBOARDING.md`
+- **Branch protection rules**: `.security/BRANCH_PROTECTION.md`
+- **SAML/SSO template**: `.security/SAML_SSO_TEMPLATE.md`
+- **Audit log streaming**: `.security/AUDIT_LOG_STREAMING.md`
+- **IP allowlist policy**: `.security/IP_ALLOWLIST.md`
+- **Secrets inventory**: `.security/SECRETS_INVENTORY.md`
+- **Setup checklist script**: `scripts/setup-github-enterprise.sh`
+- **Migration script**: `scripts/migrate-to-enterprise.sh`
+- **Branch protection script**: `scripts/apply-branch-protection.sh`
+- **Secrets upload script**: `scripts/set-github-secrets.sh`
+
+Automation helpers:
+
+```bash
+# Print the full setup checklist
+./scripts/setup-github-enterprise.sh
+
+# Perform the repository migration
+./scripts/migrate-to-enterprise.sh
+
+# Apply enterprise branch protection
+./scripts/apply-branch-protection.sh abc-io-enterprise/redot2 master
+
+# Upload secrets from .env to GitHub Repository Secrets
+./scripts/set-github-secrets.sh abc-io-enterprise/redot2
+```
+
 ## Notes for Agents
 
 - Do not assume the presence of npm build steps, bundlers, or frontend frameworks. Most Node.js services are run directly with `node src/index.js` (or `server.js` for `beacon-pwa`).
@@ -373,3 +414,4 @@ All remotes are pre-configured. Run `git remote -v` to view them. Private repos 
 - When modifying a Node.js service, remember that `compose.dev.yml` only includes `gateway`, `operator-station`, and `postgres`. Other services must be tested with the full `docker-compose.yml` or `compose.prod.yml`.
 - The `ai-isp` service directory is fully implemented and deployed; it is **not** a placeholder.
 - The project language for comments and documentation is **English**.
+- When creating or updating enterprise documentation, keep sensitive values (passwords, keys, tokens) out of Git. Reference `.security/SECRETS_INVENTORY.md` instead.

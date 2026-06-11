@@ -5,29 +5,75 @@ on:
     tags:
       - 'v*.*.*'
 
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
 jobs:
   package:
+    name: Build and publish release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Build service containers
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build gateway
+        run: docker build -t abc-io-gateway:${{ github.ref_name }} ./services/gateway
+
+      - name: Build operator-station
+        run: docker build -t abc-io-operator-station:${{ github.ref_name }} ./services/operator-station
+
+      - name: Build kimi
+        run: docker build -t abc-io-kimi:${{ github.ref_name }} ./services/kimi
+
+      - name: Build ai-isp
+        run: docker build -t abc-io-ai-isp:${{ github.ref_name }} ./services/ai-isp
+
+      - name: Validate compose files
         run: |
-          docker build -t abc-io-gateway ./services/gateway
-          docker build -t abc-io-operator-station ./services/operator-station
-          docker build -t abc-io-kimi ./services/kimi
+          docker compose -f docker-compose.yml config
+          docker compose -f compose.prod.yml config
+
       - name: Create release archive
         run: |
-          zip -r rd1backupublive-final-2.0.zip . -x .git/*
-      - name: Create GitHub release
-        uses: softprops/action-gh-release@v1
+          zip -r "redot2-${{ github.ref_name }}.zip" . \
+            -x ".git/*" \
+            -x ".env" \
+            -x ".env.*" \
+            -x "*.key" \
+            -x "*.pem" \
+            -x "*.p12" \
+            -x "node_modules/*" \
+            -x "*/node_modules/*" \
+            -x "postgres-data/*" \
+            -x "redis-data/*" \
+            -x "apk/*.apk" \
+            -x "apk/*.jks" \
+            -x "apk/*.idsig" \
+            -x "android-sdk/*"
+
+      - name: Generate release archive checksums
+        run: |
+          sha256sum "redot2-${{ github.ref_name }}.zip" > "redot2-${{ github.ref_name }}.zip.sha256"
+          cat "redot2-${{ github.ref_name }}.zip.sha256"
+
+      - name: Create GitHub release and upload artifacts
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: ABC-IO v2.0 Release ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            redot2-${{ github.ref_name }}.zip
+            redot2-${{ github.ref_name }}.zip.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload release artifact
-        uses: softprops/action-gh-release@v1
+
+      - name: Attest release artifact
+        uses: actions/attest-build-provenance@v1
         with:
-          files: rd1backupublive-final-2.0.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          subject-path: "redot2-${{ github.ref_name }}.zip"

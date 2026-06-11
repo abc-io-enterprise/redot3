@@ -1,5 +1,7 @@
 ﻿# ABC-IO v2.0 - FINAL SYSTEM HANDOFF
 
+> **SECURITY NOTICE**: This document was created during initial delivery and may contain example credentials (e.g., owner password, biometric token). These values must be treated as **PLACEHOLDERS** and rotated immediately in production. Authoritative secret management guidance is in `.security/SECRETS_INVENTORY.md` and `docs/SECURITY_RUNBOOK.md`. Never commit real credentials to Git.
+
 ## STATUS: LIVE AND FULLY OPERATIONAL
 
 **Date**: 2026-06-10  

@@ -1,4 +1,4 @@
-﻿name: Deploy to Production
+name: Deploy to Production
 
 on:
   workflow_dispatch:
@@ -16,45 +16,63 @@ on:
         required: true
         default: 'v1.0.0'
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
+    name: Deploy ${{ github.event.inputs.tag }} to ${{ github.event.inputs.environment }}
     runs-on: ubuntu-latest
-    environment: production
+    environment: ${{ github.event.inputs.environment }}
     steps:
-      - uses: actions/checkout@v3
-      - name: Checkout tag
-        run: git fetch --all --tags && git checkout ${{ github.event.inputs.tag }}
+      - name: Checkout repository at tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag }}
+          fetch-depth: 0
 
-      - name: Deploy to VPS
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_KEY: ${{ secrets.VPS_SSH_KEY }}
-          ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
+      - name: Verify tag signature (optional)
         run: |
-          mkdir -p ~/.ssh
-          echo $VPS_KEY > ~/.ssh/vps_key
-          chmod 600 ~/.ssh/vps_key
-          ssh-keyscan -H $VPS_HOST >> ~/.ssh/known_hosts 2>/dev/null
-          
-          ssh -i ~/.ssh/vps_key $VPS_USER@$VPS_HOST << 'DEPLOY'
+          git verify-tag ${{ github.event.inputs.tag }} || echo "ℹ️ Tag is not GPG-signed."
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            set -euo pipefail
             cd /opt/redot2
             git fetch --all --tags
             git checkout ${{ github.event.inputs.tag }}
-            docker compose pull
-            docker compose up -d --remove-orphans
+            # Write production env safely (file permissions restricted)
+            cat > .env <<'ENV_EOF'
+            ${{ secrets.PROD_ENV_FILE }}
+            ENV_EOF
+            chmod 600 .env
+            # Pull latest images and recreate services
+            docker compose -f compose.prod.yml pull
+            docker compose -f compose.prod.yml up -d --remove-orphans
+            # Health verification
             ./scripts/health-check.sh
-          DEPLOY
 
       - name: Smoke test
         run: |
+          echo "Waiting for services to stabilize..."
           sleep 30
-          curl -f http://${{ secrets.VPS_HOST }}/health || exit 1
+          curl -fsS --retry 5 --retry-delay 10 "http://${{ secrets.VPS_HOST }}/health" || {
+            echo "❌ Smoke test failed. Initiating rollback is recommended."
+            exit 1
+          }
+          echo "✅ Smoke test passed."
 
-      - name: Notify deployment
+      - name: Notify success
         if: success()
-        run: echo Deployment to ${{ github.event.inputs.environment }} successful
+        run: echo "✅ Deployment to ${{ github.event.inputs.environment }} succeeded."
 
       - name: Notify failure
         if: failure()
-        run: echo Deployment FAILED - Rollback required
+        run: echo "❌ Deployment to ${{ github.event.inputs.environment }} FAILED — check VPS state and consider rollback."

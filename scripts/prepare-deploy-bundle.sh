@@ -19,14 +19,21 @@ mkdir -p "$BUNDLE_DIR/abc-io"
 echo "[1/5] Copying source code..."
 git archive HEAD | tar -x -C "$BUNDLE_DIR/abc-io"
 
+# Copy pre-installed node_modules (not in git)
+echo "[2/5] Copying pre-built node_modules..."
+if [ -d "services/gateway/node_modules" ]; then
+  cp -r services/gateway/node_modules "$BUNDLE_DIR/abc-io/services/gateway/"
+  echo "  Gateway node_modules copied ($(du -sh services/gateway/node_modules | cut -f1))"
+fi
+
 # Copy APK (not in git)
-echo "[2/5] Copying APK artifact..."
+echo "[3/5] Copying APK artifact..."
 mkdir -p "$BUNDLE_DIR/abc-io/apk"
 cp apk/redot2-operator.apk "$BUNDLE_DIR/abc-io/apk/" 2>/dev/null || echo "WARNING: APK not found"
 cp apk/redot2-latest.apk "$BUNDLE_DIR/abc-io/apk/" 2>/dev/null || true
 
 # Copy .env securely (warn user)
-echo "[3/5] Preparing environment..."
+echo "[4/5] Preparing environment..."
 echo ""
 echo "⚠️  IMPORTANT: You must manually copy .env to the VPS."
 echo "   Do NOT commit .env to git."
@@ -39,7 +46,7 @@ cat > "$BUNDLE_DIR/abc-io/.env.deploy.template" << 'ENVEOF'
 ENVEOF
 
 # Create startup script
-echo "[4/5] Creating startup script..."
+echo "[5/5] Creating startup script..."
 cat > "$BUNDLE_DIR/abc-io/startup.sh" << 'STARTEOF'
 #!/bin/bash
 set -e
@@ -139,7 +146,7 @@ For AI nodes, after step 2, only start AI services:
 READMEEOF
 
 # Package
-echo "[5/5] Creating bundle..."
+echo "[6/6] Creating bundle..."
 cd "$BUNDLE_DIR"
 tar -czf "/c/Users/cplexmath/OneDrive/Documents/redot2/$BUNDLE_NAME" abc-io/
 
