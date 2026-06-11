@@ -31,8 +31,8 @@ deploy_redot1() {
         mkdir -p /opt/abc-io && cd /opt/abc-io
         if [ -d .git ]; then git fetch origin && git checkout $DEPLOY_TAG && git pull origin $DEPLOY_TAG; else git clone $REPO_URL . && git checkout $DEPLOY_TAG; fi
         cp .env.example .env
-        docker compose -f compose.prod.yml pull
-        docker compose -f compose.prod.yml up -d
+        docker-compose -f compose.prod.yml pull
+        docker-compose -f compose.prod.yml up -d
         sleep 30
         docker compose -f compose.prod.yml ps
 EOF
