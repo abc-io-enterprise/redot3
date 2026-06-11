@@ -5,7 +5,7 @@
 set -e
 
 DEPLOY_TAG="${1:-main}"
-REPO_URL="https://github.com/ccplexmath/redot2complete.git"
+REPO_URL="https://github.com/abc-io-enterprise/redot2.git"
 
 REDOT1_IP="${REDOT1_IP:-162.254.32.142}"
 AI1_IP="${AI1_IP:-192.227.212.235}"

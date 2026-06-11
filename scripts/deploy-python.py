@@ -65,7 +65,7 @@ def deploy_node(name, config):
             pass
 
         log("  Docker check...")
-        out, err, code = run_cmd(ssh, "which docker-compose || which docker")
+        out, err, code = run_cmd(ssh, "docker compose version || docker-compose version || which docker")
         if code != 0:
             log("  [WARN] Docker missing. Installing...")
             run_cmd(ssh, "apt-get update -qq && apt-get install -y -qq docker.io docker-compose 2>/dev/null || true", timeout=300)
@@ -99,7 +99,7 @@ def deploy_node(name, config):
 
         log("  Starting services...")
         if services:
-            cmd = 'cd /opt/abc-io && docker system prune -af --volumes >/dev/null 2>&1 || true && docker-compose -f compose.prod.yml up -d {}'.format(services)
+            cmd = 'cd /opt/abc-io && docker system prune -af --volumes >/dev/null 2>&1 || true && docker compose -f compose.prod.yml up -d {}'.format(services)
         else:
             cmd = 'cd /opt/abc-io && bash startup.sh'
 
