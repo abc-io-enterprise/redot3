@@ -3,7 +3,7 @@ services:
     image: nginx:stable-alpine
     ports:
       - '8088:80'
-      - '8443:443'
+    # 8443 removed: Windows Docker port binding issue after container restart
     depends_on:
       - gateway
     volumes:
