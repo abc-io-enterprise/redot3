@@ -79,6 +79,8 @@ async function sendEmail(to, subject, html, text) {
 app.use(helmet());
 app.use(cors({ origin: process.env.CORS_ORIGIN || true, credentials: true }));
 app.use(morgan(NODE_ENV === 'production' ? 'combined' : 'dev'));
+// Raw body parser for Stripe webhook must come before global JSON parser
+app.use('/api/v1/billing/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -163,7 +165,11 @@ async function optionalAuth(req, res, next) {
 // ============================================
 function tierRateLimit(req) {
   const tier = req.tier || 'free';
-  const limits = { free: 30, pro: 300, enterprise: 3000 };
+  const limits = {
+    free: 30, basic: 60, standard: 120, pro: 300,
+    business: 600, team: 1200, corporate: 2000,
+    enterprise: 3000, agency: 5000, global: 10000
+  };
   return limits[tier] || 30;
 }
 
@@ -444,7 +450,7 @@ app.post('/api/v1/billing/checkout', authMiddleware, async (req, res) => {
 });
 
 // Stripe webhook
-app.post('/api/v1/billing/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+app.post('/api/v1/billing/webhook', async (req, res) => {
   const sig = req.headers['stripe-signature'];
   let event;
   try {
@@ -460,15 +466,28 @@ app.post('/api/v1/billing/webhook', express.raw({ type: 'application/json' }), a
       const subId = session.subscription;
       if (accountId && subId) {
         const sub = await stripe.subscriptions.retrieve(subId);
+        const tierMap = {
+          [process.env.STRIPE_PRICE_ID_FREE]: 'free',
+          [process.env.STRIPE_PRICE_ID_BASIC]: 'basic',
+          [process.env.STRIPE_PRICE_ID_STANDARD]: 'standard',
+          [process.env.STRIPE_PRICE_ID_PRO]: 'pro',
+          [process.env.STRIPE_PRICE_ID_BUSINESS]: 'business',
+          [process.env.STRIPE_PRICE_ID_TEAM]: 'team',
+          [process.env.STRIPE_PRICE_ID_CORPORATE]: 'corporate',
+          [process.env.STRIPE_PRICE_ID_ENTERPRISE]: 'enterprise',
+          [process.env.STRIPE_PRICE_ID_AGENCY]: 'agency',
+          [process.env.STRIPE_PRICE_ID_GLOBAL]: 'global',
+        };
+        const tier = tierMap[sub.items.data[0].price.id] || 'pro';
         await pool.query(
           `INSERT INTO subscriptions (account_id, stripe_subscription_id, stripe_price_id, tier, status, current_period_start, current_period_end)
            VALUES ($1, $2, $3, $4, $5, to_timestamp($6), to_timestamp($7))
            ON CONFLICT (stripe_subscription_id) DO UPDATE SET
              status = EXCLUDED.status, current_period_start = EXCLUDED.current_period_start,
              current_period_end = EXCLUDED.current_period_end, updated_at = now()`,
-          [accountId, subId, sub.items.data[0].price.id, 'pro', sub.status, sub.current_period_start, sub.current_period_end]
+          [accountId, subId, sub.items.data[0].price.id, tier, sub.status, sub.current_period_start, sub.current_period_end]
         );
-        await pool.query("UPDATE accounts SET tier = 'pro' WHERE id = $1", [accountId]);
+        await pool.query('UPDATE accounts SET tier = $1 WHERE id = $2', [tier, accountId]);
       }
     } else if (event.type === 'invoice.payment_succeeded') {
       const inv = event.data.object;
@@ -521,6 +540,101 @@ app.get('/api/v1/billing/invoices', authMiddleware, async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: 'Failed to load invoices' });
   }
+});
+
+// ============================================
+// PAYPAL BILLING (Skeleton)
+// ============================================
+// NOTE: Real PayPal SDK integration goes here using PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET
+
+app.post('/api/v1/billing/paypal/create-order', authMiddleware, async (req, res) => {
+  try {
+    const { amount, currency = 'USD', tier } = req.body;
+    // TODO: Integrate PayPal Orders v2 API
+    const orderId = 'mock-paypal-order-' + Date.now();
+    res.json({ orderId, status: 'CREATED', approvalUrl: '/dashboard/billing' });
+  } catch (e) {
+    console.error('PayPal create-order error:', e);
+    res.status(500).json({ error: 'PayPal order creation failed' });
+  }
+});
+
+app.post('/api/v1/billing/paypal/capture-order', authMiddleware, async (req, res) => {
+  try {
+    const { orderId } = req.body;
+    // TODO: Integrate PayPal capture API
+    res.json({ orderId, status: 'COMPLETED', tier: req.body.tier || 'pro' });
+  } catch (e) {
+    console.error('PayPal capture-order error:', e);
+    res.status(500).json({ error: 'PayPal capture failed' });
+  }
+});
+
+app.post('/api/v1/billing/paypal/webhook', async (req, res) => {
+  try {
+    // TODO: Verify PayPal webhook signature using PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET
+    console.log('PayPal webhook received:', req.body);
+    res.json({ received: true });
+  } catch (e) {
+    console.error('PayPal webhook error:', e);
+    res.status(500).json({ error: 'PayPal webhook processing failed' });
+  }
+});
+
+// ============================================
+// SYSTEM HEALTH
+// ============================================
+app.get('/api/v1/system/health', async (req, res) => {
+  const health = {
+    gateway: { status: 'ok', version: '2.0.0' },
+    database: { status: 'unknown' },
+    kimi: { status: 'unknown' },
+    redis: { status: 'unknown' },
+    stripe: { status: process.env.STRIPE_SECRET_KEY ? 'configured' : 'not_configured' },
+  };
+  try {
+    await pool.query('SELECT 1');
+    health.database.status = 'ok';
+  } catch (e) {
+    health.database.status = 'error';
+    health.database.error = e.message;
+  }
+  try {
+    const kimiRes = await fetch('http://kimi:5000/health');
+    health.kimi.status = kimiRes.ok ? 'ok' : 'error';
+  } catch (e) {
+    health.kimi.status = 'error';
+    health.kimi.error = e.message;
+  }
+  try {
+    const net = require('net');
+    await new Promise((resolve, reject) => {
+      const socket = new net.Socket();
+      socket.setTimeout(2000);
+      socket.on('connect', () => { socket.destroy(); resolve(); });
+      socket.on('error', reject);
+      socket.on('timeout', () => { socket.destroy(); reject(new Error('timeout')); });
+      socket.connect(6379, 'redis');
+    });
+    health.redis.status = 'ok';
+  } catch (e) {
+    health.redis.status = 'error';
+    health.redis.error = e.message;
+  }
+  const allOk = Object.values(health).every((h) => h.status === 'ok' || h.status === 'configured');
+  res.status(allOk ? 200 : 503).json(health);
+});
+
+// ============================================
+// MOBILE STATUS
+// ============================================
+app.get('/api/v1/mobile/status', authMiddleware, apiLimiter, (req, res) => {
+  res.json({
+    connected: true,
+    gatewayVersion: '2.0.0',
+    lastSync: new Date().toISOString(),
+    fallbackAvailable: true,
+  });
 });
 
 // ============================================

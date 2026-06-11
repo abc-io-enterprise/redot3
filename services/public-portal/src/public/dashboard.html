@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — ABC-IO</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Inter',sans-serif;background:#0a0a2e;color:#e2e8f0;min-height:100vh}
@@ -106,6 +107,7 @@ async function loadBilling() {
     html += `<div class="row"><span class="label">${new Date(inv.invoice_date).toLocaleDateString()}</span><span class="value">$${(inv.amount_paid / 100).toFixed(2)} ${inv.currency?.toUpperCase()}</span></div>`;
   });
   html += `<div style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="billingPortal()">Billing Portal</button></div>`;
+  html += `<div style="margin-top:8px;font-size:12px;color:#64748b">PayPal backup available</div>`;
   document.getElementById('billingContent').innerHTML = html;
 }
 

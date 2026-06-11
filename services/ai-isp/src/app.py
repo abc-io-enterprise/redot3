@@ -182,6 +182,53 @@ def api_text_to_haptic():
     })
 
 
+@app.route('/api/v1/translate/braille-to-text', methods=['POST'])
+def api_braille_to_text():
+    data = request.get_json(silent=True) or {}
+    text = data.get('text', '')
+    if not text:
+        return jsonify({'error': 'text required'}), 400
+    result = braille_to_text(text)
+    return jsonify({'status': 'ok', 'input': text, 'output': result, 'modality': 'text', 'type': 'plain'})
+
+
+@app.route('/api/v1/translate/morse-to-text', methods=['POST'])
+def api_morse_to_text():
+    data = request.get_json(silent=True) or {}
+    text = data.get('text', '')
+    if not text:
+        return jsonify({'error': 'text required'}), 400
+    result = morse_to_text(text)
+    return jsonify({'status': 'ok', 'input': text, 'output': result, 'modality': 'text', 'type': 'plain'})
+
+
+@app.route('/api/v1/translate/haptic-to-text', methods=['POST'])
+def api_haptic_to_text():
+    data = request.get_json(silent=True) or {}
+    text = data.get('text', '')
+    if not text:
+        return jsonify({'error': 'text required'}), 400
+    # haptic_to_text exists in haptic.py but is not imported; use pass-through note
+    return jsonify({
+        'status': 'ok',
+        'input': text,
+        'output': text,
+        'modality': 'text',
+        'note': 'haptic-to-text decoding requires pattern classifier. Pass-through returned.'
+    })
+
+
+@app.route('/api/v1/translate/text-to-speech', methods=['POST'])
+def api_text_to_speech():
+    data = request.get_json(silent=True) or {}
+    text = data.get('text', '')
+    voice = data.get('voice', 'neutral')
+    if not text:
+        return jsonify({'error': 'text required'}), 400
+    result = text_to_speech(text, voice=voice)
+    return jsonify({'status': 'ok', 'input': text, 'output': result, 'modality': 'speech'})
+
+
 @app.route('/api/v1/translate/sign-to-text', methods=['POST'])
 def api_sign_to_text():
     data = request.get_json(silent=True) or {}
