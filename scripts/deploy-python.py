@@ -104,7 +104,7 @@ def deploy_node(name, config):
 
         log("  Starting services...")
         if services:
-            cmd = 'cd /opt/abc-io && docker system prune -af --volumes >/dev/null 2>&1 || true && docker compose -f compose.prod.yml up -d {}'.format(services)
+            cmd = 'cd /opt/abc-io && docker system prune -af --volumes >/dev/null 2>&1 || true && docker-compose -f compose.prod.yml up -d {}'.format(services)
         else:
             cmd = 'cd /opt/abc-io && bash startup.sh'
 

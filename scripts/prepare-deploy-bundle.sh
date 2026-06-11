@@ -83,17 +83,17 @@ echo "[2/4] Pruning old images..."
 docker system prune -af --volumes >/dev/null 2>&1 || true
 
 echo "[3/4] Pulling images..."
-docker compose -f compose.prod.yml pull
+docker-compose -f compose.prod.yml pull
 
 echo "[4/4] Starting services..."
-docker compose -f compose.prod.yml up -d
+docker-compose -f compose.prod.yml up -d
 
 echo "[4/4] Waiting for services..."
 sleep 15
 
 echo ""
 echo "=== Service Status ==="
-docker compose -f compose.prod.yml ps
+docker-compose -f compose.prod.yml ps
 
 echo ""
 echo "=== Health Checks ==="
