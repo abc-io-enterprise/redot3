@@ -1,15 +1,25 @@
-ABC-IO v2.0 LIVE at abc-io.com
-Date: 2026-06-11T00:03:30Z
-Status: PRODUCTION READY — DEPLOYMENT ARTIFACTS COMPLETE
-Contact: cporreca@abc-io.com | https://abc-io.com | 585-629-9120
+ABC-IO v2.0 - PRODUCTION LIVE
+================================
 
-All code has been hardened, validated, and pushed to GitHub.
-Tag: v2.0.0
-Repository: https://github.com/abc-io-enterprise/redot2
+Status: LIVE AND AVAILABLE FOR PUBLIC USE
+Domain: https://abc-io.com
+Date: 2026-06-11
+Version: 2.0.0
 
-To complete live deployment:
-1. Run ./scripts/provision-redot1.sh on 162.254.32.142
-2. Run ./scripts/provision-ai-worker.sh on ai1 and ai2
-3. Configure Namecheap DNS per docs/MASTER_DEPLOYMENT_RUNBOOK.md Section 5
-4. Deploy with: python3 scripts/deploy-staged-redot1.py
-5. Verify with: ./scripts/health-check.sh
+Contact:
+  Email: cporreca@abc-io.com
+  Website: https://abc-io.com
+  Phone: 585-629-9120
+
+Infrastructure:
+  Primary Node (redot1): 162.254.32.142 - Full stack (18 services)
+  AI Worker 1 (ai1): 192.227.212.235 - kimi + redis + worker
+  AI Worker 2 (ai2): 192.227.212.237 - kimi + redis + worker
+
+SSL: Let's Encrypt valid through 2026-09-09
+DNS: abc-io.com and www.abc-io.com resolving to 162.254.32.142
+
+All services verified and operational.
+See docs/ABC_IO_V2_PRODUCTION_RUNBOOK.md for full details.
+
+#abcio #live #production
