@@ -1,28 +1,57 @@
 #!/bin/sh
 set -e
 
-printf 'Checking gateway...'
-curl --fail http://localhost:4000/health >/dev/null
-printf ' ok\n'
+HEALTH_URLS="
+gateway|http://localhost:4000/health
+operator-station|http://localhost:8080/health
+public-portal|http://localhost:8090/health
+mobile-gateway|http://localhost:5050/health
+owner-dashboard|http://localhost:8500/health
+kimi|http://localhost:5000/health
+beacon|http://localhost:3006/health
+beacon-pwa|http://localhost:3005/health
+ai-isp|http://localhost:7000/health
+nginx|http://localhost:8088/health
+prometheus|http://localhost:9091/-/healthy
+grafana|http://localhost:14000/api/health
+tracer|http://localhost:16686/
+headscale|http://localhost:8085/health
+"
 
-printf 'Checking operator station...'
-curl --fail http://localhost:8080/health >/dev/null
-printf ' ok\n'
+FAIL_COUNT=0
 
-printf 'Checking public portal...'
-curl --fail http://localhost:8090/health >/dev/null
-printf ' ok\n'
+for entry in $HEALTH_URLS; do
+  name=$(echo "$entry" | cut -d'|' -f1)
+  url=$(echo "$entry" | cut -d'|' -f2)
+  printf "Checking %s..." "$name"
+  if curl --fail --max-time 5 "$url" >/dev/null 2>&1; then
+    printf " ok\n"
+  else
+    printf " FAIL\n"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+  fi
+done
 
-printf 'Checking mobile gateway...'
-curl --fail http://localhost:5050/health >/dev/null
-printf ' ok\n'
+# TCP checks for stateful services
+printf "Checking postgres..."
+if nc -z localhost 5432 2>/dev/null; then
+  printf " ok\n"
+else
+  printf " FAIL\n"
+  FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
 
-printf 'Checking owner dashboard...'
-curl --fail http://localhost:8500/health >/dev/null
-printf ' ok\n'
+printf "Checking redis..."
+if nc -z localhost 6379 2>/dev/null; then
+  printf " ok\n"
+else
+  printf " FAIL\n"
+  FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
 
-printf 'Checking kimi...'
-curl --fail http://localhost:5000/health >/dev/null
-printf ' ok\n'
+if [ "$FAIL_COUNT" -gt 0 ]; then
+  echo "ERROR: $FAIL_COUNT service(s) failed health check."
+  exit 1
+fi
 
-echo 'Health check passed.'
+echo 'All health checks passed.'

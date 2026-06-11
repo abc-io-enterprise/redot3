@@ -1,3 +1,4 @@
+<!-- From: c:\Users\cplexmath\OneDrive\Documents\redot2\AGENTS.md -->
 # AGENTS.md — ABC-IO v2.0 (redot2)
 
 This file contains ground-truth information about the project for AI coding agents. If you are reading this, assume you know nothing about the codebase beyond what is written here.
@@ -8,16 +9,16 @@ This file contains ground-truth information about the project for AI coding agen
 
 ABC-IO v2.0 (codename `redot2`) is a containerized multi-service system designed for local development, production deployment, and release packaging. It is orchestrated with Docker Compose and provides:
 
-- **`gateway`** — Central API gateway with JWT/API-key auth, per-tier rate limiting, Stripe billing, email flows, and routing to backend services.
-- **`operator-station`** — Operational dashboard that aggregates health/status from the gateway, owner dashboard, mobile gateway, and public portal.
-- **`owner-dashboard`** — Privileged admin interface for service lifecycle control, deployment updates, APK backup status, and beacon relay. It executes `docker compose` commands directly.
-- **`mobile-gateway`** — Mobile-facing API with signing, stats, and beacon ingestion.
+- **`gateway`** — Central API gateway with JWT/API-key auth, per-tier rate limiting, Stripe and PayPal billing, email flows, and routing to backend services.
+- **`operator-station`** — Operational dashboard that aggregates health/status from the gateway, owner dashboard, mobile gateway, and public portal. Renders inline HTML/CSS/JS from a single Express file.
+- **`owner-dashboard`** — Privileged admin interface for service lifecycle control, deployment updates, APK backup status, and beacon relay. It executes `docker compose` and `git` commands directly via `child_process.execSync`.
+- **`mobile-gateway`** — Mobile-facing API with HMAC signing, cellular backup/failover logic, upstream node health checks, beacon relay, and emergency message caching.
 - **`public-portal`** — Public-facing static site with signature verification.
 - **`beacon-pwa`** — Minimal location-aware beacon PWA.
 - **`beacon`** — Public-safety beacon backend with in-memory storage, 24-hour TTL, haversine region search, and responder acknowledgments.
-- **`kimi`** — Python/Flask AI adapter that proxies to Mistral or Kimi with circuit breaker, response cache, retry logic, and offline fallback.
-- **`worker`** — Background Python worker that consumes a Redis queue for `ai_inference` and `health_check` jobs.
-- **`ai-isp`** — Cross-sensory translation service (Braille, Morse, Haptic, speech-to-text, sign-language stubs) served by Gunicorn.
+- **`kimi`** — Python/Flask AI adapter that proxies to Mistral or Kimi with circuit breaker, response cache, retry logic, and offline fallback. Also includes a small standalone Redis consumer (`worker.py`) for `abc_io_tasks`.
+- **`worker`** — Background Python worker that consumes the Redis list `redot2:jobs:queue` for `ai_inference` and `health_check` jobs, storing results with a 1-hour TTL.
+- **`ai-isp`** — Cross-sensory translation service (Braille, Morse, Haptic, speech-to-text stubs, sign-language stubs) served by Gunicorn.
 - **Infrastructure services** — `postgres`, `redis`, `nginx`, `prometheus`, `grafana`, `tracer` (Jaeger), `headscale` (VPN), and a placeholder `logger` (busybox).
 
 The entire stack is intended to run on a single primary VPS or as a multi-host deployment with external DNS.
@@ -49,11 +50,12 @@ The entire stack is intended to run on a single primary VPS or as a multi-host d
 **Key architectural notes:**
 - All Node.js frontends are vanilla HTML/CSS/JS. There is no React, Vue, TypeScript, or bundler anywhere in the project.
 - The `gateway` is the central reverse-proxy target for NGINX and exposes versioned routes under `/api/v1/`.
-- The `owner-dashboard` runs `docker compose` commands directly via `child_process.execSync`. It requires host-level Docker access.
+- The `owner-dashboard` runs `docker compose` and `git` commands directly via `child_process.execSync`. It requires host-level Docker access (production compose mounts `/var/run/docker.sock`).
 - The `kimi` service supports Mistral and Kimi providers. If no API key is configured, it returns an offline fallback response.
 - The main background `worker` consumes the Redis list `redot2:jobs:queue` and stores results with a 1-hour TTL.
 - `services/kimi/worker.py` is a separate small Redis consumer that uses the list `abc_io_tasks` and result list `abc_io_results`.
 - `ai-isp` is fully containerized and implemented, not a placeholder.
+- `mobile-gateway` maintains in-memory backup state (`standby`/`active`/`recovery`) with beacon cache (max 500) and emergency messages (max 1000). Upstream nodes default to `primary` (162.254.32.142:4000), `ai1` (192.227.212.235:5000), and `ai2` (192.227.212.237:5000).
 
 ---
 
@@ -63,11 +65,12 @@ The entire stack is intended to run on a single primary VPS or as a multi-host d
 .
 ├── docker-compose.yml          # Primary 17-service orchestration (local ports)
 ├── compose.dev.yml             # Dev environment with volume mounts for gateway + operator-station + postgres
-├── compose.prod.yml            # Production environment (ports 80/443, resource limits, json-file logging)
+├── compose.prod.yml            # Production environment (ports 80/443, resource limits, json-file logging, healthchecks)
 ├── .env.example                # Template for required secrets
 ├── package.json                # Root workspace metadata + npm scripts
 ├── config/
 │   ├── nginx.conf              # Reverse-proxy to gateway:4000, public-portal, owner-dashboard
+│   ├── locations.conf          # NGINX location blocks (api, admin, static)
 │   ├── prometheus.yml          # Scrapes gateway, operator-station, owner-dashboard, kimi, mobile-gateway,
 │   │                           # public-portal, beacon-pwa, ai-isp, beacon, postgres, redis
 │   └── headscale/              # Headscale VPN configuration (mounted into headscale service)
@@ -88,6 +91,9 @@ The entire stack is intended to run on a single primary VPS or as a multi-host d
 │   ├── self-heal.sh            # Restart stack if containers are exited
 │   ├── auto-heal.sh            # 7-phase health monitor with auto-restart
 │   ├── emergency-recovery.sh   # Stop, prune, and restart the full stack
+│   ├── deploy-staged-redot1.py # 7-wave staged deploy to a 4GB VPS
+│   ├── deploy-vps-cluster.sh   # 3-node cluster deploy with Headscale mesh
+│   ├── prepare-deploy-bundle.sh# Production tar.gz bundle with embedded startup.sh
 │   ├── vps-deploy.sh           # Checkout tag and deploy on a VPS
 │   ├── vps-setup.sh            # One-time Ubuntu/Debian bootstrap
 │   ├── provision-redot1.sh     # Alpine provisioning for the primary node
@@ -150,7 +156,10 @@ The root `package.json` also exposes:
 - `npm run build` — `docker compose build`
 - `npm run stop` — `docker compose down`
 - `npm run health` — run `scripts/health-check.sh`
+- `npm run verify` — run `scripts/verify-cloud-deployment.sh`
 - `npm run heal` — run `scripts/auto-heal.sh`
+- `npm run apk:build` — run `apk/build-apk-manual.sh`
+- `npm run deploy:vps` — run `scripts/deploy-vps-cluster.sh`
 - `npm run test` — currently echoes that tests are not configured
 
 ---
@@ -164,8 +173,10 @@ The root `package.json` also exposes:
 | Gateway AI health | `GET http://localhost:4000/api/v1/ai/health` |
 | Gateway auth | `POST http://localhost:4000/api/v1/auth/register` (and `/login`, `/forgot-password`, `/reset-password`, `/verify-email`, `/me`) |
 | Gateway billing | `POST http://localhost:4000/api/v1/billing/checkout` (and `/webhook`, `/portal`, `GET /invoices`) |
+| Gateway PayPal | `POST http://localhost:4000/api/v1/billing/paypal/create-order` (and `/capture-order`, `/webhook`) |
 | Gateway translation | `POST http://localhost:4000/api/v1/translate/:modality` |
 | Gateway beacon | `POST http://localhost:4000/api/v1/beacon/emit`, `GET http://localhost:4000/api/v1/beacon/active` |
+| Gateway admin | `GET http://localhost:4000/api/v1/admin/stats`, `/metrics`, `POST /escalate`, `/self-heal` |
 | Kimi AI Service | `http://localhost:5000/health` |
 | Kimi Generate | `POST http://localhost:5000/ai/generate` |
 | Operator Station UI | `http://localhost:8080/` |
@@ -193,6 +204,29 @@ The root `package.json` also exposes:
 
 ---
 
+## Database Schema
+
+PostgreSQL is initialized via `services/postgres/init.sql`. It defines the following tables:
+
+- `accounts` — tenant accounts with tier (`free`/`basic`/`standard`/`pro`/`business`/`team`/`corporate`/`enterprise`/`agency`/`global`) and Stripe IDs.
+- `users` — account users with password hash, role, email verification, and login tracking.
+- `email_verifications` — verification tokens with expiry.
+- `password_resets` — reset tokens with expiry.
+- `sessions` — session token hashes with expiry and revocation.
+- `api_keys` — per-account API keys with scopes, rate limits, and revocation.
+- `subscriptions` — Stripe subscription records.
+- `invoices` — Stripe invoice records.
+- `paypal_transactions` — PayPal order records with amount, currency, tier, and status.
+- `usage_logs` — per-request usage tracking (endpoint, method, status, response time, tokens used).
+- `audit_logs` — security/operational audit events with JSONB payloads and severity.
+- `intervention_queue` — human escalation tickets with 8AM–8PM EST operator routing.
+
+The schema seeds a default system account with ID `00000000-0000-0000-0000-000000000000`.
+
+The gateway connects via `DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/abc_io`.
+
+---
+
 ## Code Style Guidelines
 
 ### JavaScript (Node.js services)
@@ -200,7 +234,7 @@ The root `package.json` also exposes:
 - Use `const` and `let`; avoid `var`.
 - Read the port from `process.env.PORT` with a numeric fallback (e.g., `Number(process.env.PORT || 4000)`).
 - Express apps should use `express.json()` middleware for JSON bodies.
-- Use `helmet` in production-facing services where it is already present (`gateway`, `owner-dashboard`, `mobile-gateway`, `public-portal`, `beacon-pwa`, `beacon`).
+- Use `helmet` in production-facing services where it is already present (`gateway`, `owner-dashboard`, `mobile-gateway`, `public-portal`, `beacon-pwa`, `beacon`). `operator-station` does not currently use helmet.
 - Frontends are served as static files from `src/public/` (or `public/` in `beacon-pwa`) using `express.static`.
 - Inline HTML/CSS/JS in server-rendered responses is acceptable and matches existing patterns.
 - No React, Vue, TypeScript, Webpack, or similar tooling is used.
@@ -213,7 +247,8 @@ The root `package.json` also exposes:
 
 ### General
 - There is **no ESLint, Prettier, TypeScript, or Jest** configuration in this project. Do not add them unless explicitly requested.
-- Dockerfiles for Node.js services follow a uniform pattern: `FROM node:20-alpine`, `WORKDIR /app`, copy `package.json`, `npm install`, copy `src/`, `CMD ["node", "src/index.js"]`.
+- Dockerfiles for Node.js services follow a uniform pattern: `FROM node:20-alpine`, `WORKDIR /app`, copy `package.json`, `npm install`, copy `src/`, `CMD ["node", "src/index.js"]`. The `beacon-pwa` Dockerfile is an exception (flat layout, `server.js` entrypoint, `EXPOSE 3000`).
+- **Note:** The `gateway` Dockerfile currently copies a pre-existing `node_modules` directory instead of running `npm install` inside the image. This is a local dev artifact and may break in CI; consider restoring a standard `npm install` step.
 - Dockerfiles for Python services generally follow: `FROM python:3.12-alpine` (or `slim`), install dependencies, copy source, `CMD ["python", "app.py"]` or `CMD ["python", "-u", "worker.py"]`.
 - The `ai-isp` Dockerfile is an exception: it uses `python:3.11-slim`, installs `gcc`, and runs under **Gunicorn** (`gunicorn --bind 0.0.0.0:7000 --workers 2 --timeout 60 app:app`).
 
@@ -242,7 +277,7 @@ The root `package.json` also exposes:
    A 7-phase monitor that checks service availability, disk/memory usage, DB/cache connectivity, API health, and network state. It auto-restarts failed containers and prunes stale resources. Logs to `/var/log/abc-io-health.log` and writes state to `/tmp/abc-io-health.state`.
 
 4. **CI build validation:**
-   The `ci.yml` workflow builds Docker images for `gateway`, `operator-station`, and `kimi`, and validates `docker-compose.yml` with `docker compose config`.
+   The `ci.yml` workflow builds Docker images for `gateway`, `operator-station`, `kimi`, and `ai-isp`, and validates `docker-compose.yml`, `compose.dev.yml`, and `compose.prod.yml` with `docker compose config`.
 
 ---
 
@@ -252,14 +287,15 @@ All workflows are in `.github/workflows/`:
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| `ci.yml` | Push/PR to `main` | Build gateway, operator-station, kimi images; validate compose file. |
-| `branch-protection.yml` | PR to `master` | Enforce PR descriptions, semantic commits (`feat:`, `fix:`, `docs:`, etc.), code-review requirement, and WIP detection. |
-| `codeql-analysis.yml` | Push/PR to `master`, weekly (`0 3 * * 0`) | GitHub CodeQL static security analysis for JavaScript and Python. |
-| `deploy.yml` | Manual (`workflow_dispatch`) | SSH to VPS, checkout tag, run `docker compose up -d --remove-orphans`, execute `health-check.sh`, 30s smoke test. |
-| `gcp-deploy.yml` | Manual (`workflow_dispatch`) | GCP Cloud SDK setup; applies Kubernetes manifests from `infrastructure/gcp/k8s/`. |
-| `privacy-checks.yml` | Push/PR to `master` | Scan for `.env`/`.key`/`.secret` files in Git, verify `.gitignore` exclusions, scan `docs/` for PII keywords, assert license compliance. |
-| `release.yml` | Tag push (`v*.*.*`) | Build containers, create ZIP archive, publish GitHub release with the archive attached. |
-| `secret-scanning.yml` | Push/PR to `master` | Install `truffleHog3` and scan for leaked secrets. |
+| `ci.yml` | Push/PR to `main`/`master` (ignores `**.md`, `docs/**`, `.security/**`) | Build gateway, operator-station, kimi, and ai-isp images; validate all compose files. |
+| `branch-protection.yml` | PR to `main`/`master` | Enforce PR descriptions, semantic commits (`feat:`, `fix:`, `docs:`, etc.), code-review requirement, and WIP detection. |
+| `codeql-analysis.yml` | Push/PR to `main`/`master`, weekly (`0 3 * * 0`) | GitHub CodeQL static security analysis for JavaScript and Python. |
+| `dependency-review.yml` | PR to `main`/`master` | Scan dependency changes, fail on `moderate` severity, and enforce license compliance. **Allows:** MIT, Apache-2.0, BSD, ISC, Python-2.0, Unlicense, CC0-1.0, 0BSD, BlueOak-1.0.0. **Denies:** GPL, AGPL, and LGPL variants. |
+| `deploy.yml` | Manual (`workflow_dispatch`) | SSH to VPS, checkout tag, write secrets to `.env`, run `docker compose up -d --remove-orphans`, execute `health-check.sh`, 30s smoke test. |
+| `gcp-deploy.yml` | Manual (`workflow_dispatch`) | GCP Cloud SDK setup; applies Kubernetes manifests from `infrastructure/gcp/k8s/`. Mostly placeholder/example code. |
+| `privacy-checks.yml` | Push/PR to `main`/`master` | Scan for `.env`/`.key`/`.secret` files in Git, verify `.gitignore` exclusions, scan `docs/` for PII keywords, assert license compliance. |
+| `release.yml` | Tag push (`v*.*.*`) | Build containers, create ZIP archive, generate SHA-256 checksum, publish GitHub release with the archive attached, and attest build provenance. |
+| `secret-scanning.yml` | Push/PR to `main`/`master` | Install `truffleHog3` and scan for leaked secrets. |
 | `secrets-rotation-reminder.yml` | Monthly (1st @ 08:00 UTC) | Auto-create GitHub issue reminding operators to rotate secrets. |
 
 **Branch triggers:** All workflows now trigger on both `main` and `master` to support migration. After the repository is migrated to `abc-io-enterprise/redot2`, standardize on one default branch and update workflow filters accordingly.
@@ -271,7 +307,7 @@ All workflows are in `.github/workflows/`:
 ### Secrets and Environment Variables
 - **Never commit `.env`**. It is excluded by `.gitignore`.
 - Copy `.env.example` to `.env` and fill in production values before deploying.
-- Required secrets in `.env.example` include: `POSTGRES_PASSWORD`, `MISTRAL_API_KEY`, `MISTRAL_MODEL`, `MISTRAL_API_BASE_URL`, `KIMI_API_KEY`, `KIMI_MODEL`, `KIMI_API_BASE_URL`, owner/mobile/public signing keys and fingerprints, `OWNER_SESSION_TOKEN`, `OWNER_ACCOUNT_EMAIL`, `OWNER_ACCOUNT_PASSWORD`, `OWNER_BIOMETRIC_SECRET`, `GATEWAY_API_KEY`, `SELF_HEAL_TOKEN`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID_PRO`, `STRIPE_PRICE_ID_ENTERPRISE`, `PUBLIC_URL`, `CORS_ORIGIN`, and `SMTP_*` (`SMTP_URL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`), plus Headscale/Gitea/Namecheap placeholders. See `.security/SECRETS_INVENTORY.md` for the canonical list and rotation schedule.
+- Required secrets in `.env.example` include: `POSTGRES_PASSWORD`, `MISTRAL_API_KEY`, `MISTRAL_MODEL`, `MISTRAL_API_BASE_URL`, `KIMI_API_KEY`, `KIMI_MODEL`, `KIMI_API_BASE_URL`, owner/mobile/public signing keys and fingerprints, `OWNER_SESSION_TOKEN`, `OWNER_ACCOUNT_EMAIL`, `OWNER_ACCOUNT_PASSWORD`, `OWNER_BIOMETRIC_SECRET`, `GATEWAY_API_KEY`, `SELF_HEAL_TOKEN`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID_*` (10 tiers), `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`, `PUBLIC_URL`, `CORS_ORIGIN`, and `SMTP_*` (`SMTP_URL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`), plus Headscale/Gitea/Namecheap placeholders. See `.security/SECRETS_INVENTORY.md` for the canonical list and rotation schedule.
 - Production secrets are stored in **GitHub Repository Secrets** and synchronized to the VPS `.env` at deploy time via `scripts/set-github-secrets.sh`.
 
 ### Signing and Privacy Verification
@@ -284,11 +320,12 @@ The project uses independent HMAC-SHA256 signing keys for three roles:
 Each service exposes `/api/signature` returning `{ system, payload, signature, fingerprint }`.
 
 ### Access Control
-- **Gateway:** Uses JWT signed with `JWT_SECRET` (falling back to `OWNER_SIGNING_KEY`), issuer `'abc-io'`, 7-day expiry. Also supports API keys prefixed with `ak_`, stored as SHA-256 hashes with an 8-character prefix in `api_keys`.
+- **Gateway:** Uses JWT signed with `JWT_SECRET` (falling back to `OWNER_SIGNING_KEY`), issuer `'abc-io'`, 7-day expiry. Also supports API keys prefixed with any string, stored as SHA-256 hashes with an 8-character prefix in `api_keys`.
 - **Owner Dashboard:** Requires the `x-owner-token` header (or `token` in the body) to equal `OWNER_SESSION_TOKEN`. The login endpoint computes the expected biometric token as `HMAC-SHA256(OWNER_BIOMETRIC_SECRET || OWNER_SIGNING_KEY, email + password)`; there is **no** hardcoded `BIO-VALID` value in the current source.
 - **Public Portal:** Fatally exits on startup if `PUBLIC_SIGNING_KEY` or `PUBLIC_SIGNING_FINGERPRINT` is missing.
 - **Stripe webhooks:** Verified with `STRIPE_WEBHOOK_SECRET`.
-- **Rate limits:** Per-minute limits keyed by `accountId || ip` are `free=30`, `pro=300`, `enterprise=3000`.
+- **PayPal webhooks:** Skeleton implementation present in gateway.
+- **Rate limits:** Per-minute limits keyed by `accountId || ip` are `free=30`, `basic=60`, `standard=120`, `pro=300`, `business=600`, `team=1200`, `corporate=2000`, `enterprise=3000`, `agency=5000`, `global=10000`.
 
 ### Docker Privileges
 - The `owner-dashboard` executes `docker compose` commands directly (`restart`, `stop`, `start`, `pull`, `up -d`). In production, this implies the container must have access to the host Docker socket or daemon.
@@ -296,33 +333,14 @@ Each service exposes `/api/signature` returning `{ system, payload, signature, f
 
 ---
 
-## Database Schema
-
-PostgreSQL is initialized via `services/postgres/init.sql`. It defines the following tables:
-
-- `accounts` — tenant accounts with tier (`free`/`pro`/`enterprise`) and Stripe IDs.
-- `users` — account users with password hash, role, email verification, and login tracking.
-- `email_verifications` — verification tokens with expiry.
-- `password_resets` — reset tokens with expiry.
-- `sessions` — session token hashes with expiry and revocation.
-- `api_keys` — per-account API keys with scopes, rate limits, and revocation.
-- `subscriptions` — Stripe subscription records.
-- `invoices` — Stripe invoice records.
-- `usage_logs` — per-request usage tracking (endpoint, method, status, response time).
-- `audit_logs` — security/operational audit events with JSONB payloads and severity.
-
-The schema seeds a default system account with ID `00000000-0000-0000-0000-000000000000`.
-
-The gateway connects via `DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/abc_io`.
-
----
-
 ## Deployment Architecture
 
 - **Primary node**: runs `compose.prod.yml` with all services (`nginx`, `gateway`, `operator-station`, `owner-dashboard`, `mobile-gateway`, `public-portal`, `beacon-pwa`, `beacon`, `kimi`, `worker`, `ai-isp`, `postgres`, `redis`, `prometheus`, `grafana`, `tracer`, `headscale`, `logger`).
-- **Optional secondary AI nodes**: additional VPS hosts running only `kimi` and/or `worker` behind DNS entries like `ai1.abc-io.com`.
-- **GCP**: There is a placeholder `gcp-deploy.yml` workflow and `infrastructure/gcp/` directory with Kubernetes manifests for future cloud-native expansion.
-- **VPN**: `headscale` provides a self-hosted WireCoord / Tailscale-compatible control server on ports `8085` (HTTP) and `41641/udp`.
+- **Staged deployment:** `scripts/deploy-staged-redot1.py` deploys the 17-service stack in **7 ordered waves** (infra → gateway → dashboards → AI → beacon → monitoring → nginx) to avoid OOM on a 4GB VPS.
+- **Optional secondary AI nodes:** additional VPS hosts running only `kimi` and/or `worker` behind DNS entries like `ai1.abc-io.com`.
+- **Cluster topology:** `scripts/deploy-vps-cluster.sh` deploys a 3-node topology (1 full-stack gateway + 2 AI workers) and auto-joins them into a Headscale WireGuard mesh.
+- **GCP:** There is a placeholder `gcp-deploy.yml` workflow and `infrastructure/gcp/` directory with Kubernetes manifests for future cloud-native expansion.
+- **VPN:** `headscale` provides a self-hosted WireGuard / Tailscale-compatible control server on ports `8085` (HTTP) and `41641/udp`.
 
 ---
 
@@ -335,7 +353,7 @@ The gateway connects via `DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@
 | Add a new background job type | `services/worker/worker.py` |
 | Modify owner dashboard UI or admin logic | `services/owner-dashboard/src/index.js` and `src/public/index.html` |
 | Update database initialization | `services/postgres/init.sql` |
-| Change NGINX routing | `config/nginx.conf` |
+| Change NGINX routing | `config/nginx.conf`, `config/locations.conf` |
 | Add Prometheus targets | `config/prometheus.yml` |
 | Modify CI behavior | `.github/workflows/ci.yml` |
 | Build/release packaging | `scripts/package-release.ps1` |
@@ -415,3 +433,4 @@ Automation helpers:
 - The `ai-isp` service directory is fully implemented and deployed; it is **not** a placeholder.
 - The project language for comments and documentation is **English**.
 - When creating or updating enterprise documentation, keep sensitive values (passwords, keys, tokens) out of Git. Reference `.security/SECRETS_INVENTORY.md` instead.
+- The `gateway` Dockerfile copies `node_modules` directly rather than running `npm install`. If you modify gateway dependencies, you may need to regenerate `node_modules` locally or restore a standard install step in the Dockerfile.
