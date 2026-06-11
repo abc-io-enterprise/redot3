@@ -31,8 +31,16 @@ services:
       - PORT=4000
       - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/abc_io
     depends_on:
-      - postgres
-      - kimi
+      postgres:
+        condition: service_healthy
+      kimi:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
     logging:
       driver: 'json-file'
@@ -52,7 +60,14 @@ services:
     ports:
       - '8080:8080'
     depends_on:
-      - gateway
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
     logging:
       driver: 'json-file'
@@ -81,6 +96,7 @@ services:
       - '8500:8500'
     volumes:
       - ./apk:/apk:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     restart: unless-stopped
     logging:
       driver: 'json-file'
@@ -88,8 +104,16 @@ services:
         max-size: '10m'
         max-file: '3'
     depends_on:
-      - gateway
-      - mobile-gateway
+      gateway:
+        condition: service_healthy
+      mobile-gateway:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8500/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     deploy:
       resources:
         limits:
@@ -105,7 +129,14 @@ services:
     ports:
       - '5050:5050'
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5050/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
     logging:
       driver: 'json-file'
@@ -127,7 +158,14 @@ services:
     ports:
       - '8090:8090'
     depends_on:
-      - gateway
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8090/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
     logging:
       driver: 'json-file'
@@ -190,6 +228,12 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./services/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d abc_io"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
     logging:
       driver: 'json-file'
@@ -237,6 +281,12 @@ services:
     image: redis:alpine
     ports:
       - '6379:6379'
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
     restart: unless-stopped
     logging:
       driver: 'json-file'

@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS accounts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
   slug VARCHAR(255) UNIQUE,
-  tier VARCHAR(50) DEFAULT 'free' CHECK (tier IN ('free', 'pro', 'enterprise')),
+  tier VARCHAR(50) DEFAULT 'free' CHECK (tier IN ('free', 'basic', 'standard', 'pro', 'business', 'team', 'corporate', 'enterprise', 'agency', 'global')),
   status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'cancelled')),
   stripe_customer_id VARCHAR(255),
   stripe_subscription_id VARCHAR(255),
@@ -134,6 +134,21 @@ CREATE TABLE IF NOT EXISTS invoices (
 );
 
 CREATE INDEX idx_invoices_account ON invoices(account_id);
+
+CREATE TABLE IF NOT EXISTS paypal_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
+  paypal_order_id VARCHAR(255) NOT NULL,
+  paypal_payer_id VARCHAR(255),
+  amount DECIMAL(10,2) NOT NULL,
+  currency VARCHAR(10) DEFAULT 'USD',
+  tier VARCHAR(50),
+  status VARCHAR(50) DEFAULT 'pending',
+  captured_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX idx_paypal_transactions_account ON paypal_transactions(account_id);
+CREATE INDEX idx_paypal_transactions_order ON paypal_transactions(paypal_order_id);
 
 -- ============================================
 -- USAGE TRACKING

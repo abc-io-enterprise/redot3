@@ -7,9 +7,9 @@ import paramiko
 sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 1)
 
 NODES = {
-    "redot1": {"ip": "162.254.32.142", "password": "45oEwlHtu8J1ZO7u3M", "services": ""},
-    "ai1":    {"ip": "192.227.212.235", "password": "sKCro5zL9XQ3a7O28w", "services": "kimi worker redis headscale"},
-    "ai2":    {"ip": "192.227.212.237", "password": "04FNc8Rvqpsk731PXW", "services": "kimi worker redis headscale"},
+    "redot1": {"ip": os.getenv("VPS_REDOT1_IP", "162.254.32.142"), "password": os.getenv("VPS_REDOT1_PASSWORD"), "services": ""},
+    "ai1":    {"ip": os.getenv("VPS_AI1_IP", "192.227.212.235"), "password": os.getenv("VPS_AI1_PASSWORD"), "services": "kimi worker redis headscale"},
+    "ai2":    {"ip": os.getenv("VPS_AI2_IP", "192.227.212.237"), "password": os.getenv("VPS_AI2_PASSWORD"), "services": "kimi worker redis headscale"},
 }
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -33,6 +33,10 @@ def deploy_node(name, config):
     ip = config["ip"]
     password = config["password"]
     services = config["services"]
+
+    if not password:
+        log("  [FAIL] No VPS password set in environment for {}. Set VPS_{}_PASSWORD.".format(name, name.upper()))
+        return False
 
     log("")
     log("=" * 60)
