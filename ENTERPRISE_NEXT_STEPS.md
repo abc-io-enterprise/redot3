@@ -12,7 +12,7 @@ All preparatory work is complete and pushed to `https://github.com/ccplexmath/re
 | Migration scripts | ✅ Complete |
 | Pushed to current origin | ✅ Complete |
 | GitHub Enterprise org created | ⏳ Needs your GitHub login / billing |
-| Repository migrated to `abc-io-enterprise/redot2` | ⏳ Blocked on org creation |
+| Repository migrated to `abc-io-enterprise/redot2` | ✅ Complete |
 | Secrets uploaded to GitHub | ⏳ Blocked on org creation |
 | Branch protection applied | ⏳ Blocked on org creation |
 | SAML SSO / audit streaming configured | ⏳ Blocked on Enterprise Cloud subscription |
