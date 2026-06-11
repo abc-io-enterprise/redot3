@@ -194,6 +194,7 @@ services:
       context: ./services/public-portal
     environment:
       - NODE_ENV=production
+      - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/abc_io
       - PUBLIC_SIGNING_KEY=${PUBLIC_SIGNING_KEY}
       - PUBLIC_SIGNING_FINGERPRINT=${PUBLIC_SIGNING_FINGERPRINT}
     ports:

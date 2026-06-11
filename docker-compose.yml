@@ -101,6 +101,7 @@ services:
     ports:
       - '8090:8090'
     environment:
+      - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/abc_io
       - PUBLIC_SIGNING_KEY=${PUBLIC_SIGNING_KEY}
       - PUBLIC_SIGNING_FINGERPRINT=${PUBLIC_SIGNING_FINGERPRINT}
     restart: unless-stopped
