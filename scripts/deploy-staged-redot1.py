@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Staged deployment for redot1 (162.254.32.142).
-Starts the 17-service stack in waves to avoid OOM on a 4GB VPS.
+Starts the 19-service stack in waves to avoid OOM on a 4GB VPS.
 """
 import os, sys, time, paramiko, subprocess, tempfile, shutil, tarfile, fnmatch
 
@@ -56,10 +56,10 @@ STAGES = [
         "wait_cmd": None,
         "wait_timeout": 0,
     },
-    # Stage 6: Monitoring stack
+    # Stage 6: Monitoring + autonomous stack
     {
-        "name": "Monitoring",
-        "services": ["prometheus", "grafana", "tracer", "headscale"],
+        "name": "Monitoring + Autonomous",
+        "services": ["prometheus", "grafana", "tracer", "headscale", "autonomous"],
         "wait_for": None,
         "wait_cmd": None,
         "wait_timeout": 0,
