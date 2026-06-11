@@ -19,6 +19,7 @@ SECTIONS = [
     ("AUTONOMOUS_SYSTEM.md", "Autonomous Systems"),
     ("SHUTDOWN_CHECKLIST.md", "Shutdown / Handoff Checklist"),
     ("SIGN_OFF.md", "System Sign-Off"),
+    ("FINAL_LIVE_CONFIRMATION.md", "Final Live Confirmation"),
 ]
 
 CSS = """
