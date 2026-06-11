@@ -192,6 +192,23 @@ CREATE INDEX idx_audit_type ON audit_logs(event_type);
 CREATE INDEX idx_audit_created ON audit_logs(created_at);
 
 -- ============================================
+-- INTERVENTION QUEUE (8AM-8PM EST Human Escalation)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS intervention_queue (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  ticket_id VARCHAR(255) NOT NULL,
+  user_message TEXT,
+  status VARCHAR(100) DEFAULT 'Pending Human Operator Escalation',
+  timezone VARCHAR(50) DEFAULT 'America/New_York',
+  resolved_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_intervention_status ON intervention_queue(status);
+CREATE INDEX idx_intervention_created ON intervention_queue(created_at);
+
+-- ============================================
 -- DEFAULT ACCOUNT (system)
 -- ============================================
 
