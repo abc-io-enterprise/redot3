@@ -113,6 +113,12 @@ All core systems have been implemented, deployed, verified, and documented:
 - Dashboard (`/dashboard.html`)
 - Email Verification (`/verify-email.html`)
 - Password Reset (`/reset-password.html`)
+- Community Hub / Human Interaction Portal (`/community.html`)
+- Solutions (`/solutions.html`)
+- Customer Area (`/customer-area.html`)
+- Family Dashboard (`/family-dashboard.html`)
+- Free Beacon Landing (`/beacon.html`)
+- Beacon PWA (`/beacon`)
 
 ### AI & Translation
 - Text ↔ Braille (Unicode Grade 1)
@@ -124,9 +130,12 @@ All core systems have been implemented, deployed, verified, and documented:
 - 5×5 cross-sensory matrix
 
 ### Beacon Safety
-- Emit emergency/transit/SOS beacons
+- Emit emergency/transit/SOS beacons (free, no account)
 - PostgreSQL persistence
 - Email notifications to owner
+- Free locational awareness endpoint (`/api/v1/beacon/awareness`)
+- Weather, public safety alerts, nearby suggestions, and public events
+- HTTPS Beacon PWA at `/beacon`
 - Responder acknowledgments
 - Haversine region search
 - 24-hour TTL
