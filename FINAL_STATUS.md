@@ -5,7 +5,7 @@
 **Contact:** cporreca@abc-io.com | 585-629-9120  
 **Domain:** https://abc-io.com  
 **GitHub:** https://github.com/abc-io-enterprise/redot2
-**Version:** 2.1.0-autonomous
+**Version:** v5.0.0
 
 ---
 
@@ -187,10 +187,11 @@ All core systems have been implemented, deployed, verified, and documented:
 
 ## Backup & Archive
 
-- GitHub: `abc-io-enterprise/redot2`, tag `v2.0.0`
-- Local backup: `Documents/redot2_backup_*.zip`
+- GitHub: `abc-io-enterprise/redot2`, tag `v5.0.0`
+- Local backup: `redot2-v5.0.0-final-backup.zip` (14.29 MB, 275 files)
+- Owner reference PDF: `ABC-IO_v5.0.0_Owner_Reference.pdf`
 - Offline archive: `Documents/redot2.archive.zip` (USB storage)
-- Android APK: `apk/redot2-latest.apk` (cellular failsafe)
+- Android APK: `apk/redot2-latest.apk` and `apk/redot2-operator.apk` (signed cellular failsafe)
 
 ---
 
@@ -220,9 +221,10 @@ All public endpoints verified live on 2026-06-11:
 - ✅ https://abc-io.com/api/v1/beacon/awareness — Weather, safety alerts, events
 - ✅ https://abc-io.com/api/v1/help/articles — Help center API
 - ✅ https://abc-io.com/api/v1/system/health — Gateway health
-- ✅ GitHub tag `v2.1.0` pushed to `abc-io-enterprise/redot2`
+- ✅ GitHub tag `v5.0.0` pushed to `abc-io-enterprise/redot2`
 - ✅ Desktop orchestrator and autonomous APK ready
-- ✅ Local archive: `Documents/redot2.zip` (48.26 MB)
+- ✅ Local archive: `redot2-v5.0.0-final-backup.zip` (14.29 MB)
+- ✅ Owner reference PDF: `ABC-IO_v5.0.0_Owner_Reference.pdf`
 - ✅ Operational validation report generated: `OPERATIONAL_REPORT.md`
 - ✅ Full system audit passes: `[PASS] REDOT2 COMPLETE SYSTEM BUILT AND LIVE`
 

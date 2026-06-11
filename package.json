@@ -1,6 +1,6 @@
 {
   "name": "abc-io-v2",
-  "version": "2.1.0-autonomous",
+  "version": "v5.0.0",
   "description": "ABC-IO v2.0 — Unified AI-ISP Infrastructure Platform with Autonomous Backend",
   "private": true,
   "workspaces": [

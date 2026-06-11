@@ -34,9 +34,9 @@ VPS_USER = "root"
 VPS_PASSWORD = os.getenv("VPS_REDOT1_PASSWORD", "")
 DOMAIN = "abc-io.com"
 REPO = "https://github.com/abc-io-enterprise/redot2"
-TAG = "v2.1.0"
+TAG = "v5.0.0"
 TEST_EMAIL = "cporreca@abc-io.com"
-TEST_PASSWORD = "Oper@tionalV@lid!2026"
+TEST_PASSWORD = os.getenv("ABC_IO_TEST_PASSWORD", "")
 
 SSL_CTX = ssl.create_default_context()
 SSL_CTX.check_hostname = False
