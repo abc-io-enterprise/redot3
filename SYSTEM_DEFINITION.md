@@ -11,7 +11,7 @@
 
 ## What is redot1?
 
-**redot1** is a Global Interfacing and Communications Provider created in 2026 by Christopher Porreca. It is a personal communications provider powered by an AI-autonomous ISP backend system for private and business use.
+**redot1** is a Global Interfacing and Communications Provider created in 2026 by Christopher Porreca. It is a personal communications provider and a personal interfacing provider powered by an AI-autonomous ISP backend system for private and business use.
 
 At its core, redot1 operates **ABC-IO** (`abc-io.com`), a cloud web operating system that delivers:
 
@@ -89,4 +89,4 @@ The system is deployed, verified, and ready for public use. Desktop may disconne
 
 ---
 
-*redot1 — A Personal Communications Provider by Christopher Porreca.*
+*redot1 — A Personal Communications Provider and Personal Interfacing Provider by Christopher Porreca.*

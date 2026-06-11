@@ -8,7 +8,7 @@ Version: 2.1.0-autonomous
 Tag: v2.1.0
 
 Owner: Christopher Porreca / redot1
-Company: redot1 — A Personal Communications Provider
+Company: redot1 — A Personal Communications Provider and Personal Interfacing Provider
 Contact:
   Email: cporreca@abc-io.com
   Website: https://abc-io.com
