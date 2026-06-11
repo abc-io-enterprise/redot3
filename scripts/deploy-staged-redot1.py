@@ -45,7 +45,7 @@ STAGES = [
         "name": "AI Services",
         "services": ["kimi", "ai-isp", "worker"],
         "wait_for": "kimi",
-        "wait_cmd": "docker compose -f compose.prod.yml exec -T kimi python -c \\"import urllib.request; print(urllib.request.urlopen('http://localhost:5000/health').read().decode())\\" || true",
+        "wait_cmd": "docker compose -f compose.prod.yml exec -T kimi python -c \"import urllib.request; print(urllib.request.urlopen('http://localhost:5000/health').read().decode())\" || true",
         "wait_timeout": 120,
     },
     # Stage 5: Beacon + PWA
