@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: abc-io
+
+resources:
+  - namespace.yaml
+  - secret-env.yaml
+  - configmap-nginx.yaml
+  - configmap-locations.yaml
+  - configmap-prometheus.yaml
+  - deployment-postgres.yaml
+  - deployment-redis.yaml
+  - deployment-gateway.yaml
+  - deployment-public-portal.yaml
+  - deployment-owner-dashboard.yaml
+  - deployment-operator-station.yaml
+  - deployment-kimi.yaml
+  - deployment-ai-isp.yaml
+  - deployment-beacon.yaml
+  - deployment-beacon-pwa.yaml
+  - deployment-mobile-gateway.yaml
+  - deployment-prometheus.yaml
+  - deployment-grafana.yaml
+  - deployment-nginx.yaml
+  - ingress.yaml

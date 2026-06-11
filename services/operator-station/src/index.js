@@ -2,8 +2,12 @@ const express = require('express');
 const http = require('http');
 const net = require('net');
 const fs = require('fs').promises;
+const { exec } = require('child_process');
+const { promisify } = require('util');
+const { X509Certificate } = require('crypto');
 const app = express();
 const port = Number(process.env.PORT || 8080);
+const execAsync = promisify(exec);
 
 const services = [
   { key: 'gateway', name: 'API Gateway', url: 'http://gateway:4000/health', type: 'http' },
@@ -11,8 +15,8 @@ const services = [
   { key: 'mobile-gateway', name: 'Mobile Gateway', url: 'http://mobile-gateway:5050/health', type: 'http' },
   { key: 'public-portal', name: 'Public Portal', url: 'http://public-portal:8090/health', type: 'http' },
   { key: 'operator-station', name: 'Operator Station', url: 'http://localhost:8080/health', type: 'http' },
-  { key: 'beacon-pwa', name: 'Beacon PWA', url: 'http://beacon-pwa:3000/health', type: 'http' },
-  { key: 'beacon', name: 'Beacon', url: 'http://beacon:3000/health', type: 'http' },
+  { key: 'beacon-pwa', name: 'Beacon PWA', url: 'http://beacon-pwa:3005/health', type: 'http' },
+  { key: 'beacon', name: 'Beacon', url: 'http://beacon:3006/health', type: 'http' },
   { key: 'kimi', name: 'Kimi AI', url: 'http://kimi:5000/health', type: 'http' },
   { key: 'ai-isp', name: 'AI-ISP', url: 'http://ai-isp:7000/health', type: 'http' },
   { key: 'worker', name: 'Worker', url: 'http://worker:5000/health', type: 'http', unknownOnFail: true },
@@ -81,6 +85,81 @@ async function checkSelfHealing() {
   }
 }
 
+async function getSslExpiry() {
+  const certPath = '/etc/letsencrypt/live/abc-io.com/fullchain.pem';
+  try {
+    const pem = await fs.readFile(certPath, 'utf8');
+    const cert = new X509Certificate(pem);
+    const expiry = new Date(cert.validTo);
+    const now = new Date();
+    const daysRemaining = Math.floor((expiry - now) / (1000 * 60 * 60 * 24));
+    return {
+      available: true,
+      domain: 'abc-io.com',
+      expiry: expiry.toISOString(),
+      daysRemaining,
+      warning: daysRemaining < 30,
+    };
+  } catch (err) {
+    return { available: false, error: err.message };
+  }
+}
+
+async function getSystemMetrics() {
+  const metrics = {
+    cpu: { loadAverage: null },
+    memory: { total: null, used: null, free: null, percentUsed: null },
+    disk: { total: null, used: null, free: null, percentUsed: null },
+  };
+
+  try {
+    const { stdout: loadavg } = await execAsync('cat /proc/loadavg');
+    const loadParts = loadavg.trim().split(' ');
+    metrics.cpu.loadAverage = {
+      '1m': parseFloat(loadParts[0]),
+      '5m': parseFloat(loadParts[1]),
+      '15m': parseFloat(loadParts[2]),
+    };
+  } catch (e) {
+    metrics.cpu.error = e.message;
+  }
+
+  try {
+    const { stdout: meminfo } = await execAsync('cat /proc/meminfo');
+    const lines = meminfo.split('\n');
+    const memTotalLine = lines.find((l) => l.startsWith('MemTotal:'));
+    const memAvailableLine = lines.find((l) => l.startsWith('MemAvailable:'));
+    const memFreeLine = lines.find((l) => l.startsWith('MemFree:'));
+
+    const memTotalKB = memTotalLine ? parseInt(memTotalLine.replace(/\D/g, ''), 10) : 0;
+    const memAvailableKB = memAvailableLine ? parseInt(memAvailableLine.replace(/\D/g, ''), 10) : 0;
+    const memFreeKB = memFreeLine ? parseInt(memFreeLine.replace(/\D/g, ''), 10) : 0;
+
+    const memUsedKB = memTotalKB - (memAvailableKB || memFreeKB);
+    metrics.memory.totalMB = Math.round(memTotalKB / 1024);
+    metrics.memory.usedMB = Math.round(memUsedKB / 1024);
+    metrics.memory.freeMB = Math.round((memAvailableKB || memFreeKB) / 1024);
+    metrics.memory.percentUsed = memTotalKB > 0 ? Math.round((memUsedKB / memTotalKB) * 100) : 0;
+  } catch (e) {
+    metrics.memory.error = e.message;
+  }
+
+  try {
+    const { stdout: df } = await execAsync("df -h / | tail -n 1");
+    const parts = df.trim().split(/\s+/);
+    if (parts.length >= 6) {
+      metrics.disk.total = parts[1];
+      metrics.disk.used = parts[2];
+      metrics.disk.free = parts[3];
+      metrics.disk.percentUsed = parseInt(parts[4].replace('%', ''), 10);
+    }
+  } catch (e) {
+    metrics.disk.error = e.message;
+  }
+
+  return metrics;
+}
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'operator-station' });
 });
@@ -88,6 +167,8 @@ app.get('/health', (req, res) => {
 app.get('/status', async (req, res) => {
   const results = {};
   const selfHealing = await checkSelfHealing();
+  const sslInfo = await getSslExpiry();
+  const systemMetrics = await getSystemMetrics();
 
   await Promise.all(services.map(async (svc) => {
     try {
@@ -118,6 +199,8 @@ app.get('/status', async (req, res) => {
     service: 'operator-station',
     timestamp: new Date().toISOString(),
     selfHealing: selfHealing.active ? selfHealing.state : false,
+    ssl: sslInfo,
+    system: systemMetrics,
     services: results
   });
 });
@@ -241,19 +324,51 @@ app.get('/', (req, res) => {
       color: #8090b0;
       font-family: 'Courier New', monospace;
     }
-    .mobile-section {
+    .metrics-section, .ssl-section, .mobile-section {
       margin-top: 2rem;
       background: #0f1633;
       border-radius: 12px;
       padding: 1.25rem;
       border: 1px solid rgba(0, 255, 136, 0.15);
     }
-    .mobile-section h2 {
+    .metrics-section h2, .ssl-section h2, .mobile-section h2 {
       color: #00ff88;
       font-size: 1.1rem;
       margin-bottom: 1rem;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+    }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .metric-card {
+      background: #0a0a2e;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      border: 1px solid rgba(0, 255, 136, 0.1);
+    }
+    .metric-label {
+      font-size: 0.75rem;
+      color: #a0a8c0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.25rem;
+    }
+    .metric-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+    }
+    .metric-value.warning { color: #ffc107; }
+    .metric-value.danger { color: #ff4444; }
+    .ssl-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
     }
     .mobile-status {
       display: flex;
@@ -289,6 +404,7 @@ app.get('/', (req, res) => {
     @media (max-width: 600px) {
       h1 { font-size: 1.25rem; }
       .grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+      .metrics-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -305,6 +421,16 @@ app.get('/', (req, res) => {
     <div class="healing-banner" id="healing-banner">
       <span>⚠️</span>
       <span>Self-Healing Active: <span id="healing-state"></span></span>
+    </div>
+
+    <div class="ssl-section" id="ssl-section" style="display:none;">
+      <h2>SSL Certificate</h2>
+      <div class="ssl-status" id="ssl-status"></div>
+    </div>
+
+    <div class="metrics-section" id="metrics-section" style="display:none;">
+      <h2>System Metrics</h2>
+      <div class="metrics-grid" id="metrics-grid"></div>
     </div>
 
     <div class="count-bar" id="count-bar"></div>
@@ -380,6 +506,62 @@ app.get('/', (req, res) => {
         document.getElementById('healing-state').textContent = data.selfHealing;
       } else {
         banner.classList.remove('active');
+      }
+
+      // SSL
+      const sslSection = document.getElementById('ssl-section');
+      const sslStatus = document.getElementById('ssl-status');
+      if (data.ssl && data.ssl.available) {
+        sslSection.style.display = 'block';
+        const warning = data.ssl.warning;
+        sslStatus.innerHTML = \`
+          <div class="led \${warning ? 'healing' : 'online'}"></div>
+          <span>\${data.ssl.domain} — expires in <strong class="\${warning ? 'warning' : ''}">\${data.ssl.daysRemaining} days</strong> (\${new Date(data.ssl.expiry).toLocaleDateString()})</span>
+        \`;
+      } else if (data.ssl && !data.ssl.available) {
+        sslSection.style.display = 'none';
+      }
+
+      // System Metrics
+      const metricsSection = document.getElementById('metrics-section');
+      const metricsGrid = document.getElementById('metrics-grid');
+      if (data.system) {
+        metricsSection.style.display = 'block';
+        const m = data.system;
+        metricsGrid.innerHTML = '';
+
+        if (m.cpu && m.cpu.loadAverage) {
+          metricsGrid.innerHTML += \`
+            <div class="metric-card">
+              <div class="metric-label">CPU Load (1m)</div>
+              <div class="metric-value">\${m.cpu.loadAverage['1m'].toFixed(2)}</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">CPU Load (5m)</div>
+              <div class="metric-value">\${m.cpu.loadAverage['5m'].toFixed(2)}</div>
+            </div>
+          \`;
+        }
+
+        if (m.memory && m.memory.totalMB) {
+          const memClass = m.memory.percentUsed > 90 ? 'danger' : (m.memory.percentUsed > 75 ? 'warning' : '');
+          metricsGrid.innerHTML += \`
+            <div class="metric-card">
+              <div class="metric-label">Memory Used</div>
+              <div class="metric-value \${memClass}">\${m.memory.percentUsed}% (\${m.memory.usedMB} / \${m.memory.totalMB} MB)</div>
+            </div>
+          \`;
+        }
+
+        if (m.disk && m.disk.total) {
+          const diskClass = m.disk.percentUsed > 90 ? 'danger' : (m.disk.percentUsed > 75 ? 'warning' : '');
+          metricsGrid.innerHTML += \`
+            <div class="metric-card">
+              <div class="metric-label">Disk Used</div>
+              <div class="metric-value \${diskClass}">\${m.disk.percentUsed}% (\${m.disk.used} / \${m.disk.total})</div>
+            </div>
+          \`;
+        }
       }
 
       const services = data.services;

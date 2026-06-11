@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAQ — ABC-IO</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#0a0a2e;color:#e2e8f0;line-height:1.6}
+a{color:#00ff88;text-decoration:none}
+.container{max-width:800px;margin:0 auto;padding:0 24px}
+.nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0}
+.nav .logo{font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.5px}
+.nav .logo span{color:#00ff88}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:#94a3b8;font-size:14px;font-weight:500;transition:.2s}
+.nav-links a:hover{color:#fff}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:.2s}
+.btn-primary{background:#00ff88;color:#0a0a2e}
+.btn-outline{background:transparent;border:1px solid #334155;color:#e2e8f0}
+.btn-outline:hover{border-color:#00ff88;color:#00ff88}
+.btn-sm{padding:6px 14px;font-size:13px}
+.hero{padding:60px 0 30px;text-align:center}
+.hero h1{font-size:36px;font-weight:700;color:#fff}
+.hero p{font-size:15px;color:#94a3b8;margin-top:12px}
+.faq-item{background:#0f1633;border:1px solid #1e293b;border-radius:10px;margin-bottom:12px;overflow:hidden}
+.faq-question{width:100%;padding:16px 20px;background:none;border:none;color:#fff;font-size:15px;font-weight:600;text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.faq-question:hover{color:#00ff88}
+.faq-question::after{content:'+';font-size:18px;color:#94a3b8}
+.faq-item.open .faq-question::after{content:'−'}
+.faq-answer{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.faq-item.open .faq-answer{max-height:500px}
+.faq-answer p{padding:0 20px 16px;color:#94a3b8;font-size:14px}
+.footer{border-top:1px solid #1e293b;padding:40px 0;text-align:center;color:#64748b;font-size:14px;margin-top:40px}
+.footer-links{display:flex;gap:20px;justify-content:center;margin-bottom:16px;flex-wrap:wrap}
+.footer-links a{color:#94a3b8;font-size:14px}
+.footer-links a:hover{color:#fff}
+@media(max-width:640px){.hero h1{font-size:28px}.nav-links{display:none}}
+</style>
+</head>
+<body>
+<nav class="nav container">
+  <a href="/" class="logo"><img src="/abc-io_logo.png" alt="ABC-IO" style="height:28px;margin-right:8px;vertical-align:middle">ABC<span>-IO</span></a>
+  <div class="nav-links">
+    <a href="/features">Features</a>
+    <a href="/pricing">Pricing</a>
+    <a href="/docs">API Docs</a>
+    <a href="/contact">Contact</a>
+    <a href="/login" class="btn btn-outline btn-sm">Log In</a>
+    <a href="/signup" class="btn btn-primary btn-sm">Get Started</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="container">
+    <h1>Frequently Asked Questions</h1>
+    <p>Quick answers to common questions about ABC-IO.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggle(this)">What is ABC-IO?</button>
+      <div class="faq-answer"><p>ABC-IO is a universal communications platform for AI operations, global mesh networking, cellular backup, and enterprise security. It provides AI translation, beacon safety, API gateway, and cross-sensory communication services.</p></div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggle(this)">Is there a free plan?</button>
+      <div class="faq-answer"><p>Yes. Our Free tier includes 30 requests per minute, community support, core AI access, and beacon emission. No credit card is required to get started.</p></div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggle(this)">How does the annual billing discount work?</button>
+      <div class="faq-answer"><p>Annual plans are billed at 10x the monthly price, giving you 2 months free compared to paying monthly. You can switch between monthly and annual at any time from the billing portal.</p></div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggle(this)">What AI providers are supported?</button>
+      <div class="faq-answer"><p>We support Mistral and Kimi as primary AI providers. The system includes automatic failover, circuit breaker logic, retry mechanisms, and an offline fallback mode when providers are unavailable.</p></div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggle(this)">How do rate limits work?</button>
+      <div class="faq-answer"><p>Rate limits are applied per account and are based on your subscription tier. Free accounts receive 30 requests per minute, while Global accounts receive up to 10,000 requests per minute. Limits reset every minute.</p></div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggle(this)">What is the Beacon Safety feature?</button>
+      <div class="faq-answer"><p>Beacon Safety is a public safety system that allows users to emit location-aware emergency beacons. Beacons are active for 24 hours and can be discovered by responders within a configurable radius.</p></div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggle(this)">Can I use my own API keys?</button>
+      <div class="faq-answer"><p>Yes. Starting from the Standard tier, you can generate scoped API keys from your dashboard. API keys support read and write scopes and can be revoked at any time.</p></div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggle(this)">Is my data secure?</button>
+      <div class="faq-answer"><p>Absolutely. We use bcrypt for password hashing, TLS for all API traffic, HMAC-SHA256 for internal service authentication, and maintain comprehensive audit logs. We do not sell your personal data.</p></div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggle(this)">How do I cancel my subscription?</button>
+      <div class="faq-answer"><p>You can cancel at any time from the billing portal in your dashboard. Your service will remain active until the end of the current billing period.</p></div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-question" onclick="toggle(this)">Do you offer refunds?</button>
+      <div class="faq-answer"><p>Refunds are evaluated on a case-by-case basis. Please contact support@abc-io.com with your account details and we will review your request within 2 business days.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-links">
+      <a href="/features">Features</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/docs">API Docs</a>
+      <a href="/terms">Terms</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/help">Help</a>
+      <a href="/faq">FAQ</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+      <a href="https://github.com/ccplexmath/redot2complete" target="_blank">GitHub</a>
+    </div>
+    <p>© 2026 ABC-IO — A Universal Interfacing Communications Company. All rights reserved.</p>
+  </div>
+</footer>
+
+<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#0f1633;border-top:1px solid #1e293b;padding:16px 24px;z-index:1000">
+  <div style="max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+    <span style="font-size:13px;color:#94a3b8">We use cookies to improve your experience. By continuing, you agree to our use of cookies.</span>
+    <button onclick="acceptCookies()" style="padding:8px 16px;border-radius:6px;background:#00ff88;color:#0a0a2e;font-size:13px;font-weight:600;border:none;cursor:pointer;white-space:nowrap">Accept</button>
+  </div>
+</div>
+
+<script>
+function toggle(btn){
+  const item=btn.parentElement;
+  item.classList.toggle('open');
+}
+function acceptCookies(){localStorage.setItem('abcio_cookie_consent','1');document.getElementById('cookieBanner').style.display='none';}
+if(!localStorage.getItem('abcio_cookie_consent')){var el=document.getElementById('cookieBanner');if(el)el.style.display='block';}
+</script>
+</body>
+</html>

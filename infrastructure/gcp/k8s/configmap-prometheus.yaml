@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: abc-io
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+
+    scrape_configs:
+      - job_name: 'abc_io_gateway'
+        static_configs:
+          - targets: ['gateway:4000']
+            labels:
+              service: 'gateway'
+
+      - job_name: 'abc_io_operator'
+        static_configs:
+          - targets: ['operator-station:8080']
+            labels:
+              service: 'operator-station'
+
+      - job_name: 'abc_io_owner_dashboard'
+        static_configs:
+          - targets: ['owner-dashboard:8500']
+            labels:
+              service: 'owner-dashboard'
+
+      - job_name: 'abc_io_kimi'
+        static_configs:
+          - targets: ['kimi:5000']
+            labels:
+              service: 'kimi'
+
+      - job_name: 'abc_io_mobile_gateway'
+        static_configs:
+          - targets: ['mobile-gateway:5050']
+            labels:
+              service: 'mobile-gateway'
+
+      - job_name: 'abc_io_public_portal'
+        static_configs:
+          - targets: ['public-portal:8090']
+            labels:
+              service: 'public-portal'
+
+      - job_name: 'abc_io_beacon_pwa'
+        static_configs:
+          - targets: ['beacon-pwa:3005']
+            labels:
+              service: 'beacon-pwa'
+
+      - job_name: 'abc_io_postgres'
+        static_configs:
+          - targets: ['postgres-exporter:9187']
+            labels:
+              service: 'postgres'
+
+      - job_name: 'abc_io_redis'
+        static_configs:
+          - targets: ['redis-exporter:9121']
+            labels:
+              service: 'redis'
+
+      - job_name: 'abc_io_ai_isp'
+        static_configs:
+          - targets: ['ai-isp:7000']
+            labels:
+              service: 'ai-isp'
+
+      - job_name: 'abc_io_beacon'
+        static_configs:
+          - targets: ['beacon:3006']
+            labels:
+              service: 'beacon'

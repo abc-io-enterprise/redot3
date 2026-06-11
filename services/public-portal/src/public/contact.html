@@ -57,5 +57,15 @@ body{font-family:'Inter',sans-serif;background:#0a0a2e;color:#e2e8f0;min-height:
   </div>
   <div class="back"><a href="/">← Back to home</a></div>
 </div>
+<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#0f1633;border-top:1px solid #1e293b;padding:16px 24px;z-index:1000">
+  <div style="max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+    <span style="font-size:13px;color:#94a3b8">We use cookies to improve your experience. By continuing, you agree to our use of cookies.</span>
+    <button onclick="acceptCookies()" style="padding:8px 16px;border-radius:6px;background:#00ff88;color:#0a0a2e;font-size:13px;font-weight:600;border:none;cursor:pointer;white-space:nowrap">Accept</button>
+  </div>
+</div>
+<script>
+function acceptCookies(){localStorage.setItem('abcio_cookie_consent','1');document.getElementById('cookieBanner').style.display='none';}
+if(!localStorage.getItem('abcio_cookie_consent')){var el=document.getElementById('cookieBanner');if(el)el.style.display='block';}
+</script>
 </body>
 </html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify Email — ABC-IO</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#0a0a2e;color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 20px}
+.card{background:#0f1633;border:1px solid #1e293b;border-radius:16px;padding:40px;width:100%;max-width:420px;text-align:center}
+.logo{font-size:22px;font-weight:700;color:#fff;margin-bottom:8px}
+.logo span{color:#00ff88}
+.subtitle{color:#64748b;font-size:14px;margin-bottom:24px}
+.status-icon{font-size:48px;margin-bottom:16px}
+.msg{font-size:14px;margin-bottom:24px}
+.msg.success{color:#00ff88}
+.msg.error{color:#ef4444}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:.2s;text-decoration:none}
+.btn-primary{background:#00ff88;color:#0a0a2e}
+.btn-primary:hover{background:#00dd77}
+.spinner{width:32px;height:32px;border:3px solid #1e293b;border-top-color:#00ff88;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">ABC<span>-IO</span></div>
+  <p class="subtitle">Email Verification</p>
+  <div id="state">
+    <div class="spinner"></div>
+    <p class="msg" style="color:#94a3b8">Verifying your email...</p>
+  </div>
+</div>
+<script>
+const API='/api';
+const params=new URLSearchParams(location.search);
+const token=params.get('token');
+
+async function verify(){
+  const state=document.getElementById('state');
+  if(!token){
+    state.innerHTML='<div class="status-icon">⚠️</div><p class="msg error">Missing verification token.</p><a href="/login" class="btn btn-primary">Go to Login</a>';
+    return;
+  }
+  try{
+    const res=await fetch(`${API}/v1/auth/verify-email?token=${encodeURIComponent(token)}`);
+    const data=await res.json();
+    if(res.ok){
+      state.innerHTML='<div class="status-icon">✅</div><p class="msg success">'+ (data.message||'Your email has been verified!') +'</p><a href="/login" class="btn btn-primary">Log In</a>';
+    }else{
+      state.innerHTML='<div class="status-icon">❌</div><p class="msg error">'+(data.error||'Verification failed. The link may be expired or invalid.')+'</p><a href="/login" class="btn btn-primary">Go to Login</a>';
+    }
+  }catch(e){
+    state.innerHTML='<div class="status-icon">❌</div><p class="msg error">Network error. Please try again later.</p><a href="/login" class="btn btn-primary">Go to Login</a>';
+  }
+}
+verify();
+</script>
+<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#0f1633;border-top:1px solid #1e293b;padding:16px 24px;z-index:1000">
+  <div style="max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+    <span style="font-size:13px;color:#94a3b8">We use cookies to improve your experience. By continuing, you agree to our use of cookies.</span>
+    <button onclick="acceptCookies()" style="padding:8px 16px;border-radius:6px;background:#00ff88;color:#0a0a2e;font-size:13px;font-weight:600;border:none;cursor:pointer;white-space:nowrap">Accept</button>
+  </div>
+</div>
+<script>
+function acceptCookies(){localStorage.setItem('abcio_cookie_consent','1');document.getElementById('cookieBanner').style.display='none';}
+if(!localStorage.getItem('abcio_cookie_consent')){var el=document.getElementById('cookieBanner');if(el)el.style.display='block';}
+</script>
+</body>
+</html>

@@ -151,17 +151,44 @@ async function revokeKey(id) {
   loadKeys();
 }
 
+async function loadSubscription() {
+  const res = await api('/v1/billing/subscription');
+  const data = await res.json();
+  const tier = (data.tier || 'free').toUpperCase();
+  const status = data.status || 'none';
+  const periodEnd = data.current_period_end ? new Date(data.current_period_end).toLocaleDateString() : '—';
+  const cancel = data.cancel_at_period_end ? ' (cancels at period end)' : '';
+  document.getElementById('billingContent').insertAdjacentHTML('afterbegin', `
+    <div class="row"><span class="label">Plan</span><span class="value">${tier}</span></div>
+    <div class="row"><span class="label">Status</span><span class="value">${status}${cancel}</span></div>
+    <div class="row"><span class="label">Current Period Ends</span><span class="value">${periodEnd}</span></div>`);
+  return { tier, status };
+}
+
 async function loadUsage() {
-  // Simple display — gateway logs usage in DB; we'd need an endpoint for aggregated stats
+  const res = await api('/v1/billing/usage');
+  const data = await res.json();
+  const requests = data.total_requests || 0;
+  const tokens = data.total_tokens || 0;
   document.getElementById('usageContent').innerHTML = `
-    <div class="row"><span class="label">Tier</span><span class="value" id="usageTier">—</span></div>
-    <div class="row"><span class="label">Rate Limit</span><span class="value" id="usageLimit">—</span></div>
+    <div class="row"><span class="label">Requests (this month)</span><span class="value">${Number(requests).toLocaleString()}</span></div>
+    <div class="row"><span class="label">Tokens Used</span><span class="value">${Number(tokens).toLocaleString()}</span></div>
     <div class="row"><span class="label">Status</span><span class="value" style="color:#00ff88">Active</span></div>`;
 }
 
 function logout() { localStorage.removeItem('abcio_token'); location.href = '/login'; }
 
-loadProfile().then(loadBilling).then(loadKeys).then(loadUsage);
+loadProfile().then(loadBilling).then(loadSubscription).then(loadKeys).then(loadUsage);
+</script>
+<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#0f1633;border-top:1px solid #1e293b;padding:16px 24px;z-index:1000">
+  <div style="max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+    <span style="font-size:13px;color:#94a3b8">We use cookies to improve your experience. By continuing, you agree to our use of cookies.</span>
+    <button onclick="acceptCookies()" style="padding:8px 16px;border-radius:6px;background:#00ff88;color:#0a0a2e;font-size:13px;font-weight:600;border:none;cursor:pointer;white-space:nowrap">Accept</button>
+  </div>
+</div>
+<script>
+function acceptCookies(){localStorage.setItem('abcio_cookie_consent','1');document.getElementById('cookieBanner').style.display='none';}
+if(!localStorage.getItem('abcio_cookie_consent')){var el=document.getElementById('cookieBanner');if(el)el.style.display='block';}
 </script>
 </body>
 </html>

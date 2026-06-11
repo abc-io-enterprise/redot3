@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Help Article — ABC-IO</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#0a0a2e;color:#e2e8f0;line-height:1.7}
+a{color:#00ff88;text-decoration:none}
+.container{max-width:800px;margin:0 auto;padding:0 24px}
+.nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0}
+.nav .logo{font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.5px}
+.nav .logo span{color:#00ff88}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:#94a3b8;font-size:14px;font-weight:500;transition:.2s}
+.nav-links a:hover{color:#fff}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:.2s}
+.btn-outline{background:transparent;border:1px solid #334155;color:#e2e8f0}
+.btn-outline:hover{border-color:#00ff88;color:#00ff88}
+.btn-sm{padding:6px 14px;font-size:13px}
+.hero{padding:40px 0 20px}
+.hero a{font-size:13px;color:#94a3b8}
+.hero a:hover{color:#fff}
+.hero h1{font-size:28px;font-weight:700;color:#fff;margin-top:8px}
+.hero .meta{font-size:13px;color:#64748b;margin-top:8px}
+.article{background:#0f1633;border:1px solid #1e293b;border-radius:12px;padding:28px;margin-top:20px;font-size:15px;color:#cbd5e1}
+.article p{margin-bottom:16px}
+.article h2,.article h3{color:#fff;margin:24px 0 12px}
+.article ul,.article ol{margin-left:20px;margin-bottom:16px}
+.article li{margin-bottom:6px}
+.article code{background:#0a0a2e;border:1px solid #334155;padding:2px 6px;border-radius:4px;font-family:'SF Mono',monospace;font-size:13px;color:#00ff88}
+.article pre{background:#0a0a2e;border:1px solid #334155;border-radius:8px;padding:16px;overflow-x:auto;margin:12px 0}
+.article pre code{background:none;border:none;padding:0;color:#e2e8f0}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}
+.tag{background:rgba(0,255,136,.1);color:#00ff88;font-size:12px;padding:4px 10px;border-radius:20px}
+.empty{text-align:center;color:#64748b;font-size:14px;padding:60px 0}
+.footer{border-top:1px solid #1e293b;padding:40px 0;text-align:center;color:#64748b;font-size:14px;margin-top:40px}
+.footer-links{display:flex;gap:20px;justify-content:center;margin-bottom:16px;flex-wrap:wrap}
+.footer-links a{color:#94a3b8;font-size:14px}
+.footer-links a:hover{color:#fff}
+@media(max-width:640px){.hero h1{font-size:22px}.nav-links{display:none}}
+</style>
+</head>
+<body>
+<nav class="nav container">
+  <a href="/" class="logo"><img src="/abc-io_logo.png" alt="ABC-IO" style="height:28px;margin-right:8px;vertical-align:middle">ABC<span>-IO</span></a>
+  <div class="nav-links">
+    <a href="/features">Features</a>
+    <a href="/pricing">Pricing</a>
+    <a href="/docs">API Docs</a>
+    <a href="/contact">Contact</a>
+    <a href="/help" class="btn btn-outline btn-sm">Help Center</a>
+  </div>
+</nav>
+
+<section class="hero container">
+  <a href="/help">← Back to Help Center</a>
+  <h1 id="title">Loading...</h1>
+  <div class="meta" id="meta"></div>
+</section>
+
+<section class="container" id="content">
+  <div class="empty">Loading article...</div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-links">
+      <a href="/features">Features</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/docs">API Docs</a>
+      <a href="/terms">Terms</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/help">Help</a>
+      <a href="/faq">FAQ</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+      <a href="https://github.com/ccplexmath/redot2complete" target="_blank">GitHub</a>
+    </div>
+    <p>© 2026 ABC-IO — A Universal Interfacing Communications Company. All rights reserved.</p>
+  </div>
+</footer>
+
+<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#0f1633;border-top:1px solid #1e293b;padding:16px 24px;z-index:1000">
+  <div style="max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+    <span style="font-size:13px;color:#94a3b8">We use cookies to improve your experience. By continuing, you agree to our use of cookies.</span>
+    <button onclick="acceptCookies()" style="padding:8px 16px;border-radius:6px;background:#00ff88;color:#0a0a2e;font-size:13px;font-weight:600;border:none;cursor:pointer;white-space:nowrap">Accept</button>
+  </div>
+</div>
+
+<script>
+const API='/api';
+const params=new URLSearchParams(location.search);
+const slug=params.get('slug');
+
+async function loadArticle(){
+  const content=document.getElementById('content');
+  const title=document.getElementById('title');
+  const meta=document.getElementById('meta');
+  if(!slug){
+    title.textContent='Article Not Found';
+    content.innerHTML='<div class="empty">Missing article slug.</div>';
+    return;
+  }
+  try{
+    const res=await fetch(`${API}/v1/help/articles/${encodeURIComponent(slug)}`);
+    const data=await res.json();
+    if(!res.ok){
+      title.textContent='Article Not Found';
+      content.innerHTML='<div class="empty">'+(data.error||'Article not found.')+'</div>';
+      return;
+    }
+    const a=data.article;
+    title.textContent=a.title;
+    meta.textContent=(a.category_name?a.category_name+' · ':'')+new Date(a.updated_at||a.created_at).toLocaleDateString();
+    content.innerHTML=`<div class="article">${a.content}</div>`+
+      (a.tags&&a.tags.length?`<div class="tags">${a.tags.map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join('')}</div>`:'');
+  }catch(e){
+    title.textContent='Error';
+    content.innerHTML='<div class="empty">Unable to load article. Please try again later.</div>';
+  }
+}
+function escapeHtml(t){
+  const d=document.createElement('div');d.textContent=t;return d.innerHTML;
+}
+function acceptCookies(){localStorage.setItem('abcio_cookie_consent','1');document.getElementById('cookieBanner').style.display='none';}
+if(!localStorage.getItem('abcio_cookie_consent')){var el=document.getElementById('cookieBanner');if(el)el.style.display='block';}
+loadArticle();
+</script>
+</body>
+</html>

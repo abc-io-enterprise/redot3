@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: abc-io
+data:
+  nginx.conf: |
+    events {
+      worker_connections 1024;
+    }
+
+    http {
+      include /etc/nginx/mime.types;
+      default_type application/octet-stream;
+
+      log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+      access_log /var/log/nginx/access.log main;
+
+      # Rate limit zones
+      limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+      limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;
+
+      # Upstreams (K8s service names)
+      upstream gateway {
+        server gateway:4000;
+      }
+
+      upstream public_portal {
+        server public-portal:8090;
+      }
+
+      upstream owner_dashboard {
+        server owner-dashboard:8500;
+      }
+
+      upstream mobile_gateway {
+        server mobile-gateway:5050;
+      }
+
+      server {
+        listen 80 default_server;
+        listen [::]:80 default_server;
+        server_name abc-io.com www.abc-io.com;
+
+        include /etc/nginx/conf.d/locations.conf;
+      }
+    }

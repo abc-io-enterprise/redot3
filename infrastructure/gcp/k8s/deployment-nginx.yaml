@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: abc-io
+  labels:
+    app: nginx
+    tier: proxy
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+        tier: proxy
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:stable-alpine
+          ports:
+            - containerPort: 80
+              name: http
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: locations-config
+              mountPath: /etc/nginx/conf.d/locations.conf
+              subPath: locations.conf
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: nginx-config
+        - name: locations-config
+          configMap:
+            name: locations-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  namespace: abc-io
+  labels:
+    app: nginx
+spec:
+  type: LoadBalancer
+  selector:
+    app: nginx
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http
