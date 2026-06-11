@@ -11,6 +11,11 @@ app.use(express.json())
 // Serve static PWA UI
 app.use('/', express.static(path.join(__dirname, 'public')))
 
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', service: 'beacon-pwa' })
+})
+
 // Minimal public beacon API
 app.get('/api/beacon', (req, res) => {
   const { lat, lon } = req.query
