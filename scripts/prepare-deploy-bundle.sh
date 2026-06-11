@@ -4,6 +4,7 @@
 
 set -e
 
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEPLOY_TAG="${1:-$(git rev-parse --short HEAD)}"
 BUNDLE_NAME="abc-io-deploy-${DEPLOY_TAG}.tar.gz"
 BUNDLE_DIR="/tmp/abc-io-deploy-$$"
@@ -42,7 +43,7 @@ echo ""
 # Create a .env.deploy template
 cat > "$BUNDLE_DIR/abc-io/.env.deploy.template" << 'ENVEOF'
 # Copy your local .env file to the VPS as /opt/abc-io/.env
-# Then run: docker-compose -f compose.prod.yml up -d
+# Then run: docker compose -f compose.prod.yml up -d
 ENVEOF
 
 # Create startup script
@@ -83,17 +84,17 @@ echo "[2/4] Pruning old images..."
 docker system prune -af --volumes >/dev/null 2>&1 || true
 
 echo "[3/4] Pulling images..."
-docker-compose -f compose.prod.yml pull
+docker compose -f compose.prod.yml pull
 
 echo "[4/4] Starting services..."
-docker-compose -f compose.prod.yml up -d
+docker compose -f compose.prod.yml up -d
 
 echo "[4/4] Waiting for services..."
 sleep 15
 
 echo ""
 echo "=== Service Status ==="
-docker-compose -f compose.prod.yml ps
+docker compose -f compose.prod.yml ps
 
 echo ""
 echo "=== Health Checks ==="
@@ -147,7 +148,7 @@ IMPORTANT: VPS nodes have 20GB HDD. Local files must stay under 10GB.
 The deploy script auto-prunes Docker images before deployment.
 
 For AI nodes, after step 2, only start AI services:
-  docker-compose -f compose.prod.yml up -d kimi worker redis headscale
+  docker compose -f compose.prod.yml up -d kimi worker redis headscale
 
 ================================================
 READMEEOF
@@ -155,13 +156,13 @@ READMEEOF
 # Package
 echo "[6/6] Creating bundle..."
 cd "$BUNDLE_DIR"
-tar -czf "/c/Users/cplexmath/OneDrive/Documents/redot2/$BUNDLE_NAME" abc-io/
+tar -czf "$PROJECT_DIR/$BUNDLE_NAME" abc-io/
 
 echo ""
 echo "================================================"
 echo "DEPLOY BUNDLE READY"
 echo "File: $BUNDLE_NAME"
-echo "Size: $(du -h /c/Users/cplexmath/OneDrive/Documents/redot2/$BUNDLE_NAME | cut -f1)"
+echo "Size: $(du -h "$PROJECT_DIR/$BUNDLE_NAME" | cut -f1)"
 echo ""
 echo "Deploy to VPS:"
 echo "  scp $BUNDLE_NAME root@162.254.32.142:/opt/"

@@ -121,6 +121,7 @@ async function authMiddleware(req, res, next) {
     req.userId = decoded.sub;
     req.accountId = decoded.account_id;
     req.tier = decoded.tier || 'free';
+    req.role = decoded.role || 'user';
     req.authType = 'jwt';
     return next();
   }
@@ -160,6 +161,14 @@ async function optionalAuth(req, res, next) {
       req.accountId = decoded.account_id;
       req.tier = decoded.tier || 'free';
     }
+  }
+  next();
+}
+
+// Owner-only middleware
+function requireOwner(req, res, next) {
+  if (req.role !== 'owner') {
+    return res.status(403).json({ error: 'Forbidden', message: 'Owner access required' });
   }
   next();
 }
@@ -238,8 +247,8 @@ app.post('/api/v1/auth/register', async (req, res) => {
         `Welcome to ABC-IO! Verify: ${verifyUrl}`
       );
 
-      const token = signToken({ sub: userId, account_id: accountId, tier: 'free', email: email.toLowerCase() });
-      res.status(201).json({ token, user: { id: userId, email: email.toLowerCase(), tier: 'free' } });
+      const token = signToken({ sub: userId, account_id: accountId, tier: 'free', email: email.toLowerCase(), role: 'owner' });
+      res.status(201).json({ token, user: { id: userId, email: email.toLowerCase(), tier: 'free', role: 'owner' } });
     } catch (e) {
       await client.query('ROLLBACK');
       throw e;
@@ -259,7 +268,7 @@ app.post('/api/v1/auth/login', async (req, res) => {
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
     const result = await pool.query(
-      `SELECT u.id, u.email, u.password_hash, u.account_id, u.status, u.email_verified, a.tier
+      `SELECT u.id, u.email, u.password_hash, u.account_id, u.status, u.email_verified, u.role, a.tier
        FROM users u JOIN accounts a ON u.account_id = a.id WHERE u.email = $1`,
       [email.toLowerCase()]
     );
@@ -273,8 +282,8 @@ app.post('/api/v1/auth/login', async (req, res) => {
 
     await pool.query('UPDATE users SET last_login_at = now(), login_count = login_count + 1 WHERE id = $1', [user.id]);
 
-    const token = signToken({ sub: user.id, account_id: user.account_id, tier: user.tier, email: user.email });
-    res.json({ token, user: { id: user.id, email: user.email, tier: user.tier, emailVerified: user.email_verified } });
+    const token = signToken({ sub: user.id, account_id: user.account_id, tier: user.tier, email: user.email, role: user.role });
+    res.json({ token, user: { id: user.id, email: user.email, tier: user.tier, role: user.role, emailVerified: user.email_verified } });
   } catch (e) {
     console.error('Login error:', e);
     res.status(500).json({ error: 'Login failed' });
@@ -370,6 +379,40 @@ app.get('/api/v1/auth/me', authMiddleware, async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: 'Failed to load user' });
   }
+});
+
+// Simple in-memory token blacklist (cleared on restart; for multi-replica deployments,
+// replace with Redis SET in the future)
+const tokenBlacklist = new Set();
+setInterval(() => tokenBlacklist.clear(), 24 * 60 * 60 * 1000); // clear daily
+
+function isTokenBlacklisted(token) {
+  return tokenBlacklist.has(token);
+}
+
+// Override verifyToken to check blacklist
+const _originalVerifyToken = verifyToken;
+function verifyTokenWithBlacklist(token) {
+  if (isTokenBlacklisted(token)) return null;
+  return _originalVerifyToken(token);
+}
+
+// Patch authMiddleware to use blacklisted verifier
+// (We re-assign the global verifyToken used by authMiddleware)
+// Actually authMiddleware uses verifyToken directly, so let's patch it:
+const originalVerify = verifyToken;
+verifyToken = function(token) {
+  if (isTokenBlacklisted(token)) return null;
+  return originalVerify(token);
+};
+
+app.post('/api/v1/auth/logout', authMiddleware, (req, res) => {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (token) {
+    tokenBlacklist.add(token);
+  }
+  res.json({ loggedOut: true });
 });
 
 // ============================================
@@ -730,7 +773,7 @@ app.get('/api/v1/beacon/active', async (req, res) => {
 // ============================================
 // ADMIN / OWNER ROUTES
 // ============================================
-app.get('/api/v1/admin/stats', authMiddleware, async (req, res) => {
+app.get('/api/v1/admin/stats', authMiddleware, requireOwner, async (req, res) => {
   try {
     const users = await pool.query('SELECT COUNT(*) FROM users WHERE status = $1', ['active']);
     const accounts = await pool.query('SELECT COUNT(*) FROM accounts');
@@ -752,7 +795,7 @@ app.get('/api/v1/admin/stats', authMiddleware, async (req, res) => {
 // ============================================
 
 // Admin metrics — uptime, memory, connections, queue
-app.get('/api/v1/admin/metrics', authMiddleware, async (req, res) => {
+app.get('/api/v1/admin/metrics', authMiddleware, requireOwner, async (req, res) => {
   try {
     const queueResult = await pool.query('SELECT COUNT(*) FROM intervention_queue WHERE status = $1', ['Pending Human Operator Escalation']);
     res.json({
@@ -768,7 +811,7 @@ app.get('/api/v1/admin/metrics', authMiddleware, async (req, res) => {
 });
 
 // Escalation queue — 8AM-8PM EST human routing
-app.post('/api/v1/admin/escalate', authMiddleware, async (req, res) => {
+app.post('/api/v1/admin/escalate', authMiddleware, requireOwner, async (req, res) => {
   try {
     const { ticketId, userMessage } = req.body;
     const currentHourEst = new Date().getUTCHours() - 4; // Conversion framework for New York Time
@@ -792,7 +835,7 @@ app.post('/api/v1/admin/escalate', authMiddleware, async (req, res) => {
 });
 
 // Self-heal trigger
-app.post('/api/v1/admin/self-heal', authMiddleware, async (req, res) => {
+app.post('/api/v1/admin/self-heal', authMiddleware, requireOwner, async (req, res) => {
   try {
     const { targetServiceHealth } = req.body;
     if (targetServiceHealth === 'CRITICAL_500_FAIL_DETECTION') {

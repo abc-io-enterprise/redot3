@@ -1,8 +1,9 @@
 # Production Deployment Checklist — ABC-IO v2.0 / redot2
 
-**Status**: READY FOR PRODUCTION  
+**Status**: PRODUCTION HARDENED — DEPLOYMENT READY  
 **Owner**: cporreca@abc-io.com  
-**Last Updated**: 2026-06-10
+**Last Updated**: 2026-06-10  
+**Master Runbook**: See `docs/MASTER_DEPLOYMENT_RUNBOOK.md` for complete deployment procedures
 
 ---
 

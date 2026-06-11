@@ -8,6 +8,7 @@ services:
       - gateway
     volumes:
       - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/locations.conf:/etc/nginx/conf.d/locations.conf:ro
 
   gateway:
     build:
@@ -74,6 +75,7 @@ services:
       - OWNER_BIOMETRIC_SECRET=${OWNER_BIOMETRIC_SECRET:-}
       - MOBILE_GATEWAY_URL=http://mobile-gateway:5050
       - APK_PATH=/apk/redot2-latest.apk
+      - GIT_DEFAULT_BRANCH=${GIT_DEFAULT_BRANCH:-main}
     volumes:
       - ./apk:/apk:ro
     restart: unless-stopped

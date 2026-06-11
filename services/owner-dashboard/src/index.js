@@ -241,7 +241,8 @@ app.post('/api/deploy/update', (req, res) => {
 
     // Step 1: Git pull
     deployLog.steps.push({ step: 1, action: 'Git pull from origin', status: 'IN_PROGRESS' });
-    execSync('git pull origin master', { cwd: '/app', timeout: 30000 });
+    const defaultBranch = process.env.GIT_DEFAULT_BRANCH || 'main';
+    execSync(`git pull origin ${defaultBranch}`, { cwd: '/app', timeout: 30000 });
     deployLog.steps[deployLog.steps.length - 1].status = 'COMPLETE';
 
     // Step 2: Docker compose pull
@@ -291,10 +292,18 @@ app.post('/api/github/push', (req, res) => {
 
   const { message } = req.body;
   if (!message) return res.status(400).json({ error: 'Commit message required' });
+  if (typeof message !== 'string' || message.length > 200) {
+    return res.status(400).json({ error: 'Commit message must be a string <= 200 chars' });
+  }
+  // Reject any characters that could break shell quoting
+  if (/["$&|;<>()`\\]/.test(message)) {
+    return res.status(400).json({ error: 'Commit message contains invalid characters' });
+  }
 
   try {
     execSync(`git add -A && git commit -m "${message}"`, { cwd: '/app', timeout: 15000 });
-    execSync('git push origin master', { cwd: '/app', timeout: 30000 });
+    const defaultBranch = process.env.GIT_DEFAULT_BRANCH || 'main';
+    execSync(`git push origin ${defaultBranch}`, { cwd: '/app', timeout: 30000 });
     
     res.json({
       action: 'push',

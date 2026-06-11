@@ -22,7 +22,7 @@ const services = [
   { key: 'prometheus', name: 'Prometheus', url: 'http://prometheus:9090/-/healthy', type: 'http' },
   { key: 'grafana', name: 'Grafana', url: 'http://grafana:3000/api/health', type: 'http' },
   { key: 'tracer', name: 'Tracer (Jaeger)', url: 'http://tracer:16686/', type: 'http' },
-  { key: 'headscale', name: 'Headscale', url: 'http://headscale:8080/health', type: 'http' },
+  { key: 'headscale', name: 'Headscale', host: 'headscale', port: 8080, type: 'tcp' },
 ];
 
 function httpCheck(url, timeoutMs = 5000) {

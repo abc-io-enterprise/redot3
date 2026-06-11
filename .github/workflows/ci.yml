@@ -33,8 +33,26 @@ jobs:
       - name: Build operator-station
         run: docker build -t abc-io-operator-station ./services/operator-station
 
+      - name: Build owner-dashboard
+        run: docker build -t abc-io-owner-dashboard ./services/owner-dashboard
+
+      - name: Build mobile-gateway
+        run: docker build -t abc-io-mobile-gateway ./services/mobile-gateway
+
+      - name: Build public-portal
+        run: docker build -t abc-io-public-portal ./services/public-portal
+
+      - name: Build beacon-pwa
+        run: docker build -t abc-io-beacon-pwa ./services/beacon-pwa
+
+      - name: Build beacon
+        run: docker build -t abc-io-beacon ./services/beacon
+
       - name: Build kimi
         run: docker build -t abc-io-kimi ./services/kimi
+
+      - name: Build worker
+        run: docker build -t abc-io-worker ./services/worker
 
       - name: Build ai-isp
         run: docker build -t abc-io-ai-isp ./services/ai-isp
