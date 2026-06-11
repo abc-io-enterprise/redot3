@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Pre-commit hook to prevent accidental commits of secrets and sensitive files.
+# To install: git config core.hooksPath .githooks
+# To bypass in rare cases: git commit --no-verify (use with extreme caution).
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+# Block commits of .env, .key, .secret, and PEM/P12 files
+blocked_files=$(git diff --cached --name-only --diff-filter=ACMR | grep -iE '\.(env|key|secret|pem|p12|pfx)$' || true)
+if [ -n "$blocked_files" ]; then
+  echo "ERROR: Attempting to commit sensitive files:"
+  echo "$blocked_files"
+  echo ""
+  echo "If these are truly intended to be committed, use: git commit --no-verify"
+  echo "Otherwise, remove them from the staging area and add to .gitignore."
+  exit 1
+fi
+
+# Warn if files contain high-risk credential patterns
+credential_hits=""
+while IFS= read -r file; do
+  [ -z "$file" ] && continue
+  # Skip binary files and lockfiles
+  case "$file" in
+    *.lock|*.png|*.jpg|*.jpeg|*.gif|*.ico|*.pdf|*.zip|*.tar.gz|*.apk|*.jks|*.idsig)
+      continue
+      ;;
+  esac
+  if [ -f "$file" ]; then
+    matches=$(grep -nEi 'password[[:space:]]*=[[:space:]]*[^[:space:]]' "$file" 2>/dev/null | sed "s|^|$file:|" || true)
+    if [ -n "$matches" ]; then
+      credential_hits="${credential_hits}${matches}\n"
+    fi
+  fi
+done < <(git diff --cached --name-only --diff-filter=ACMR)
+
+if [ -n "$credential_hits" ]; then
+  echo "WARNING: Potential credential patterns detected in staged files:"
+  printf '%b' "$credential_hits"
+  echo ""
+  read -rp "Are you sure these are safe to commit? [y/N] " confirm
+  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    echo "Commit aborted."
+    exit 1
+  fi
+fi
+
+echo "Pre-commit checks passed."
