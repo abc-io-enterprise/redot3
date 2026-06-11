@@ -3,7 +3,30 @@
 Staged deployment for redot1 (162.254.32.142).
 Starts the 19-service stack in waves to avoid OOM on a 4GB VPS.
 """
-import os, sys, time, paramiko, subprocess, tempfile, shutil, tarfile, fnmatch
+import os, sys, time, paramiko, subprocess, tempfile, shutil, tarfile, fnmatch, re
+
+# ---------------------------------------------------------------------------
+# Load .env safely (bash-unfriendly chars like ! < > are common in secrets)
+# ---------------------------------------------------------------------------
+def load_dotenv(path):
+    if not os.path.exists(path):
+        return
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip()
+            if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+                value = value[1:-1]
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"))
 
 # ---------------------------------------------------------------------------
 # Configuration
