@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Free Beacon — ABC-IO Public Safety</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#0a0a2e;color:#e2e8f0;line-height:1.6}
+a{color:#00ff88;text-decoration:none}
+.container{max-width:800px;margin:0 auto;padding:0 24px}
+.nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0}
+.nav .logo{font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.5px}
+.nav .logo span{color:#00ff88}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:#94a3b8;font-size:14px;font-weight:500;transition:.2s}
+.nav-links a:hover{color:#fff}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:14px 28px;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;border:none;transition:.2s}
+.btn-primary{background:#c0392b;color:#fff}
+.btn-primary:hover{background:#a93226}
+.btn-outline{background:transparent;border:1px solid #334155;color:#e2e8f0}
+.btn-outline:hover{border-color:#00ff88;color:#00ff88}
+.hero{padding:80px 0 40px;text-align:center}
+.hero h1{font-size:42px;font-weight:700;color:#fff;line-height:1.1;letter-spacing:-1px}
+.hero p{font-size:16px;color:#94a3b8;margin:16px auto 32px;max-width:600px}
+.section{padding:40px 0}
+.card{background:#0f1633;border:1px solid #1e293b;border-radius:14px;padding:28px;margin-bottom:24px}
+.card h3{font-size:20px;font-weight:700;color:#fff;margin-bottom:12px}
+.card p{font-size:14px;color:#94a3b8;margin-bottom:16px}
+.card ul{list-style:none}
+.card li{padding:6px 0;color:#cbd5e1;font-size:14px;display:flex;align-items:center;gap:8px}
+.card li::before{content:'✓';color:#00ff88;font-weight:700}
+.footer{border-top:1px solid #1e293b;padding:40px 0;text-align:center;color:#64748b;font-size:14px;margin-top:40px}
+.footer-links{display:flex;gap:20px;justify-content:center;margin-bottom:16px;flex-wrap:wrap}
+.footer-links a{color:#94a3b8;font-size:14px}
+.footer-links a:hover{color:#fff}
+@media(max-width:768px){.hero h1{font-size:32px}.nav-links{display:none}}
+</style>
+  <link rel="stylesheet" href="/brand.css">
+</head>
+<body>
+<header class="brand-header">
+  <div class="header-inner">
+    <a href="/" class="logo-link">
+      <img src="/abc-io_logo.png" alt="ABC-IO" class="logo-img">
+      <span class="brand-name">ABC-IO</span>
+    </a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/features.html">Features</a>
+      <a href="/pricing.html">Pricing</a>
+      <a href="/community.html">Community</a>
+      <a href="/help.html">Help</a>
+      <a href="/dashboard.html">Dashboard</a>
+    </nav>
+  </div>
+</header>
+<main>
+<section class="hero">
+  <div class="container">
+    <h1>Free <span style="color:#00ff88">Beacon</span></h1>
+    <p>A free, anonymous public safety service. Share your location to receive safety alerts, weather, nearby events, and suggestions. No account required.</p>
+    <a href="/beacon" class="btn btn-primary">Launch Beacon PWA</a>
+    <a href="/community.html" class="btn btn-outline">Community Hub</a>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="card">
+      <h3>How It Works</h3>
+      <ul>
+        <li>Open the Beacon PWA on any device</li>
+        <li>Tap "What's Around Me?" to share your location</li>
+        <li>Get weather, public safety alerts, and nearby suggestions</li>
+        <li>Emit an emergency/transit/SOS beacon if needed</li>
+        <li>All beacons expire after 24 hours</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Privacy Promise</h3>
+      <ul>
+        <li>No account required</li>
+        <li>No personal information collected</li>
+        <li>Location is used only to generate your response</li>
+        <li>No persistent device identifiers</li>
+        <li>All data auto-expires</li>
+      </ul>
+    </div>
+  </div>
+</section>
+</main>
+<footer class="footer">
+  <div class="footer-links">
+    <a href="/privacy.html">Privacy</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/contact.html">Contact</a>
+    <a href="/help.html">Help</a>
+  </div>
+  <p>&copy; 2026 ABC-IO by Christopher Porreca / redot1. All rights reserved.</p>
+</footer>
+</body>
+</html>

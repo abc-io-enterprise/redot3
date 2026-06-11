@@ -1,10 +1,10 @@
 const CACHE_NAME = 'abc-io-beacon-v1';
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/favicon.ico',
-  '/abc-io_logo.png',
+  './',
+  './index.html',
+  './manifest.json',
+  './favicon.ico',
+  './abc-io_logo.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -43,7 +43,7 @@ self.addEventListener('fetch', (event) => {
       });
     }).catch(() => {
       if (event.request.mode === 'navigate') {
-        return caches.match('/index.html');
+        return caches.match('./index.html');
       }
     })
   );

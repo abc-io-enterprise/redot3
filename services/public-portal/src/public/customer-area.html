@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Area — ABC-IO Account & Service Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#0a0a2e;color:#e2e8f0;line-height:1.6}
+a{color:#00ff88;text-decoration:none}
+.container{max-width:1200px;margin:0 auto;padding:0 24px}
+.nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0}
+.nav .logo{font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.5px}
+.nav .logo span{color:#00ff88}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:#94a3b8;font-size:14px;font-weight:500;transition:.2s}
+.nav-links a:hover{color:#fff}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:.2s}
+.btn-primary{background:#00ff88;color:#0a0a2e}
+.btn-primary:hover{background:#00dd77}
+.btn-outline{background:transparent;border:1px solid #334155;color:#e2e8f0}
+.btn-outline:hover{border-color:#00ff88;color:#00ff88}
+.hero{padding:80px 0 40px;text-align:center}
+.hero h1{font-size:42px;font-weight:700;color:#fff;line-height:1.1;letter-spacing:-1px}
+.hero p{font-size:16px;color:#94a3b8;margin:16px auto 32px;max-width:640px}
+.section{padding:60px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
+.card{background:#0f1633;border:1px solid #1e293b;border-radius:14px;padding:28px;text-align:center}
+.card h3{font-size:20px;font-weight:700;color:#fff;margin-bottom:12px}
+.card p{font-size:14px;color:#94a3b8;margin-bottom:20px}
+.status-badge{display:inline-block;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:16px}
+.status-free{background:rgba(0,255,136,.1);color:#00ff88}
+.status-paid{background:rgba(255,193,7,.15);color:#ffc107}
+.footer{border-top:1px solid #1e293b;padding:40px 0;text-align:center;color:#64748b;font-size:14px;margin-top:40px}
+.footer-links{display:flex;gap:20px;justify-content:center;margin-bottom:16px;flex-wrap:wrap}
+.footer-links a{color:#94a3b8;font-size:14px}
+.footer-links a:hover{color:#fff}
+@media(max-width:768px){.hero h1{font-size:32px}.nav-links{display:none}}
+</style>
+  <link rel="stylesheet" href="/brand.css">
+</head>
+<body>
+<header class="brand-header">
+  <div class="header-inner">
+    <a href="/" class="logo-link">
+      <img src="/abc-io_logo.png" alt="ABC-IO" class="logo-img">
+      <span class="brand-name">ABC-IO</span>
+    </a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/features.html">Features</a>
+      <a href="/pricing.html">Pricing</a>
+      <a href="/community.html">Community</a>
+      <a href="/solutions.html">Solutions</a>
+      <a href="/help.html">Help</a>
+      <a href="/dashboard.html">Dashboard</a>
+    </nav>
+  </div>
+</header>
+<main>
+<section class="hero">
+  <div class="container">
+    <h1>Customer <span style="color:#00ff88">Area</span></h1>
+    <p>Manage your ABC-IO account, services, billing, and access levels. Free accounts include beacon access and basic AI tools.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="grid">
+      <div class="card">
+        <span class="status-badge status-free">Free</span>
+        <h3>Personal Account</h3>
+        <p>For individuals and families who need safe, accessible communication and free safety tools.</p>
+        <ul style="list-style:none;text-align:left;margin-bottom:20px">
+          <li style="padding:6px 0;color:#cbd5e1;font-size:14px">✓ Free beacon & awareness service</li>
+          <li style="padding:6px 0;color:#cbd5e1;font-size:14px">✓ Basic AI chat & translation</li>
+          <li style="padding:6px 0;color:#cbd5e1;font-size:14px">✓ Community access</li>
+          <li style="padding:6px 0;color:#cbd5e1;font-size:14px">✓ 30 req/min rate limit</li>
+        </ul>
+        <a href="/signup.html" class="btn btn-primary">Create Free Account</a>
+      </div>
+      <div class="card">
+        <span class="status-badge status-paid">Paid</span>
+        <h3>Service Dashboard</h3>
+        <p>Manage your subscription, API keys, usage, invoices, and family-safe settings.</p>
+        <ul style="list-style:none;text-align:left;margin-bottom:20px">
+          <li style="padding:6px 0;color:#cbd5e1;font-size:14px">✓ View usage & quotas</li>
+          <li style="padding:6px 0;color:#cbd5e1;font-size:14px">✓ Manage API keys</li>
+          <li style="padding:6px 0;color:#cbd5e1;font-size:14px">✓ Billing & invoices</li>
+          <li style="padding:6px 0;color:#cbd5e1;font-size:14px">✓ Upgrade or change plan</li>
+        </ul>
+        <a href="/dashboard.html" class="btn btn-primary">Open Dashboard</a>
+      </div>
+      <div class="card">
+        <span class="status-badge status-paid">Business</span>
+        <h3>Organization Console</h3>
+        <p>For teams, businesses, and public services that need multi-user management and SLA support.</p>
+        <ul style="list-style:none;text-align:left;margin-bottom:20px">
+          <li style="padding:6px 0;color:#cbd5e1;font-size:14px">✓ Multi-seat management</li>
+          <li style="padding:6px 0;color:#cbd5e1;font-size:14px">✓ Role-based permissions</li>
+          <li style="padding:6px 0;color:#cbd5e1;font-size:14px">✓ Audit logs & reports</li>
+          <li style="padding:6px 0;color:#cbd5e1;font-size:14px">✓ Priority support</li>
+        </ul>
+        <a href="/contact.html" class="btn btn-outline">Contact Sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:#0f1633">
+  <div class="container" style="text-align:center">
+    <h2 style="font-size:28px;color:#fff;margin-bottom:16px">Account Types</h2>
+    <p style="color:#94a3b8;max-width:700px;margin:0 auto 32px">Choose how you use ABC-IO. Every account includes privacy controls, family-safe filtering, and access to our free beacon network.</p>
+    <div class="grid" style="max-width:900px;margin:0 auto">
+      <div class="card">
+        <h3>Personal</h3>
+        <p class="small">Individual or family use. Free tier available.</p>
+      </div>
+      <div class="card">
+        <h3>Private</h3>
+        <p class="small">Closed groups, teams, and invite-only spaces.</p>
+      </div>
+      <div class="card">
+        <h3>Public</h3>
+        <p class="small">Public services, open communities, and civic use.</p>
+      </div>
+      <div class="card">
+        <h3>Service</h3>
+        <p class="small">API-driven integrations and automation.</p>
+      </div>
+      <div class="card">
+        <h3>Organization</h3>
+        <p class="small">Nonprofits, NGOs, and member organizations.</p>
+      </div>
+      <div class="card">
+        <h3>Business</h3>
+        <p class="small">Companies and enterprises with SLA needs.</p>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+<footer class="footer">
+  <div class="footer-links">
+    <a href="/privacy.html">Privacy</a>
+    <a href="/terms.html">Terms</a>
+    <a href="/contact.html">Contact</a>
+    <a href="/help.html">Help</a>
+  </div>
+  <p>&copy; 2026 ABC-IO by Christopher Porreca / redot1. All rights reserved.</p>
+</footer>
+</body>
+</html>

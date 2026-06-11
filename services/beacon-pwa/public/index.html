@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#c0392b">
   <title>ABC-IO Public Safety Beacon</title>
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/x-icon" href="./favicon.ico">
+  <link rel="manifest" href="./manifest.json">
   <style>
     * { box-sizing: border-box; }
     body { font-family: system-ui, Arial, sans-serif; margin: 0; padding: 1rem; background: #f8f9fa; color: #1a1a1a; }
@@ -18,6 +18,7 @@
     input, select, textarea { width: 100%; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px; font-family: inherit; }
     button { padding: 0.5rem 1rem; border: none; border-radius: 4px; background: #c0392b; color: #fff; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
     button.secondary { background: #2980b9; }
+    button.success { background: #27ae60; }
     button:disabled { opacity: 0.6; cursor: not-allowed; }
     .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; color: #fff; margin-right: 4px; }
     .emergency { background: #c0392b; }
@@ -29,14 +30,21 @@
     .status { margin-top: 0.5rem; font-size: 0.875rem; }
     .status.ok { color: #27ae60; }
     .status.err { color: #c0392b; }
+    .awareness-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+    @media (min-width: 600px) { .awareness-grid { grid-template-columns: 1fr 1fr; } }
+    .awareness-card { background: #f1f3f5; border-radius: 6px; padding: 0.75rem; }
+    .awareness-card h3 { margin: 0 0 0.5rem 0; font-size: 0.95rem; color: #2c3e50; }
+    .awareness-card ul { margin: 0; padding-left: 1.2rem; }
+    .awareness-card li { margin-bottom: 0.25rem; font-size: 0.85rem; }
+    .privacy { font-size: 0.75rem; color: #6c757d; margin-top: 0.5rem; }
   </style>
-  <link rel="stylesheet" href="/brand.css">
+  <link rel="stylesheet" href="./brand.css">
 </head>
 <body>
 <header class="brand-header">
   <div class="header-inner">
     <a href="/" class="logo-link">
-      <img src="/abc-io_logo.png" alt="ABC-IO" class="logo-img">
+      <img src="./abc-io_logo.png" alt="ABC-IO" class="logo-img">
       <span class="brand-name">ABC-IO</span>
     </a>
     <nav>
@@ -52,6 +60,15 @@
 
 <main>
 <p style="text-align:right;color:var(--text-muted);margin:0 0 0.5rem 0"><small id="ts"></small></p>
+
+<div class="card">
+  <h2>Free Locational Awareness</h2>
+  <p class="small">No account required. Tap the button to get weather, public safety alerts, nearby suggestions, and local events based on your current location. Your location is used only to generate this response and is not stored.</p>
+  <button class="success" id="awarenessBtn">What's Around Me?</button>
+  <div id="awarenessResult"></div>
+  <p class="privacy">Privacy: No PII collected. Location is not retained.</p>
+</div>
+
 <div class="card">
     <h2>Emit Beacon</h2>
     <form id="emitForm">
@@ -109,18 +126,71 @@
     document.getElementById('ts').textContent = new Date().toLocaleString();
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(err => console.error('SW registration failed:', err));
+      navigator.serviceWorker.register('./sw.js').catch(err => console.error('SW registration failed:', err));
     }
 
     const emitForm = document.getElementById('emitForm');
     const emitStatus = document.getElementById('emitStatus');
     const beaconList = document.getElementById('beaconList');
     const refreshBtn = document.getElementById('refreshBtn');
+    const awarenessBtn = document.getElementById('awarenessBtn');
+    const awarenessResult = document.getElementById('awarenessResult');
 
     function setStatus(el, text, isError) {
       el.textContent = text;
       el.className = 'status ' + (isError ? 'err' : 'ok');
     }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    awarenessBtn.addEventListener('click', () => {
+      awarenessResult.innerHTML = '<p class="small">Acquiring location...</p>';
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          fetch('/api/v1/beacon/awareness?lat=' + lat + '&lng=' + lng + '&radiusKm=10')
+            .then(r => r.json())
+            .then(data => {
+              let html = '<div class="awareness-grid">';
+              html += '<div class="awareness-card"><h3>Weather</h3>' +
+                '<p class="small">' + escapeHtml(data.weather.condition) + '<br>' +
+                data.weather.temperatureF + '°F, wind ' + data.weather.windSpeedMph + ' mph<br>' +
+                '<em>Source: ' + escapeHtml(data.weather.source) + '</em></p></div>';
+
+              html += '<div class="awareness-card"><h3>Public Safety Alerts</h3>';
+              if (data.safetyAlerts && data.safetyAlerts.length > 0) {
+                html += '<ul>' + data.safetyAlerts.map(a =>
+                  '<li><span class="badge ' + (a.type === 'emergency' ? 'emergency' : a.type === 'transit' ? 'transit' : 'sos') + '">' +
+                  a.type.toUpperCase() + '</span> ' + escapeHtml(a.message || 'Alert') + ' (' + a.distanceKm + ' km)</li>'
+                ).join('') + '</ul>';
+              } else {
+                html += '<p class="small">No active safety alerts in this area.</p>';
+              }
+              html += '</div>';
+
+              html += '<div class="awareness-card"><h3>Nearby Suggestions</h3><ul>' +
+                data.nearbySuggestions.map(s => '<li>' + escapeHtml(s) + '</li>').join('') + '</ul></div>';
+
+              html += '<div class="awareness-card"><h3>Public Events</h3><ul>' +
+                data.publicEvents.map(e => '<li>' + escapeHtml(e) + '</li>').join('') + '</ul></div>';
+
+              html += '</div>';
+              awarenessResult.innerHTML = html;
+            })
+            .catch(err => {
+              awarenessResult.innerHTML = '<p class="small err">Error: ' + escapeHtml(err.message) + '</p>';
+            });
+        },
+        (err) => {
+          awarenessResult.innerHTML = '<p class="small err">Location error: ' + escapeHtml(err.message) + '</p>';
+        }
+      );
+    });
 
     emitForm.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -177,12 +247,6 @@
         acknowledge(this.getAttribute('data-bid'));
       });
       return div;
-    }
-
-    function escapeHtml(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
     }
 
     function acknowledge(beaconId) {

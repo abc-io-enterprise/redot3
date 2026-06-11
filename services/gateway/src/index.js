@@ -1106,6 +1106,16 @@ app.get('/api/v1/beacon/active', async (req, res) => {
   }
 });
 
+app.get('/api/v1/beacon/awareness', async (req, res) => {
+  try {
+    const response = await fetch(`http://beacon:3000/api/v1/beacon/awareness?${new URLSearchParams(req.query)}`);
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (e) {
+    res.status(502).json({ error: 'Beacon service unavailable' });
+  }
+});
+
 // ============================================
 // ADMIN / OWNER ROUTES
 // ============================================
