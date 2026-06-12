@@ -49,6 +49,10 @@ apk/android-project/build/
 *.p12
 *.pfx
 
+# Gitea generated SSH host keys (regenerate on first run)
+config/gitea/ssh-host-key
+config/gitea/ssh-host-key.pub
+
 # Lockfiles (include for reproducible builds)
 # yarn.lock
 # pnpm-lock.yaml
