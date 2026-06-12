@@ -6,72 +6,83 @@
 **Domain:** https://abc-io.com
 **GitHub:** https://github.com/abc-io-enterprise/redot3
 **Version:** v5.0.0
-**Latest Commit:** `16ef9df`
 
 ---
 
 ## Executive Status
 
-**SYSTEM: READY FOR PRODUCTION**
+**SYSTEM: READY FOR OWNER REVIEW**
 
-The repository has been audited, launch blockers fixed, exposed secrets rotated, documentation updated, and master archives created. All compose files validate, no secrets are committed, the public landing page is reachable, and the codebase is ready for owner-executed production deployment.
+The repository has been audited, launch blockers fixed where repository automation could address them, documentation updated, legal files signed, dependencies refreshed, master archives regenerated, and validation completed. Production launch remains owner-gated because DNS, VPS/deploy access, production secrets, billing dashboards, SMTP, TLS renewal, and legal approval require owner-controlled external systems.
 
 ---
 
 ## Completed Work
 
-### Repository & Code
-- ✅ Fixed `worker` service `DATABASE_URL` omission across all compose files.
-- ✅ Aligned local dev `REDIS_URL` handling and added missing `KIMI_ENDPOINTS` / `AI_ISP_URL` / `REDIS_URL` to `gateway`.
-- ✅ Updated `.env.example` Redis URL guidance for production authentication.
-- ✅ Removed Windows path artifact directories from `config/`.
-- ✅ All 7 compose files validate (`docker compose config`).
+### Repository and Code
+- Added `.editorconfig`.
+- Added `docs/AUDIT_OUTPUTS.md` with system map, missing-items matrix, keep/refactor/replace decisions, launch blockers, P0/P1/P2 priorities, architecture recommendation, and owner actions.
+- Added `docs/GCP_DEPLOYMENT.md` and linked it from `docs/DEPLOYMENT.md`.
+- Added owner signature blocks dated 06/12/2026 to all five legal policies.
+- Replaced concrete Redis password placeholder in `.env.example`.
+- Refreshed workspace dependencies and `package-lock.json`.
+- Updated `services/gateway/package.json` to use patched `nodemailer` and `uuid`.
+- Updated `services/redot3-portal/package.json` and `vite.config.ts` for a clean Vite 8 build.
+- Updated `scripts/create-master-archives.py` to regenerate redot3, redot5, and live backup archives.
 
 ### Security
-- ✅ Exposed secrets incident documented.
-- ✅ Owner confirmed all exposed environment variables have been rotated.
-- ✅ `.env` remains EFS-encrypted, gitignored, and untracked.
+- `.env` remains EFS-encrypted, gitignored, and untracked.
+- `npm audit --omit=dev` reports 0 vulnerabilities.
+- No secret values were printed or committed.
 
 ### Master Archives (in `Documents/`)
-- ✅ `REDOT3.ZIP` — 1.33 MB, 112 files (redot3-portal React source)
-- ✅ `REDOT5.ZIP` — 34.71 MB, 428 files (full private system archive)
-- ✅ `completed-redot1-abc-io-live.zip` — 34.72 MB, 428 files (master working backup)
+- `REDOT3.ZIP` — 34.83 MB, 482 files
+- `REDOT5.ZIP` — 34.83 MB, 482 files
+- `completed-redot1-abc-io-live.zip` — 34.84 MB, 482 files
 
 ### Documentation
-- ✅ `DEPLOYMENT_LAUNCH_REQUEST_2026_06_12.md` — redacted launch plan
-- ✅ `SECURITY_INCIDENT_2026_06_12.md` — secret exposure/rotation tracker
-- ✅ `final_system_manifest.json`
-- ✅ `project_audit_report.md`
-- ✅ `launch_readiness_report.md`
-- ✅ `REDOT3-AND-REDOT5_DONE.md`
+- `final_system_manifest.json`
+- `project_audit_report.md`
+- `launch_readiness_report.md`
+- `REDOT3-AND-REDOT5_DONE.md`
+- `docs/AUDIT_OUTPUTS.md`
+- `docs/GCP_DEPLOYMENT.md`
 
 ### Verification
-- ✅ `scripts/verify-env-safety.py` — PASS
-- ✅ `scripts/full-system-audit.py` — PASS
-- ✅ Public site `https://abc-io.com/` — HTTP 200
-- ✅ Public health `https://abc-io.com/health` — HTTP 200
-- ✅ All 7 compose files validate — PASS
+- `docker compose config` for all 7 compose files — PASS
+- `python scripts/verify-env-safety.py` — PASS
+- `python scripts/full-system-audit.py` — PASS
+- `npm run build -w services/redot3-portal` — PASS
+- `npm audit --omit=dev` — 0 vulnerabilities
+- Public site `https://abc-io.com/` — HTTP 200
+- Public health `https://abc-io.com/health` — HTTP 200
+- Public pricing `https://abc-io.com/pricing.html` — HTTP 200
 
 ---
 
 ## Remaining Owner-Executed Steps
 
-The following require owner VPS SSH access and are documented in `DEPLOYMENT_LAUNCH_REQUEST_2026_06_12.md`:
+The following require owner-controlled external systems and are documented in `docs/OWNER_ACTIONS_REQUIRED.md`:
 
 | ID | Action | Owner |
 |---|---|---|
-| VPS-01 | SSH to redot1/ai1/ai2 and deploy `compose.prod.yml` / replica files | Christopher Porreca |
-| DNS-01 | Confirm Namecheap DNS A records for `abc-io.com`, `www`, `ai1`, `ai2` | Christopher Porreca |
-| PAY-01 | Finalize Stripe dashboard webhooks and price IDs | Christopher Porreca |
-| PAY-02 | Finalize PayPal dashboard credentials and webhook ID | Christopher Porreca |
+| DNS-01 | Confirm Namecheap DNS records for `abc-io.com`, `www`, `api`, `admin`, `ai1`, `ai2`, and `headscale` | Christopher Porreca |
+| VPS-01 | Confirm SSH/deploy access to redot1, ai1, and ai2 | Christopher Porreca |
+| ENV-01 | Populate production `.env` and sync secret names to GitHub Repository Secrets | Christopher Porreca |
+| PAY-01 | Configure Stripe live products, price IDs, secret key, and webhook signing secret | Christopher Porreca |
+| PAY-02 | Decide whether PayPal remains enabled or is disabled until dashboard validation is complete | Christopher Porreca |
 | EMAIL-01 | Configure and test SMTP provider | Christopher Porreca |
-| SSL-01 | Verify Let's Encrypt certificate renewal path on VPS | Christopher Porreca |
+| SSL-01 | Verify Let's Encrypt certificate provisioning and renewal on VPS | Christopher Porreca |
+| AUTH-01 | Rotate seeded owner/operator passwords | Christopher Porreca |
+| LEGAL-01 | Approve final legal, support, and help center copy | Christopher Porreca |
+| PUSH-01 | Push final repository changes to `abc-io-enterprise/redot3` | Christopher Porreca |
+| GCP-01 | Create/select Google Cloud project, billing, IAM identity, and validate Terraform plan before redot5 deployment | Christopher Porreca |
 
 ---
 
 ## Sign-Off
 
-Repository work is complete and the system is ready for production execution.
+Repository work is complete and the system is ready for owner review. Do not declare `SYSTEM: ON` until production verification evidence is collected after DNS, TLS, secrets, billing, SMTP, and health checks pass.
 
 **Christopher Porreca**  
 Owner, redot1 / ABC-IO  

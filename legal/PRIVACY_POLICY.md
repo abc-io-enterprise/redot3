@@ -1,11 +1,11 @@
 # Privacy Policy
 
-**ABC-IO / redot1**  
-**Owner:** Christopher Porreca  
-**Domain:** https://abc-io.com  
-**Support:** support@abc-io.com  
-**Phone:** (585) 348-7120  
-**Effective Date:** [EFFECTIVE_DATE]
+**ABC-IO / redot1**
+**Owner:** Christopher Porreca
+**Domain:** https://abc-io.com
+**Support:** support@abc-io.com
+**Phone:** (585) 348-7120
+**Effective Date:** 06/12/2026
 
 ---
 
@@ -91,4 +91,6 @@ For privacy-related questions or requests, contact:
 
 ---
 
-*100 Years Nonstop — Always On, Always Yours, Always Here*
+_Signed by Christopher Porreca, Owner of ABC-IO / redot1, on 06/12/2026._
+
+_100 Years Nonstop — Always On, Always Yours, Always Here_

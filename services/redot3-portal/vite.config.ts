@@ -6,6 +6,12 @@ import { defineConfig } from "vite"
 export default defineConfig({
   base: "/portal/",
   plugins: [react()],
+  css: {
+    transformer: "postcss",
+  },
+  build: {
+    cssMinify: "esbuild",
+  },
   server: {
     port: 3000,
   },

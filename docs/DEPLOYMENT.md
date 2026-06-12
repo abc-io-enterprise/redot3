@@ -77,7 +77,7 @@ Use staging to validate portal flows, checkout sessions, webhooks, and failover 
 ### Option A: staged deployment (recommended for 4 GB VPS)
 
 ```bash
-export VPS_REDOT1_PASSWORD="$VPS_REDOT1_PASSWORD"
+export VPS_REDOT1_PASSWORD_VALUE="${VPS_REDOT1_PASSWORD:-}"
 python3 scripts/deploy-staged-redot1.py
 ```
 
@@ -156,6 +156,20 @@ sleep 20
   3. Register `https://abc-io.com/api/v1/billing/webhook` and copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
   4. Redeploy `gateway`.
 - verification method: a live-mode checkout completes and the webhook event updates the account tier in `postgres`
+
+## Google Cloud / redot5 path
+
+The Google Cloud migration path is documented separately in [`docs/GCP_DEPLOYMENT.md`](./GCP_DEPLOYMENT.md). Treat redot5 as a private migration package until the owner creates a GCP project, enables billing, configures Secret Manager, and validates the Terraform plan in a staging project.
+
+Recommended redot5 sequence:
+
+1. Review `infrastructure/gcp/terraform/` and `infrastructure/gcp/k8s/`.
+2. Create a GCP staging project and enable Cloud Build, Artifact Registry, Secret Manager, Cloud SQL, and Cloud Run.
+3. Store all secrets in Secret Manager and reference only environment variable names in `.github/workflows/gcp-deploy.yml`.
+4. Run `terraform validate` and `terraform plan` before applying anything.
+5. Deploy to GCP staging, run health checks, then promote to production only after owner sign-off.
+
+Rollback for redot5 is DNS cutover back to the VPS production deployment, redeployment of the previous container image tag, or Cloud SQL restore from an encrypted backup.
 
 ## Verification
 

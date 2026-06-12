@@ -73,11 +73,13 @@ Automation helpers:
 
 ## Release Packaging
 
-To create a packaged ZIP archive for distribution, run:
+To create packaged ZIP archives for release and private backup, run:
 
 ```powershell
-./scripts/package-release.ps1
+python scripts/create-master-archives.py
 ```
+
+The script writes `REDOT3.ZIP`, `REDOT5.ZIP`, and `completed-redot1-abc-io-live.zip` to the user's `Documents/` directory and records `master_archive_manifest.json`.
 
 ## Production Deployment
 

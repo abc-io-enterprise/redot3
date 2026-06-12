@@ -1,5 +1,5 @@
 {
-  "manifest": "ABC-IO v2.0 redot2 — Final System Manifest",
+  "manifest": "ABC-IO v2.0 redot3 final system manifest",
   "version": "v5.0.0",
   "owner": "Christopher Porreca",
   "business": "ABC-IO / redot1",
@@ -9,7 +9,7 @@
   "location": "Rochester, New York",
   "tagline": "100 Years Nonstop — Always On, Always Yours, Always Here",
   "baseline_date": "2026-06-12",
-  "generated_at": "2026-06-12T16:25:00-04:00",
+  "generated_at": "2026-06-12T18:30:00-04:00",
   "status": "SYSTEM: READY FOR OWNER REVIEW",
   "components_found": {
     "services": [
@@ -89,6 +89,8 @@
       "docs/NAMECHEAP_DEPLOYMENT.md",
       "docs/VPS_DEPLOYMENT.md",
       "docs/BACKUP_AND_RECOVERY.md",
+      "docs/AUDIT_OUTPUTS.md",
+      "docs/GCP_DEPLOYMENT.md",
       "docs/REDOT3_PUBLISH_AND_DEPLOY.md",
       "docs/ABC_IO_V2_PRODUCTION_RUNBOOK.md",
       "docs/MASTER_DEPLOYMENT_RUNBOOK.md",
@@ -122,70 +124,107 @@
     ]
   },
   "components_created_this_cycle": [
-    "scripts/create-master-archives.py",
-    "master_archive_manifest.json",
-    "updated compose files with worker DATABASE_URL and gateway Redis/AI_ISP/KIMI_ENDPOINTS",
-    "updated .env.example Redis URL guidance",
-    "updated FINAL_STATUS.md",
-    "updated REDOT3-AND-REDOT5_DONE.md"
+    ".editorconfig",
+    "docs/AUDIT_OUTPUTS.md",
+    "docs/GCP_DEPLOYMENT.md",
+    "signed legal policy blocks in legal/",
+    "updated package-lock.json with current workspace dependencies",
+    "updated services/gateway/package.json dependency versions",
+    "updated services/redot3-portal/package.json dependency versions",
+    "updated services/redot3-portal/vite.config.ts for Vite 8 build compatibility",
+    "updated scripts/create-master-archives.py",
+    "regenerated master_archive_manifest.json",
+    "regenerated C:/Users/cplexmath/Documents/REDOT3.ZIP",
+    "regenerated C:/Users/cplexmath/Documents/REDOT5.ZIP",
+    "regenerated C:/Users/cplexmath/Documents/completed-redot1-abc-io-live.zip"
   ],
   "blockers": {
     "resolved_this_cycle": [
       {
-        "id": "FIX-01",
-        "item": "worker service missing DATABASE_URL in all compose files",
-        "resolution": "Added DATABASE_URL to worker in docker-compose.yml, compose.prod.yml, compose.staging.yml, compose.replica.yml, compose.replica-ai1.yml, compose.replica-ai2.yml"
+        "id": "FIX-05",
+        "item": ".editorconfig missing from GitHub-ready repository structure",
+        "resolution": "Added root .editorconfig"
       },
       {
-        "id": "FIX-02",
-        "item": "gateway missing REDIS_URL, KIMI_ENDPOINTS, AI_ISP_URL in local dev compose",
-        "resolution": "Added environment variables and redis depends_on to gateway in docker-compose.yml"
+        "id": "FIX-06",
+        "item": "mandatory audit outputs not consolidated in one document",
+        "resolution": "Added docs/AUDIT_OUTPUTS.md with system map, missing-items matrix, decisions, blockers, priorities, architecture recommendation, and owner actions"
       },
       {
-        "id": "FIX-03",
-        "item": "Windows path artifact directories in config/",
-        "resolution": "Removed config/headscale;C/, config/locations.conf;C/, config/nginx.conf;C/"
+        "id": "FIX-07",
+        "item": "redot5 Google Cloud path needed explicit deployment guidance",
+        "resolution": "Added docs/GCP_DEPLOYMENT.md and linked it from docs/DEPLOYMENT.md"
       },
       {
-        "id": "FIX-04",
-        "item": ".env.example Redis URL did not match production authenticated URL",
-        "resolution": "Updated REDIS_URL to redis://:${REDIS_PASSWORD}@redis:6379/0 with explanatory comment"
+        "id": "FIX-08",
+        "item": "legal files had effective dates but no signature blocks",
+        "resolution": "Added owner signature blocks dated 06/12/2026 to all five legal policies"
+      },
+      {
+        "id": "FIX-09",
+        "item": ".env.example contained a concrete Redis password value",
+        "resolution": "Replaced with a placeholder token"
+      },
+      {
+        "id": "FIX-10",
+        "item": "redot3-portal build initially failed because TypeScript was not installed locally",
+        "resolution": "Installed workspace dependencies and refreshed package-lock.json"
+      },
+      {
+        "id": "FIX-11",
+        "item": "npm audit reported dependency vulnerabilities",
+        "resolution": "Updated gateway nodemailer/uuid and redot3-portal Vite/esbuild/plugin versions; npm audit --omit=dev now reports 0 vulnerabilities"
       }
     ],
     "owner_gated_external_actions": [
       {
         "id": "DNS-01",
-        "item": "Namecheap DNS A records for abc-io.com, www, ai1, ai2, and optional subdomains must be configured by the domain owner.",
+        "item": "Confirm or configure Namecheap DNS records for abc-io.com, www, api, admin, ai1, ai2, and headscale.",
         "owner": "Christopher Porreca"
       },
       {
         "id": "VPS-01",
-        "item": "VPS SSH access to redot1 (162.254.32.142), ai1 (192.227.212.235), and ai2 (192.227.212.237) is required for remote deployment.",
+        "item": "Confirm SSH/deploy access to redot1, ai1, and ai2.",
+        "owner": "Christopher Porreca"
+      },
+      {
+        "id": "ENV-01",
+        "item": "Populate production .env from .env.example and sync required names to GitHub Repository Secrets without committing values.",
         "owner": "Christopher Porreca"
       },
       {
         "id": "PAY-01",
-        "item": "Stripe dashboard credentials, webhook endpoints, and price IDs must be finalized in the Stripe account.",
+        "item": "Configure Stripe live products, price IDs, secret key, and webhook signing secret.",
         "owner": "Christopher Porreca"
       },
       {
         "id": "PAY-02",
-        "item": "PayPal dashboard credentials, webhook ID, and product linkage must be finalized in the PayPal account.",
+        "item": "Decide whether PayPal remains enabled or is disabled until dashboard validation is complete.",
         "owner": "Christopher Porreca"
       },
       {
         "id": "EMAIL-01",
-        "item": "Email provider credentials (SMTP host, port, user, password) must be configured and tested.",
+        "item": "Configure and test SMTP credentials for support@abc-io.com.",
         "owner": "Christopher Porreca"
       },
       {
         "id": "SSL-01",
-        "item": "Let's Encrypt certificate renewal path on VPS must be verified before production traffic.",
+        "item": "Verify Let's Encrypt certificate provisioning and renewal on the primary VPS.",
         "owner": "Christopher Porreca"
       },
       {
-        "id": "REG-01",
-        "item": "Domain registrar account verification and renewal settings for abc-io.com must be confirmed.",
+        "id": "AUTH-01",
+        "item": "Rotate seeded owner/operator passwords after seed script use.",
+        "owner": "Christopher Porreca"
+      },
+      {
+        "id": "LEGAL-01",
+        "item": "Approve final legal, support, and help center copy before public launch.",
+        "owner": "Christopher Porreca"
+      },
+      {
+        "id": "PUSH-01",
+        "item": "Push final repository changes to abc-io-enterprise/redot3.",
         "owner": "Christopher Porreca"
       }
     ]
@@ -193,15 +232,19 @@
   "readiness_by_deployment_target": {
     "development": {
       "status": "SYSTEM: READY FOR PRODUCTION",
-      "notes": "Local compose files validate. All services can be started locally with docker compose up -d."
+      "notes": "Repository is organized; compose files validate; redot3 portal builds; local deployment requires .env values."
     },
     "staging": {
       "status": "SYSTEM: READY FOR STAGING",
-      "notes": "compose.staging.yml validates. Requires VPS or staging host, populated .env, and DNS/SSL setup before public access."
+      "notes": "compose.staging.yml validates. Requires staging host, populated .env, and health-check validation before production."
     },
     "production": {
       "status": "SYSTEM: READY FOR OWNER REVIEW",
-      "notes": "compose.prod.yml validates. Blocked by owner-gated external actions: DNS, VPS SSH, payment dashboards, email provider, SSL renewal, and registrar."
+      "notes": "compose.prod.yml validates and public endpoints are reachable. Production launch remains blocked by owner-gated DNS, VPS, secrets, billing, SMTP, TLS, and legal approval actions."
+    },
+    "redot5_google_cloud": {
+      "status": "SYSTEM: READY FOR OWNER REVIEW",
+      "notes": "GCP Terraform/Kubernetes baseline and docs/GCP_DEPLOYMENT.md are present. Owner must create/select GCP project, billing, IAM identity, and validate terraform plan before deployment."
     }
   },
   "verification_results": {
@@ -214,48 +257,50 @@
       "compose.replica-ai1.yml": "PASS",
       "compose.replica-ai2.yml": "PASS"
     },
-    "secrets_committed": {
+    "env_safety": {
       "status": "PASS",
-      "notes": ".env is listed in .gitignore. No .env, .key, .secret, .pem, .p12, or .pfx files are tracked in git."
-    },
-    "env_safe": {
-      "status": "PASS",
-      "notes": ".env exists locally, is gitignored, and is EFS-encrypted. .env.example is the committed template and contains no live secrets."
-    },
-    "legal_docs_created": {
-      "status": "PASS",
-      "notes": "All five legal/policy files exist under legal/ with placeholder effective dates."
+      "notes": ".env exists locally, is gitignored, is not tracked, and is EFS-encrypted. .env.example contains placeholders only."
     },
     "full_system_audit": {
       "status": "PASS",
-      "notes": "scripts/full-system-audit.py reports [PASS] REDOT2 COMPLETE SYSTEM BUILT AND LIVE."
+      "notes": "scripts/full-system-audit.py completed with [PASS] REDOT2 COMPLETE SYSTEM BUILT AND LIVE."
     },
     "public_site_reachability": {
+      "https://abc-io.com/": "HTTP 200",
+      "https://abc-io.com/health": "HTTP 200",
+      "https://abc-io.com/pricing.html": "HTTP 200"
+    },
+    "redot3_portal_build": {
       "status": "PASS",
-      "notes": "https://abc-io.com/ and /health return HTTP 200."
+      "notes": "npm run build -w services/redot3-portal completed successfully with Vite 8."
+    },
+    "production_dependency_audit": {
+      "status": "PASS",
+      "notes": "npm audit --omit=dev reports 0 vulnerabilities."
     },
     "master_archives": {
       "status": "PASS",
-      "notes": "REDOT3.ZIP (1.33 MB, 112 files), REDOT5.ZIP (34.71 MB, 428 files), and completed-redot1-abc-io-live.zip (34.72 MB, 428 files) created in Documents."
+      "notes": "REDOT3.ZIP, REDOT5.ZIP, and completed-redot1-abc-io-live.zip were regenerated in Documents and recorded in master_archive_manifest.json."
     }
   },
   "owner_actions_required": [
-    "Review and approve the five legal/policy documents under legal/.",
-    "Replace [EFFECTIVE_DATE] placeholders in each legal file with the actual go-live date.",
-    "Confirm Namecheap DNS records for abc-io.com, www, ai1, and ai2 are pointed at the correct VPS IPs.",
-    "Restore or confirm SSH access to redot1, ai1, and ai2 for deployment.",
-    "Log in to the Stripe dashboard and verify webhook endpoints, price IDs, and product catalog.",
-    "Log in to the PayPal dashboard and verify client credentials, webhook ID, and product linkage.",
-    "Configure and test SMTP credentials for transactional and support email.",
-    "Verify Let's Encrypt certificate renewal path on VPS before production traffic.",
-    "Confirm domain registrar settings and auto-renewal for abc-io.com.",
-    "Populate .env from .env.example with production secrets and deploy using compose.prod.yml."
+    "Confirm Namecheap DNS records for abc-io.com, www, api, admin, ai1, ai2, and headscale.",
+    "Confirm SSH/deploy access to redot1, ai1, and ai2.",
+    "Populate production .env from .env.example and sync required secret names to GitHub Repository Secrets.",
+    "Configure Stripe live products, price IDs, secret key, and webhook signing secret.",
+    "Decide whether PayPal remains enabled or is disabled until dashboard validation is complete.",
+    "Configure and test SMTP credentials for support@abc-io.com.",
+    "Verify Let's Encrypt certificate provisioning and renewal on the primary VPS.",
+    "Rotate seeded owner/operator passwords after seed script use.",
+    "Approve final legal, support, and help center copy before public launch.",
+    "Push final repository changes to abc-io-enterprise/redot3.",
+    "Create/select a Google Cloud project and validate terraform plan before any redot5 deployment."
   ],
   "next_steps": [
-    "Run scripts/health-check.sh after local docker compose up -d to confirm all services are healthy.",
-    "Run scripts/full-system-audit.py to validate required files, compose files, and documentation.",
-    "Deploy to staging first, then promote to production after owner sign-off.",
-    "Schedule a post-launch review to monitor uptime, support load, billing events, and security incidents.",
-    "Verify archive integrity of completed-redot1-abc-io-live.zip, REDOT3.ZIP, and REDOT5.ZIP in Documents."
+    "Owner reviews docs/OWNER_ACTIONS_REQUIRED.md and docs/AUDIT_OUTPUTS.md.",
+    "Owner completes DNS, VPS, secrets, billing, SMTP, TLS, and legal approval actions.",
+    "Deploy to staging first and run scripts/health-check.sh.",
+    "Push final changes to abc-io-enterprise/redot3.",
+    "Promote to production only after staging evidence and owner sign-off."
   ]
 }

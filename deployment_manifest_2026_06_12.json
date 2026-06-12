@@ -1,0 +1,535 @@
+{
+  "deployment_report": {
+    "generated_at": "2026-06-12T16:32:45Z",
+    "report_version": "2.0",
+    "system_version": "v5.0.0",
+    "owner": {
+      "name": "Christopher Porreca",
+      "email": "owner@abc-io.com",
+      "phone": "+1-585-348-7120",
+      "timezone": "America/New_York"
+    },
+    "domain": {
+      "primary": "abc-io.com",
+      "support_email": "support@abc-io.com",
+      "registrar": "Namecheap",
+      "ssl_provider": "Let's Encrypt"
+    },
+    "infrastructure": {
+      "primary_vps": {
+        "hostname": "redot1",
+        "ip_address": "162.254.32.142",
+        "provider": "Custom VPS",
+        "role": "Primary API Gateway + Services"
+      },
+      "ai_replica_1": {
+        "hostname": "ai1",
+        "ip_address": "192.227.212.235",
+        "provider": "Custom VPS",
+        "role": "AI Services Replica"
+      },
+      "ai_replica_2": {
+        "hostname": "ai2",
+        "ip_address": "192.227.212.237",
+        "provider": "Custom VPS",
+        "role": "AI Services Replica"
+      }
+    },
+    "pre_deployment_audit": {
+      "environment_safety": {
+        "status": "PASSED",
+        "timestamp": "2026-06-12T16:32:46Z",
+        "checks": {
+          "env_file_exists": true,
+          "env_encrypted": true,
+          "env_not_tracked_by_git": true,
+          "env_covered_by_gitignore": true,
+          "env_example_template_exists": true,
+          "gitea_ssh_host_key_not_tracked": true
+        }
+      },
+      "system_audit": {
+        "status": "PASSED",
+        "timestamp": "2026-06-12T16:32:46Z",
+        "file_structure": {
+          "status": "OK",
+          "files_verified": 41,
+          "critical_files": [
+            "docker-compose.yml",
+            "compose.prod.yml",
+            ".env.example",
+            "package.json"
+          ]
+        },
+        "docker_compose_validation": {
+          "status": "OK",
+          "compose_files": [
+            "docker-compose.yml",
+            "compose.prod.yml",
+            "compose.staging.yml",
+            "compose.replica-ai1.yml",
+            "compose.replica-ai2.yml"
+          ]
+        },
+        "git_status": {
+          "status": "OK",
+          "working_tree_clean": true,
+          "latest_tag": "v5.0.0"
+        },
+        "apk_artifacts": {
+          "status": "OK",
+          "apk_files": [
+            "apk/redot2-operator.apk",
+            "apk/redot2-latest.apk"
+          ],
+          "keystore_present": true
+        },
+        "public_endpoint_health": {
+          "status": "OK",
+          "endpoints": [
+            {
+              "url": "https://abc-io.com/health",
+              "status_code": 200
+            },
+            {
+              "url": "https://abc-io.com/",
+              "status_code": 200
+            }
+          ]
+        },
+        "autonomous_system": {
+          "status": "OK",
+          "backend_containerized": true,
+          "desktop_orchestrator": true,
+          "apk_builder": true,
+          "biometric_authentication": true,
+          "hardcoded_backends": [
+            "162.254.32.142",
+            "192.227.212.235",
+            "192.227.212.237",
+            "abc-io.com"
+          ]
+        }
+      },
+      "docker_compose_configuration": {
+        "status": "VALID",
+        "files": [
+          {
+            "file": "docker-compose.yml",
+            "services": 27,
+            "validation": "passed"
+          },
+          {
+            "file": "compose.prod.yml",
+            "services": 27,
+            "validation": "passed",
+            "prod_features": [
+              "health_checks",
+              "memory_limits",
+              "logging_rotation",
+              "restart_policies"
+            ]
+          }
+        ]
+      }
+    },
+    "services": {
+      "total_count": 27,
+      "services": [
+        {
+          "name": "gateway",
+          "type": "API Gateway",
+          "language": "Node.js",
+          "port": 4000,
+          "image": "build",
+          "healthcheck": true,
+          "dependencies": ["postgres", "redis", "kimi"]
+        },
+        {
+          "name": "kimi",
+          "type": "LLM Integration",
+          "language": "Python",
+          "port": 5000,
+          "image": "build",
+          "healthcheck": true,
+          "ai_providers": ["mistral", "kimi"]
+        },
+        {
+          "name": "ai-isp",
+          "type": "Information Sharing Protocol",
+          "language": "Python",
+          "port": 7000,
+          "image": "build",
+          "healthcheck": true,
+          "memory_limit_prod": "512MB"
+        },
+        {
+          "name": "mobile-gateway",
+          "type": "Mobile Backend",
+          "language": "Node.js",
+          "port": 5050,
+          "image": "build",
+          "healthcheck": true
+        },
+        {
+          "name": "owner-dashboard",
+          "type": "Admin Console",
+          "language": "Node.js",
+          "port": 8500,
+          "image": "build",
+          "healthcheck": true,
+          "dependencies": ["gateway", "mobile-gateway"]
+        },
+        {
+          "name": "operator-station",
+          "type": "Operations UI",
+          "language": "Node.js",
+          "port": 8080,
+          "image": "build",
+          "healthcheck": true
+        },
+        {
+          "name": "public-portal",
+          "type": "User Interface",
+          "language": "Node.js",
+          "port": 8090,
+          "image": "build",
+          "healthcheck": true
+        },
+        {
+          "name": "beacon",
+          "type": "Notification Service",
+          "language": "Node.js",
+          "port": 3006,
+          "image": "build",
+          "healthcheck": true,
+          "dependencies": ["postgres", "redis"]
+        },
+        {
+          "name": "account-pwa",
+          "type": "PWA",
+          "language": "Node.js",
+          "port": 8100,
+          "image": "build"
+        },
+        {
+          "name": "interface-pwa",
+          "type": "PWA",
+          "language": "Node.js",
+          "port": 8110,
+          "image": "build"
+        },
+        {
+          "name": "autonomous",
+          "type": "Orchestrator",
+          "language": "Python",
+          "docker_socket": true,
+          "role": "Container lifecycle management"
+        },
+        {
+          "name": "postgres",
+          "type": "Database",
+          "image": "postgres:15-alpine",
+          "port": 5432,
+          "volume": "postgres-data",
+          "database": "abcio"
+        },
+        {
+          "name": "redis",
+          "type": "Cache & Session Store",
+          "image": "redis:alpine",
+          "port": 6379
+        },
+        {
+          "name": "nginx",
+          "type": "Reverse Proxy",
+          "image": "nginx:stable-alpine",
+          "port": 8088,
+          "config": "config/nginx.conf"
+        },
+        {
+          "name": "prometheus",
+          "type": "Metrics",
+          "image": "prom/prometheus:latest",
+          "port": 9091,
+          "config": "config/prometheus.yml"
+        },
+        {
+          "name": "grafana",
+          "type": "Dashboards",
+          "image": "grafana/grafana:latest",
+          "port": 14000,
+          "default_credentials": "admin/admin"
+        },
+        {
+          "name": "tracer",
+          "type": "Distributed Tracing",
+          "image": "jaegertracing/all-in-one:latest",
+          "port": 16686
+        },
+        {
+          "name": "headscale",
+          "type": "VPN Coordination",
+          "image": "headscale/headscale:latest",
+          "port": 8085,
+          "protocols": ["HTTP", "UDP"]
+        }
+      ]
+    },
+    "owner_gated_actions": {
+      "phase_1_legal": {
+        "status": "PENDING",
+        "required": true,
+        "items": [
+          {
+            "id": "legal_tos",
+            "name": "Terms of Service",
+            "file": "legal/TERMS_OF_SERVICE.md",
+            "actions": [
+              "Replace [EFFECTIVE_DATE] with go-live date",
+              "Verify business terms",
+              "Confirm contact information"
+            ]
+          },
+          {
+            "id": "legal_privacy",
+            "name": "Privacy Policy",
+            "file": "legal/PRIVACY_POLICY.md",
+            "actions": [
+              "Replace [EFFECTIVE_DATE] with go-live date",
+              "Verify GDPR/CCPA compliance",
+              "Confirm data retention policies"
+            ]
+          },
+          {
+            "id": "legal_support",
+            "name": "Support Policy",
+            "file": "legal/SUPPORT_POLICY.md",
+            "actions": [
+              "Confirm support hours",
+              "Verify response times",
+              "Review SLA commitments"
+            ]
+          },
+          {
+            "id": "legal_refund",
+            "name": "Refund Policy",
+            "file": "legal/REFUND_POLICY.md",
+            "actions": [
+              "Confirm refund terms",
+              "Verify cancellation procedures"
+            ]
+          },
+          {
+            "id": "legal_aup",
+            "name": "Acceptable Use Policy",
+            "file": "legal/ACCEPTABLE_USE_POLICY.md",
+            "actions": [
+              "Review prohibited activities",
+              "Ensure platform alignment"
+            ]
+          }
+        ]
+      },
+      "phase_2_dns": {
+        "status": "PENDING",
+        "required": true,
+        "registrar": "Namecheap",
+        "records": [
+          {
+            "hostname": "abc-io.com",
+            "type": "A",
+            "target": "162.254.32.142",
+            "verification": "nslookup abc-io.com"
+          },
+          {
+            "hostname": "www.abc-io.com",
+            "type": "A",
+            "target": "162.254.32.142",
+            "verification": "nslookup www.abc-io.com"
+          },
+          {
+            "hostname": "ai1.abc-io.com",
+            "type": "A",
+            "target": "192.227.212.235",
+            "verification": "nslookup ai1.abc-io.com"
+          },
+          {
+            "hostname": "ai2.abc-io.com",
+            "type": "A",
+            "target": "192.227.212.237",
+            "verification": "nslookup ai2.abc-io.com"
+          }
+        ]
+      },
+      "phase_3_payment": {
+        "status": "PENDING",
+        "required": true,
+        "providers": [
+          {
+            "name": "Stripe",
+            "actions": [
+              "Create products & prices for 10 tiers",
+              "Set webhook: https://abc-io.com/api/v1/billing/webhook",
+              "Copy secret to .env: STRIPE_WEBHOOK_SECRET",
+              "Test with card 4242..."
+            ],
+            "price_ids": [
+              "RD1FREE",
+              "RD1BASIC",
+              "RD1STANDARD",
+              "RD1PRO",
+              "RD1BUSSINESS",
+              "RD1TEAM",
+              "RD1CORPORATE",
+              "RD1ENTERPRISE",
+              "RD1AGENCY",
+              "RD1GLOBAL"
+            ]
+          },
+          {
+            "name": "PayPal",
+            "actions": [
+              "Create webhook: https://abc-io.com/api/v1/billing/paypal/webhook",
+              "Verify credentials in .env",
+              "Test payment flow"
+            ]
+          }
+        ]
+      },
+      "phase_4_email": {
+        "status": "PENDING",
+        "required": true,
+        "smtp_config": {
+          "SMTP_HOST": "abc-io.com",
+          "SMTP_PORT": 587,
+          "SMTP_USER": "cplexmath@abc-io.com",
+          "SMTP_FROM": "ABC-IO <no-reply@abc-io.com>"
+        },
+        "verification_steps": [
+          "Test SMTP credentials",
+          "Verify sender address",
+          "Test registration email",
+          "Confirm template rendering"
+        ]
+      },
+      "phase_5_ssl": {
+        "status": "PENDING",
+        "required": true,
+        "provider": "Let's Encrypt",
+        "actions": [
+          "Run: certbot renew --dry-run",
+          "Verify auto-renewal timer active",
+          "Enable domain auto-renewal in Namecheap"
+        ]
+      }
+    },
+    "deployment_instructions": {
+      "local_verification": [
+        "python scripts/verify-env-safety.py",
+        "python scripts/full-system-audit.py",
+        "docker compose config",
+        "docker compose -f compose.prod.yml config",
+        "docker compose up -d",
+        "sleep 20",
+        "./scripts/health-check.sh"
+      ],
+      "production_deployment": {
+        "redot1_primary": {
+          "host": "162.254.32.142",
+          "steps": [
+            "ssh root@162.254.32.142",
+            "nano .env  # populate from local",
+            "docker compose -f compose.prod.yml up -d --remove-orphans",
+            "./scripts/health-check.sh"
+          ]
+        },
+        "ai1_replica": {
+          "host": "192.227.212.235",
+          "steps": [
+            "ssh root@192.227.212.235",
+            "nano .env  # populate from local",
+            "docker compose -f compose.replica-ai1.yml up -d --remove-orphans",
+            "./scripts/health-check.sh"
+          ]
+        },
+        "ai2_replica": {
+          "host": "192.227.212.237",
+          "steps": [
+            "ssh root@192.227.212.237",
+            "nano .env  # populate from local",
+            "docker compose -f compose.replica-ai2.yml up -d --remove-orphans",
+            "./scripts/health-check.sh"
+          ]
+        }
+      }
+    },
+    "monitoring_targets": {
+      "uptime": {
+        "target": "99.9%",
+        "monitoring_tool": "Prometheus",
+        "dashboard_url": "http://localhost:14000"
+      },
+      "api_response_time_p95": {
+        "target_ms": 200,
+        "monitoring_tool": "Prometheus + Grafana"
+      },
+      "error_rate": {
+        "target_percent": 1,
+        "alert_threshold_percent": 2
+      },
+      "payment_success_rate": {
+        "target_percent": 99,
+        "alert_threshold_percent": 95
+      }
+    },
+    "security_checklist": [
+      {
+        "item": "Environment variables encrypted",
+        "status": "COMPLETE",
+        "method": "EFS encryption"
+      },
+      {
+        "item": "Secrets NOT tracked by git",
+        "status": "COMPLETE"
+      },
+      {
+        "item": "Official base images used",
+        "status": "COMPLETE"
+      },
+      {
+        "item": "Non-root containers",
+        "status": "COMPLETE"
+      },
+      {
+        "item": "Health checks implemented",
+        "status": "COMPLETE"
+      },
+      {
+        "item": "Logging configured",
+        "status": "COMPLETE",
+        "format": "JSON"
+      },
+      {
+        "item": "Memory limits enforced",
+        "status": "COMPLETE"
+      },
+      {
+        "item": "SSL certificate installed",
+        "status": "PENDING"
+      },
+      {
+        "item": "Firewall rules configured",
+        "status": "PENDING"
+      }
+    ],
+    "support_info": {
+      "owner_email": "owner@abc-io.com",
+      "owner_phone": "+1-585-348-7120",
+      "support_email": "support@abc-io.com",
+      "emergency_escalation": true,
+      "support_hours": "24/7",
+      "autonomous_support": true
+    }
+  }
+}

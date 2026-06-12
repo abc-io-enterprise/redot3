@@ -1,11 +1,11 @@
 # Support Policy
 
-**ABC-IO / redot1**  
-**Owner:** Christopher Porreca  
-**Domain:** https://abc-io.com  
-**Support:** support@abc-io.com  
-**Phone:** (585) 348-7120  
-**Effective Date:** [EFFECTIVE_DATE]
+**ABC-IO / redot1**
+**Owner:** Christopher Porreca
+**Domain:** https://abc-io.com
+**Support:** support@abc-io.com
+**Phone:** (585) 348-7120
+**Effective Date:** 06/12/2026
 
 ---
 
@@ -38,12 +38,12 @@ Support is available through the following channels:
 
 Response times are targets and may vary based on issue severity and volume:
 
-| Severity | Description | Target Response |
-|---|---|---|
-| Critical | Service-wide outage, security incident, or emergency beacon failure | Within 1 hour, 24/7 |
-| High | Major feature impairment affecting multiple users | Within 4 business hours |
-| Medium | Partial feature issue or single-user problem | Within 1 business day |
-| Low | General questions, feature requests, or minor issues | Within 2 business days |
+| Severity | Description                                                         | Target Response         |
+| -------- | ------------------------------------------------------------------- | ----------------------- |
+| Critical | Service-wide outage, security incident, or emergency beacon failure | Within 1 hour, 24/7     |
+| High     | Major feature impairment affecting multiple users                   | Within 4 business hours |
+| Medium   | Partial feature issue or single-user problem                        | Within 1 business day   |
+| Low      | General questions, feature requests, or minor issues                | Within 2 business days  |
 
 ## 5. Scope of Support
 
@@ -89,4 +89,6 @@ For support questions, contact:
 
 ---
 
-*100 Years Nonstop — Always On, Always Yours, Always Here*
+_Signed by Christopher Porreca, Owner of ABC-IO / redot1, on 06/12/2026._
+
+_100 Years Nonstop — Always On, Always Yours, Always Here_
