@@ -96,6 +96,61 @@ a{color:#00ff88;text-decoration:none}
     </div>
   </div>
 </section>
+
+<section class="section" style="background:#07071a">
+  <div class="container">
+    <h2 style="font-size:28px;font-weight:700;color:#fff;text-align:center;margin-bottom:12px">5 Deployment Environments</h2>
+    <p style="text-align:center;color:#94a3b8;margin-bottom:32px;max-width:700px;margin-left:auto;margin-right:auto">The complete ABC-IO system ships as a purchasable, multi-environment platform for personal or professional use. Deploy locally, stage safely, run production traffic, and replicate across AI worker nodes.</p>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <h3>Dev</h3>
+        <p>Local live-reload environment for gateway, operator-station, and Postgres.</p>
+        <ul>
+          <li>Volume-mounted source</li>
+          <li>Fast iteration</li>
+          <li>Ideal for development</li>
+        </ul>
+      </div>
+      <div class="pricing-card">
+        <h3>Staging</h3>
+        <p>Full-stack staging with alternate host ports for safe pre-production validation.</p>
+        <ul>
+          <li>Mirrors production</li>
+          <li>Isolated ports</li>
+          <li>Integration testing</li>
+        </ul>
+      </div>
+      <div class="pricing-card popular">
+        <div class="popular-badge">Production</div>
+        <h3>Prod</h3>
+        <p>Primary full-stack deployment on redot1 with NGINX, SSL, monitoring, and AI.</p>
+        <ul>
+          <li>Public traffic at abc-io.com</li>
+          <li>Resource limits &amp; healthchecks</li>
+          <li>Prometheus + Grafana</li>
+        </ul>
+      </div>
+      <div class="pricing-card">
+        <h3>Replica AI-1</h3>
+        <p>Redundant public-facing node on ai1 sharing primary DB/Redis for failover.</p>
+        <ul>
+          <li>192.227.212.235</li>
+          <li>Gateway + Portal + Kimi</li>
+          <li>NGINX upstream target</li>
+        </ul>
+      </div>
+      <div class="pricing-card">
+        <h3>Replica AI-2</h3>
+        <p>Secondary redundant node on ai2 for geographic and failure resilience.</p>
+        <ul>
+          <li>192.227.212.237</li>
+          <li>Gateway + Portal + Kimi</li>
+          <li>NGINX backup target</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
 </main>
 <footer class="brand-footer">
   <div class="footer-inner">
@@ -106,15 +161,16 @@ a{color:#00ff88;text-decoration:none}
     <div>
       <h4>Contact</h4>
       <p>Christopher Porreca / redot1</p>
-      <p><a href="mailto:cporreca@abc-io.com">cporreca@abc-io.com</a></p>
-      <p><a href="tel:585-629-9120">585-629-9120</a></p>
+      <p><a href="https://abc-io.com">https://abc-io.com</a></p>
+      <p><a href="mailto:contact@abc-io.com">contact@abc-io.com</a></p>
+      <p><a href="tel:585-348-7120">585-348-7120</a></p>
     </div>
     <div>
       <h4>Legal</h4>
       <p><a href="/privacy.html">Privacy Policy</a></p>
       <p><a href="/terms.html">Terms of Service</a></p>
     </div>
-    <p class="copyright">&copy; 2026 ABC-IO by Christopher Porreca / redot1. All rights reserved. Private operational system.</p>
+    <p class="copyright">&copy; 2026 ABC-IO by Christopher Porreca / redot1. All rights reserved. Universal silicone &amp; carbon cross-sensory information sharing communications platform. Available in 5 deployment environments for personal or professional use.</p>
   </div>
 </footer>
 

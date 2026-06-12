@@ -7,7 +7,7 @@ This file contains ground-truth information about the project for AI coding agen
 
 ## Project Overview
 
-ABC-IO v2.0 (codename `redot2`) is a containerized, multi-service platform developed by ABC-IO — the universal silicone and carbon cross-sensory information sharing communications platform. The root `package.json` version is `v5.0.0`, the license is `PROPRIETARY`, and the canonical remote is `https://github.com/abc-io-enterprise/redot2.git`. The current default branch is `master`; CI/CD workflows also trigger on `main` to support migration.
+ABC-IO v2.0 (codename `redot2`) is a containerized, multi-service platform developed by ABC-IO — the universal silicone and carbon cross-sensory information sharing communications platform. The root `package.json` version is `v5.0.0`, the license is `PROPRIETARY`, and the canonical remote is `https://github.com/abc-io-enterprise/redot3.git` (successor to `redot2`). The current default branch is `master`; CI/CD workflows also trigger on `main` to support migration. Created by Christopher Porreca / redot1, 2026. Live: https://abc-io.com · contact@abc-io.com · (585) 348-7120.
 
 The system is designed for local development, single-primary VPS production, and multi-node deployments. It is orchestrated with Docker Compose and provides:
 
@@ -440,6 +440,7 @@ Severity-based SLAs (from `docs/SECURITY_RUNBOOK.md`):
 
 - **Single-primary VPS mode:** run `compose.prod.yml` with all 21 services; NGINX listens on `80`/`443` and terminates/proxies traffic.
 - **Local dev mode:** `docker compose up -d` uses `docker-compose.yml` with local ports (`4000`, `8080`, `8500`, `5050`, `3005`, `8100`, `8110`, `5000`, `7000`, `3006`, `8088`, `9091`, `14000`, `16686`, `8085`, etc.). Note: `public-portal` host port `8090` is intentionally removed in local compose; access it via NGINX.
+- **Purchasable 5-environment platform:** The system is packaged for personal or professional use across `compose.dev.yml`, `compose.staging.yml`, `compose.prod.yml`, `compose.replica-ai1.yml`, and `compose.replica-ai2.yml`. See `docs/REDOT3_PUBLISH_AND_DEPLOY.md` for Namecheap/VS Code deployment.
 - **Live-reload dev mode:** `compose.dev.yml` only starts `gateway`, `operator-station`, and `postgres` with volume mounts.
 - **Replica / multi-node mode:** `compose.replica-ai1.yml` and `compose.replica-ai2.yml` run gateway, public-portal, mobile-gateway, beacon-pwa, account-pwa, interface-pwa, kimi, ai-isp, beacon, worker, and nginx on `ai1`/`ai2`, sharing the primary DB/Redis.
 - **Headscale mesh:** `scripts/deploy-vps-cluster.sh` and `scripts/deploy-triple-node.py` deploy a 3-node topology (redot1 full stack + ai1/ai2 replicas) and join them into a Headscale WireGuard mesh.
