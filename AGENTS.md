@@ -372,6 +372,8 @@ docker compose -f compose.staging.yml up -d
 ### Secrets and Environment Variables
 
 - **Never commit `.env`**. It is excluded by `.gitignore`.
+- On Windows, keep `.env` **EFS-encrypted** (`cipher /e .env`) so only your user account can read it, even if the file is synced via OneDrive.
+- Run `python scripts/verify-env-safety.py` to confirm `.env` is gitignored, not tracked, and encrypted.
 - Copy `.env.example` to `.env` and fill in production values before deploying.
 - Production secrets are stored in **GitHub Repository Secrets** and synchronized to the VPS `.env` at deploy time via `scripts/set-github-secrets.sh`.
 - Required secret groups include: `POSTGRES_PASSWORD`, `MISTRAL_API_KEY`, `MISTRAL_MODEL`, `MISTRAL_API_BASE_URL`, `KIMI_API_KEY`, `KIMI_MODEL`, `KIMI_API_BASE_URL`, `KIMI_ENDPOINTS`, owner/mobile/public signing keys and fingerprints, `OWNER_SESSION_TOKEN`, `OWNER_ACCOUNT_EMAIL`, `OWNER_ACCOUNT_PASSWORD`, `OWNER_BIOMETRIC_SECRET`, `GATEWAY_API_KEY`, `SELF_HEAL_TOKEN`, `JWT_SECRET`, Stripe secrets + 10 `STRIPE_PRICE_ID_*`, PayPal secrets, `PUBLIC_URL`, `CORS_ORIGIN`, `SMTP_*`, Headscale/Gitea/Namecheap placeholders, and VPS SSH passwords.
