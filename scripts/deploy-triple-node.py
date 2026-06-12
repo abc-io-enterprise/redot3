@@ -41,8 +41,9 @@ NODES = {
     "ai2": {"ip": AI2, "password": AI2_PASSWORD, "compose": "compose.replica-ai2.yml"},
 }
 
+SHARED_REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "")
 SHARED_DB_URL = f"postgres://postgres:${{POSTGRES_PASSWORD}}@{REDOT1}:5432/abc_io"
-SHARED_REDIS_URL = f"redis://{REDOT1}:6379/0"
+SHARED_REDIS_URL = f"redis://:{SHARED_REDIS_PASSWORD}@{REDOT1}:6379/0" if SHARED_REDIS_PASSWORD else f"redis://{REDOT1}:6379/0"
 KIMI_ENDPOINTS = f"http://{REDOT1}:5000,http://{AI1}:5000,http://{AI2}:5000"
 
 
@@ -83,6 +84,31 @@ def run_remote(client, command, timeout=300):
     err = stderr.read().decode("utf-8", errors="replace")
     rc = stdout.channel.recv_exit_status()
     return rc, out, err
+
+
+def configure_firewall(client, ai1_ip, ai2_ip):
+    """Allow replica nodes to reach shared Postgres and Redis on the primary node."""
+    rc, out, err = run_remote(client, "which ufw")
+    if rc != 0:
+        print("[INFO] ufw not installed; skipping firewall configuration")
+        return
+    # Check if ufw is active
+    rc2, out2, err2 = run_remote(client, "ufw status | grep -q 'Status: active'")
+    if rc2 != 0:
+        print("[INFO] ufw not active; skipping firewall configuration")
+        return
+    rules = [
+        f"ufw allow from {ai1_ip} to any port 5432 proto tcp",
+        f"ufw allow from {ai1_ip} to any port 6379 proto tcp",
+        f"ufw allow from {ai2_ip} to any port 5432 proto tcp",
+        f"ufw allow from {ai2_ip} to any port 6379 proto tcp",
+    ]
+    for rule in rules:
+        rc, out, err = run_remote(client, rule)
+        if rc != 0:
+            print(f"[WARN] Firewall rule failed: {rule}: {err}")
+        else:
+            print(f"[INFO] Applied firewall rule: {rule}")
 
 
 def deploy_node(name, info, bundle_path, env_path):
@@ -138,6 +164,9 @@ def deploy_node(name, info, bundle_path, env_path):
             rc, out, err = run_remote(client, f"cd {REMOTE_DIR} && docker compose -f {compose} cp services/postgres/v5.0.0-patch.sql postgres:/tmp/v5.0.0-patch.sql && docker compose -f {compose} exec -T postgres psql -U postgres -d abc_io -f /tmp/v5.0.0-patch.sql", timeout=120)
             if rc != 0:
                 print(f"[WARN] {name} DB patch apply failed: {err}")
+
+            # Allow replica nodes to reach the shared Postgres and Redis
+            configure_firewall(client, AI1, AI2)
 
         print(f"[OK] {name} deployed.")
         return True
