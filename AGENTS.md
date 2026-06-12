@@ -7,7 +7,7 @@ This file contains ground-truth information about the project for AI coding agen
 
 ## Project Overview
 
-ABC-IO v2.0 (codename `redot2`) is a containerized, multi-service platform developed by ABC-IO. The root `package.json` version is `v5.0.0`, the license is `PROPRIETARY`, and the canonical remote is `https://github.com/abc-io-enterprise/redot2.git`. The current default branch is `master`; CI/CD workflows also trigger on `main` to support migration.
+ABC-IO v2.0 (codename `redot2`) is a containerized, multi-service platform developed by ABC-IO — the universal silicone and carbon cross-sensory information sharing communications platform. The root `package.json` version is `v5.0.0`, the license is `PROPRIETARY`, and the canonical remote is `https://github.com/abc-io-enterprise/redot2.git`. The current default branch is `master`; CI/CD workflows also trigger on `main` to support migration.
 
 The system is designed for local development, single-primary VPS production, and multi-node deployments. It is orchestrated with Docker Compose and provides:
 

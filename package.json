@@ -1,7 +1,7 @@
 {
   "name": "abc-io-v2",
   "version": "v5.0.0",
-  "description": "ABC-IO v2.0 — Unified AI-ISP Infrastructure Platform with Autonomous Backend",
+  "description": "ABC-IO — Universal silicone and carbon cross-sensory information sharing communications platform",
   "private": true,
   "workspaces": [
     "services/gateway",
