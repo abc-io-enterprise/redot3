@@ -11,7 +11,8 @@
     "services/public-portal",
     "services/beacon-pwa",
     "services/account-pwa",
-    "services/interface-pwa"
+    "services/interface-pwa",
+    "services/redot3-portal"
   ],
   "scripts": {
     "dev": "docker compose -f docker-compose.yml up -d",
@@ -34,6 +35,8 @@
     "orchestrator:daemon": "python scripts/autonomous-orchestrator.py --daemon",
     "desktop:admin": "python admin-desktop/server.py",
     "deploy:vps": "bash scripts/deploy-vps-cluster.sh",
+    "portal:build": "npm run build -w services/redot3-portal",
+    "portal:dev": "npm run dev -w services/redot3-portal",
     "lint": "echo 'Linting not configured'",
     "format": "echo 'Formatting not configured'"
   },

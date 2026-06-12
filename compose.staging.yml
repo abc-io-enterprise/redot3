@@ -228,6 +228,33 @@ services:
         limits:
           memory: 256M
 
+  redot3-portal:
+    build:
+      context: ./services/redot3-portal
+    environment:
+      - NODE_ENV=production
+    ports:
+      - '8093:80'
+    depends_on:
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
   beacon-pwa:
     build:
       context: ./services/beacon-pwa

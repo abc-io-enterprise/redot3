@@ -19,6 +19,7 @@ The system is designed for local development, single-primary VPS production, and
 - **`beacon-pwa`** — Minimal location-aware beacon Progressive Web App.
 - **`account-pwa`** — Account-aware Progressive Web App for messaging, product management, billing, and quick access to AI translation and beacon services. Served at `/account/` via NGINX.
 - **`interface-pwa`** — Touchscreen-first cross-sensory interface PWA for multi-device, multi-modal communication (text, audio, visual, haptic, scent, taste). Served at `/interface/` via NGINX.
+- **`redot3-portal`** — Modern React 19 + TypeScript + Vite SPA serving the redot3 public experience at `/portal/` via NGINX. This is the project's only React/TypeScript frontend.
 - **`beacon`** — Public-safety beacon backend with PostgreSQL storage, 24-hour TTL, haversine region search, and responder acknowledgments.
 - **`kimi`** — Python/Flask AI adapter that proxies to Mistral or Kimi with circuit breaker, response cache, retry logic, and offline fallback. Also includes a small standalone Redis consumer (`worker.py`) for the `abc_io_tasks` list.
 - **`worker`** — Background Python worker that consumes the Redis list `redot2:jobs:queue` for `ai_inference`, `health_check`, and `security_scan` jobs, storing results with a 1-hour TTL.
@@ -79,7 +80,7 @@ The entire stack is intended to run on a single primary VPS or as a multi-host d
 | VPN / Mesh | Headscale (Tailscale-compatible WireGuard control server) |
 | Container Orchestration | Docker Compose |
 | CI/CD | GitHub Actions |
-| Build Tooling | **None of the following exist at project level:** React, Vue, TypeScript compiler config, Webpack, ESLint, Prettier, Jest, `pyproject.toml`, `Cargo.toml`, `Makefile` |
+| Build Tooling | **None of the following exist at project level** except where noted for `redot3-portal`:** React, Vue, TypeScript compiler config, Webpack, ESLint, Prettier, Jest, `pyproject.toml`, `Cargo.toml`, `Makefile`. `services/redot3-portal/` uses React 19, TypeScript, Vite, Tailwind CSS, and ESLint. |
 
 All Node.js frontends are vanilla HTML/CSS/JS. There is no React, Vue, TypeScript, or bundler anywhere in the project.
 
@@ -110,6 +111,7 @@ All Node.js frontends are vanilla HTML/CSS/JS. There is no React, Vue, TypeScrip
 │   ├── beacon-pwa/server.js (+ public/)
 │   ├── account-pwa/server.js (+ public/)
   ├── interface-pwa/server.js (+ public/)
+│   ├── redot3-portal/          # React 19 + Vite SPA (new in redot3)
 │   ├── beacon/src/index.js
 │   ├── kimi/app.py, worker.py, requirements.txt
 │   ├── worker/worker.py, requirements.txt
@@ -172,7 +174,7 @@ docker compose -f compose.prod.yml up -d
 docker compose -f compose.replica.yml up -d
 ```
 
-`compose.replica.yml` (and per-node files `compose.replica-ai1.yml`, `compose.replica-ai2.yml`) runs `nginx`, `gateway`, `public-portal`, `mobile-gateway`, `beacon-pwa`, `account-pwa`, `interface-pwa`, `kimi`, `ai-isp`, `beacon`, and `worker`. It expects the primary node's Postgres and Redis to be reachable via `DATABASE_URL` and `REDIS_URL`.
+`compose.replica.yml` (and per-node files `compose.replica-ai1.yml`, `compose.replica-ai2.yml`) runs `nginx`, `gateway`, `public-portal`, `redot3-portal`, `mobile-gateway`, `beacon-pwa`, `account-pwa`, `interface-pwa`, `kimi`, `ai-isp`, `beacon`, and `worker`. It expects the primary node's Postgres and Redis to be reachable via `DATABASE_URL` and `REDIS_URL`.
 
 ### Root npm Scripts
 
@@ -226,7 +228,7 @@ docker compose -f compose.staging.yml up -d
 
 ### Compose Service Map
 
-`docker-compose.yml` defines **21 services**: `nginx`, `gateway`, `operator-station`, `owner-dashboard`, `mobile-gateway`, `public-portal`, `beacon-pwa`, `account-pwa`, `interface-pwa`, `kimi`, `postgres`, `prometheus`, `grafana`, `redis`, `worker`, `logger`, `tracer`, `headscale`, `ai-isp`, `beacon`, `autonomous`.
+`docker-compose.yml` defines **22 services**: `nginx`, `gateway`, `operator-station`, `owner-dashboard`, `mobile-gateway`, `public-portal`, `redot3-portal`, `beacon-pwa`, `account-pwa`, `interface-pwa`, `kimi`, `postgres`, `prometheus`, `grafana`, `redis`, `worker`, `logger`, `tracer`, `headscale`, `ai-isp`, `beacon`, `autonomous`.
 
 | Service | Runtime | Framework | Entry File | Exposed Port (host) | Role |
 |---|---|---|---|---|---|
@@ -238,6 +240,7 @@ docker compose -f compose.staging.yml up -d
 | `beacon-pwa` | Node.js 20 Alpine | Express + `helmet` + `cors` | `services/beacon-pwa/server.js` | `3005` | Beacon PWA frontend |
 | `account-pwa` | Node.js 20 Alpine | Express + `helmet` + `cors` | `services/account-pwa/server.js` | `8100` | Account-aware PWA frontend |
 | `interface-pwa` | Node.js 20 Alpine | Express + `helmet` + `cors` | `services/interface-pwa/server.js` | `8110` | Cross-sensory interface PWA |
+| `redot3-portal` | Node.js 20 Alpine (build) → nginx stable-alpine (serve) | React 19 + TypeScript + Vite + Tailwind CSS + shadcn/ui | `services/redot3-portal/src/main.tsx` | via nginx (`8092` in prod/replica, `8093` in staging) | Modern redot3 public portal SPA at `/portal/` |
 | `beacon` | Node.js 20 Alpine | Express + `pg` + `nodemailer` | `services/beacon/src/index.js` | `3006` | Public-safety beacon backend |
 | `kimi` | Python 3.12 slim | Flask | `services/kimi/app.py` | `5000` | Mistral/Kimi AI adapter |
 | `ai-isp` | Python 3.11 slim | Flask + Gunicorn | `services/ai-isp/src/app.py` | `7000` | Cross-sensory translation engine |
@@ -263,6 +266,7 @@ docker compose -f compose.staging.yml up -d
 - **`beacon-pwa`** — Proxies `/api/v1/beacon` to the `beacon` service and serves static PWA assets.
 - **`kimi`** — Proxies to Mistral or Kimi chat-completions endpoints with circuit breaker, retry, 5-minute in-memory cache, and offline fallback. `services/kimi/worker.py` consumes Redis list `abc_io_tasks` and pushes results to `abc_io_results`.
 - **`worker`** — Consumes `redot2:jobs:queue`. Job types: `ai_inference`, `health_check`, `security_scan`. Stores results in Redis with key `redot2:jobs:processed:<job_id>` and a 1-hour TTL.
+- **`redot3-portal`** — React 19 SPA built with Vite and served by nginx. Deployed under `/portal/`. The `BrowserRouter` basename is set to `/portal` and the Vite base URL is `/portal/` so all assets and client-side routes resolve correctly behind the NGINX sub-path proxy. Built as a static site in a multi-stage Docker image; healthcheck hits `/health` on the container's nginx port.
 - **`ai-isp`** — Fully implemented. Translation endpoints include `speech-to-text`, `text-to-braille`, `text-to-morse`, `text-to-haptic`, `braille-to-text`, `morse-to-text`, `haptic-to-text`, `text-to-speech`, `text-to-sign`, `sign-to-text`, plus `/api/v1/translate/universal` and `/api/v1/matrix`.
 - **`autonomous`** — HTTP/TCP-checks all core services every `CHECK_INTERVAL_SECONDS` (default 30) and restarts failed containers via `docker compose -f /opt/redot2/compose.prod.yml restart <service>` (max 3 heals per service). Pushes `autonomous_alert` jobs to `redot2:jobs:queue`.
 
@@ -293,6 +297,7 @@ docker compose -f compose.staging.yml up -d
 - Use `helmet` in production-facing services where it is already present (`gateway`, `owner-dashboard`, `mobile-gateway`, `public-portal`, `beacon-pwa`, `account-pwa`, `interface-pwa`, `beacon`). `operator-station` does not currently use helmet.
 - Frontends are served as static files from `src/public/` (or `public/` in `beacon-pwa`) using `express.static`.
 - Inline HTML/CSS/JS in server-rendered responses is acceptable and matches existing patterns.
+- **`redot3-portal` is the exception:** it is a React 19 + TypeScript + Vite SPA with a build step (`npm run build`) and is served by nginx, not Express.
 
 ### Python (`kimi`, `worker`, `ai-isp`, `autonomous`)
 
@@ -330,7 +335,7 @@ docker compose -f compose.staging.yml up -d
    ```bash
    ./scripts/health-check.sh
    ```
-   Curls `/health` on gateway, operator-station, public-portal, mobile-gateway, owner-dashboard, kimi, beacon, beacon-pwa, account-pwa, interface-pwa, ai-isp, nginx, prometheus, grafana, tracer, and headscale; TCP-checks postgres and redis.
+   Curls `/health` on gateway, operator-station, public-portal, redot3-portal, mobile-gateway, owner-dashboard, kimi, beacon, beacon-pwa, account-pwa, interface-pwa, ai-isp, nginx, prometheus, grafana, tracer, and headscale; TCP-checks postgres and redis.
 
 2. **Cluster health check:**
    ```bash
@@ -441,7 +446,7 @@ Severity-based SLAs (from `docs/SECURITY_RUNBOOK.md`):
 ## Deployment Architecture
 
 - **Single-primary VPS mode:** run `compose.prod.yml` with all 21 services; NGINX listens on `80`/`443` and terminates/proxies traffic.
-- **Local dev mode:** `docker compose up -d` uses `docker-compose.yml` with local ports (`4000`, `8080`, `8500`, `5050`, `3005`, `8100`, `8110`, `5000`, `7000`, `3006`, `8088`, `9091`, `14000`, `16686`, `8085`, etc.). Note: `public-portal` host port `8090` is intentionally removed in local compose; access it via NGINX.
+- **Local dev mode:** `docker compose up -d` uses `docker-compose.yml` with local ports (`4000`, `8080`, `8500`, `5050`, `3005`, `8100`, `8110`, `5000`, `7000`, `3006`, `8088`, `9091`, `14000`, `16686`, `8085`, etc.). Note: `public-portal` and `redot3-portal` host ports are intentionally removed in local compose; access them via NGINX (`http://localhost:8088/` and `http://localhost:8088/portal/`).
 - **Purchasable 5-environment platform:** The system is packaged for personal or professional use across `compose.dev.yml`, `compose.staging.yml`, `compose.prod.yml`, `compose.replica-ai1.yml`, and `compose.replica-ai2.yml`. See `docs/REDOT3_PUBLISH_AND_DEPLOY.md` for Namecheap/VS Code deployment.
 - **Live-reload dev mode:** `compose.dev.yml` only starts `gateway`, `operator-station`, and `postgres` with volume mounts.
 - **Replica / multi-node mode:** `compose.replica-ai1.yml` and `compose.replica-ai2.yml` run gateway, public-portal, mobile-gateway, beacon-pwa, account-pwa, interface-pwa, kimi, ai-isp, beacon, worker, and nginx on `ai1`/`ai2`, sharing the primary DB/Redis.
@@ -526,7 +531,7 @@ All remotes are pre-configured. Run `git remote -v` to view them. Private repos 
 
 ## Notes for Agents
 
-- Do not assume the presence of npm build steps, bundlers, or frontend frameworks. Most Node.js services are run directly with `node src/index.js` (or `server.js` for `beacon-pwa`, `account-pwa`, and `interface-pwa`).
+- Do not assume the presence of npm build steps, bundlers, or frontend frameworks. Most Node.js services are run directly with `node src/index.js` (or `server.js` for `beacon-pwa`, `account-pwa`, and `interface-pwa`). The `redot3-portal` service is the exception: it requires `npm run build` and is served by nginx.
 - The `autonomous` service and the `owner-dashboard` require Docker socket access (`/var/run/docker.sock`) to restart failed containers or execute compose commands.
 - The desktop orchestrator expects SSH passwords in environment variables (`VPS_REDOT1_PASSWORD`, `VPS_AI1_PASSWORD`, `VPS_AI2_PASSWORD`).
 - The autonomous APK uses `androidx.biometric` and NanoHTTPD; build via `scripts/build-autonomous-apk.sh` or Android Studio.

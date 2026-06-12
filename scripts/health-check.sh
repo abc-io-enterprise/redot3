@@ -5,6 +5,7 @@ HEALTH_URLS="
 gateway|http://localhost:4000/health
 operator-station|http://localhost:8080/health
 public-portal|http://localhost:8090/health
+redot3-portal|http://localhost:8088/portal/health
 mobile-gateway|http://localhost:5050/health
 owner-dashboard|http://localhost:8500/health
 kimi|http://localhost:5000/health

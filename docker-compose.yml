@@ -108,6 +108,14 @@ services:
     depends_on:
       - gateway
 
+  redot3-portal:
+    build:
+      context: ./services/redot3-portal
+    # Host port 8092 removed: access via NGINX proxy only (Windows port binding issue)
+    restart: unless-stopped
+    depends_on:
+      - gateway
+
   beacon-pwa:
     build:
       context: ./services/beacon-pwa
