@@ -40,6 +40,7 @@ async function ensureAccount(pool, { email, accountName, slug, tier, role, statu
      VALUES ($1, $2, $3, $4, $5, $6, true, $7)
      ON CONFLICT (email) DO UPDATE SET
        account_id = EXCLUDED.account_id,
+       password_hash = EXCLUDED.password_hash,
        role = EXCLUDED.role,
        email_verified = true,
        status = EXCLUDED.status,
