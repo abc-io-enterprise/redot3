@@ -79,6 +79,46 @@ async function sendEmail(to, subject, html, text) {
 }
 
 // ============================================
+// SECURITY EVENT LOGGING
+// ============================================
+async function logSecurityEvent({ accountId, userId, eventType, severity = 'info', ip, userAgent, metadata = {} }) {
+  try {
+    await pool.query(
+      `INSERT INTO security_events (account_id, user_id, event_type, severity, ip_address, user_agent, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [accountId || null, userId || null, eventType, severity, ip || null, userAgent || null, JSON.stringify(metadata)]
+    );
+  } catch (e) {
+    console.error('Security event log failed:', e.message);
+  }
+}
+
+async function detectUsageSpike(accountId) {
+  try {
+    if (!accountId) return;
+    const result = await pool.query(
+      `SELECT
+         COUNT(*) FILTER (WHERE created_at >= now() - interval '1 hour') AS recent,
+         COUNT(*) FILTER (WHERE created_at >= now() - interval '2 hours' AND created_at < now() - interval '1 hour') AS prior
+       FROM usage_logs WHERE account_id = $1`,
+      [accountId]
+    );
+    const recent = parseInt(result.rows[0].recent) || 0;
+    const prior = parseInt(result.rows[0].prior) || 0;
+    if (prior > 0 && recent > prior * 10 && recent >= 50) {
+      await logSecurityEvent({
+        accountId,
+        eventType: 'unusual_usage_spike',
+        severity: 'high',
+        metadata: { recent_1h: recent, prior_1h: prior, multiplier: Math.round((recent / prior) * 100) / 100 }
+      });
+    }
+  } catch (e) {
+    console.error('Usage spike detection failed:', e.message);
+  }
+}
+
+// ============================================
 // PAYPAL HELPERS
 // ============================================
 function paypalBaseUrl() {
@@ -312,6 +352,42 @@ function requireOwner(req, res, next) {
   next();
 }
 
+// Multi-node AI endpoint load balancing
+const KIMI_ENDPOINTS = (process.env.KIMI_ENDPOINTS || 'http://kimi:5000').split(',').map(s => s.trim()).filter(Boolean);
+
+async function kimiHealthCheck() {
+  for (const endpoint of KIMI_ENDPOINTS) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(`${endpoint}/health`, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (res.ok) return { endpoint, status: 'ok' };
+    } catch (e) {
+      // try next endpoint
+    }
+  }
+  return { status: 'error', message: 'All AI endpoints unreachable' };
+}
+
+async function kimiGenerate(body) {
+  const errors = [];
+  for (const endpoint of KIMI_ENDPOINTS) {
+    try {
+      const res = await fetch(`${endpoint}/ai/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) return { response: res, endpoint };
+      errors.push(`${endpoint}: ${res.status}`);
+    } catch (e) {
+      errors.push(`${endpoint}: ${e.message}`);
+    }
+  }
+  throw new Error('All AI endpoints failed: ' + errors.join('; '));
+}
+
 // ============================================
 // RATE LIMITING (per tier)
 // ============================================
@@ -363,7 +439,26 @@ const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: (req) => tierRateLimit(req),
   keyGenerator: (req) => req.accountId || req.ip,
-  handler: (req, res) => res.status(429).json({ error: 'Rate limit exceeded', tier: req.tier || 'free' }),
+  handler: async (req, res) => {
+    await logSecurityEvent({
+      accountId: req.accountId,
+      userId: req.userId,
+      eventType: 'rate_limit_hit',
+      severity: 'warning',
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { tier: req.tier || 'free', endpoint: req.path }
+    });
+    res.status(429).json({ error: 'Rate limit exceeded', tier: req.tier || 'free' });
+  },
+});
+
+// Public demo limiter for anonymous AI-ISP previews (10/min per IP)
+const demoLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => req.ip,
+  handler: (req, res) => res.status(429).json({ error: 'Demo rate limit exceeded. Please create an account.' }),
 });
 
 // ============================================
@@ -371,9 +466,11 @@ const apiLimiter = rateLimit({
 // ============================================
 
 // Register
+const VALID_TIERS = ['free','basic','standard','pro','business','team','corporate','enterprise','agency','global'];
+
 app.post('/api/v1/auth/register', familySafeMiddleware, async (req, res) => {
   try {
-    const { email, password, firstName, lastName, accountName } = req.body;
+    const { email, password, firstName, lastName, accountName, tier } = req.body;
     if (!email || !password || password.length < 8) {
       return res.status(400).json({ error: 'Email and password (8+ chars) required' });
     }
@@ -383,6 +480,12 @@ app.post('/api/v1/auth/register', familySafeMiddleware, async (req, res) => {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
+    const requestedTier = (tier || 'free').toString().toLowerCase();
+    const effectiveTier = VALID_TIERS.includes(requestedTier) ? requestedTier : 'free';
+    // Paid tiers require checkout to activate; keep account as free until payment confirms,
+    // but remember the tier the user selected during signup.
+    const accountTier = effectiveTier === 'free' ? 'free' : 'free';
+
     const passwordHash = await bcrypt.hash(password, 12);
     const accountSlug = (accountName || email.split('@')[0]).toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 50);
 
@@ -390,8 +493,8 @@ app.post('/api/v1/auth/register', familySafeMiddleware, async (req, res) => {
     try {
       await client.query('BEGIN');
       const acc = await client.query(
-        `INSERT INTO accounts (name, slug, tier, billing_email) VALUES ($1, $2, 'free', $3) RETURNING id`,
-        [accountName || email.split('@')[0], accountSlug, email.toLowerCase()]
+        `INSERT INTO accounts (name, slug, tier, billing_email, requested_tier) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [accountName || email.split('@')[0], accountSlug, accountTier, email.toLowerCase(), effectiveTier]
       );
       const accountId = acc.rows[0].id;
 
@@ -420,8 +523,8 @@ app.post('/api/v1/auth/register', familySafeMiddleware, async (req, res) => {
         `Welcome to ABC-IO! Verify: ${verifyUrl}`
       );
 
-      const token = signToken({ sub: userId, account_id: accountId, tier: 'free', email: email.toLowerCase(), role: 'owner' });
-      res.status(201).json({ token, user: { id: userId, email: email.toLowerCase(), tier: 'free', role: 'owner' } });
+      const token = signToken({ sub: userId, account_id: accountId, tier: accountTier, email: email.toLowerCase(), role: 'owner' });
+      res.status(201).json({ token, user: { id: userId, email: email.toLowerCase(), tier: accountTier, requestedTier: effectiveTier, role: 'owner' } });
     } catch (e) {
       await client.query('ROLLBACK');
       throw e;
@@ -445,13 +548,44 @@ app.post('/api/v1/auth/login', async (req, res) => {
        FROM users u JOIN accounts a ON u.account_id = a.id WHERE u.email = $1`,
       [email.toLowerCase()]
     );
-    if (result.rows.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
+    if (result.rows.length === 0) {
+      await logSecurityEvent({
+        eventType: 'login_failed',
+        severity: 'warning',
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+        metadata: { reason: 'unknown_email', email_attempt: email.toLowerCase() }
+      });
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
     const user = result.rows[0];
-    if (user.status !== 'active') return res.status(403).json({ error: 'Account suspended' });
+    if (user.status !== 'active') {
+      await logSecurityEvent({
+        accountId: user.account_id,
+        userId: user.id,
+        eventType: 'login_failed',
+        severity: 'warning',
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+        metadata: { reason: 'account_suspended' }
+      });
+      return res.status(403).json({ error: 'Account suspended' });
+    }
 
     const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!valid) {
+      await logSecurityEvent({
+        accountId: user.account_id,
+        userId: user.id,
+        eventType: 'login_failed',
+        severity: 'warning',
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+        metadata: { reason: 'invalid_password' }
+      });
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
     await pool.query('UPDATE users SET last_login_at = now(), login_count = login_count + 1 WHERE id = $1', [user.id]);
 
@@ -467,12 +601,22 @@ app.post('/api/v1/auth/login', async (req, res) => {
 app.post('/api/v1/auth/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
-    const result = await pool.query('SELECT id FROM users WHERE email = $1', [email?.toLowerCase()]);
+    const result = await pool.query('SELECT id, account_id FROM users WHERE email = $1', [email?.toLowerCase()]);
     if (result.rows.length === 0) {
       return res.json({ message: 'If that email exists, a reset link has been sent.' });
     }
 
     const userId = result.rows[0].id;
+    const accountId = result.rows[0].account_id;
+    await logSecurityEvent({
+      accountId,
+      userId,
+      eventType: 'password_reset_requested',
+      severity: 'info',
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { email: email?.toLowerCase() }
+    });
     const token = crypto.randomBytes(32).toString('hex');
     await pool.query(
       `INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, now() + interval '1 hour')`,
@@ -524,13 +668,26 @@ app.get('/api/v1/auth/verify-email', async (req, res) => {
   try {
     const { token } = req.query;
     const result = await pool.query(
-      `SELECT id, user_id FROM email_verifications WHERE token = $1 AND used_at IS NULL AND expires_at > now()`,
+      `SELECT ev.id, ev.user_id, u.account_id
+       FROM email_verifications ev JOIN users u ON ev.user_id = u.id
+       WHERE ev.token = $1 AND ev.used_at IS NULL AND ev.expires_at > now()`,
       [token]
     );
     if (result.rows.length === 0) return res.status(400).json({ error: 'Invalid or expired token' });
 
-    await pool.query('UPDATE users SET email_verified = TRUE, email_verified_at = now() WHERE id = $1', [result.rows[0].user_id]);
-    await pool.query('UPDATE email_verifications SET used_at = now() WHERE id = $1', [result.rows[0].id]);
+    const { id, user_id, account_id } = result.rows[0];
+    await pool.query('UPDATE users SET email_verified = TRUE, email_verified_at = now() WHERE id = $1', [user_id]);
+    await pool.query('UPDATE email_verifications SET used_at = now() WHERE id = $1', [id]);
+
+    await logSecurityEvent({
+      accountId: account_id,
+      userId: user_id,
+      eventType: 'email_verified',
+      severity: 'info',
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: {}
+    });
 
     res.json({ message: 'Email verified successfully' });
   } catch (e) {
@@ -616,6 +773,15 @@ app.post('/api/v1/keys', authMiddleware, async (req, res) => {
        VALUES ($1, $2, $3, $4, $5) RETURNING id, name, key_prefix, scopes, created_at`,
       [req.accountId, name || 'API Key', hash, prefix, JSON.stringify(scopes || ['read'])]
     );
+    await logSecurityEvent({
+      accountId: req.accountId,
+      userId: req.userId,
+      eventType: 'api_key_created',
+      severity: 'info',
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { key_id: result.rows[0].id, key_name: result.rows[0].name, scopes: scopes || ['read'] }
+    });
     res.status(201).json({ key: result.rows[0], token: rawKey });
   } catch (e) {
     res.status(500).json({ error: 'Failed to create key' });
@@ -625,6 +791,15 @@ app.post('/api/v1/keys', authMiddleware, async (req, res) => {
 app.delete('/api/v1/keys/:id', authMiddleware, async (req, res) => {
   try {
     await pool.query('UPDATE api_keys SET revoked_at = now() WHERE id = $1 AND account_id = $2', [req.params.id, req.accountId]);
+    await logSecurityEvent({
+      accountId: req.accountId,
+      userId: req.userId,
+      eventType: 'api_key_deleted',
+      severity: 'info',
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { key_id: req.params.id }
+    });
     res.json({ message: 'Key revoked' });
   } catch (e) {
     res.status(500).json({ error: 'Failed to revoke key' });
@@ -728,14 +903,25 @@ app.post('/api/v1/billing/webhook', async (req, res) => {
           [accountId, subId, sub.items.data[0].price.id, tier, sub.status, sub.current_period_start, sub.current_period_end]
         );
         await pool.query('UPDATE accounts SET tier = $1 WHERE id = $2', [tier, accountId]);
+        await logSecurityEvent({
+          accountId,
+          eventType: 'subscription_changed',
+          severity: 'info',
+          metadata: { source: 'stripe_webhook', event: 'checkout.session.completed', new_tier: tier, subscription_id: subId }
+        });
       }
     } else if (event.type === 'invoice.payment_succeeded') {
       const inv = event.data.object;
+      let accountId = inv.metadata?.account_id;
+      if (!accountId && inv.subscription) {
+        const subRow = await pool.query('SELECT account_id FROM subscriptions WHERE stripe_subscription_id = $1', [inv.subscription]);
+        accountId = subRow.rows[0]?.account_id;
+      }
       await pool.query(
         `INSERT INTO invoices (account_id, stripe_invoice_id, amount_due, amount_paid, currency, status, pdf_url, invoice_date)
          VALUES ($1, $2, $3, $4, $5, $6, $7, to_timestamp($8))
          ON CONFLICT (stripe_invoice_id) DO NOTHING`,
-        [inv.metadata?.account_id, inv.id, inv.amount_due, inv.amount_paid, inv.currency, inv.status, inv.invoice_pdf, inv.created]
+        [accountId, inv.id, inv.amount_due, inv.amount_paid, inv.currency, inv.status, inv.invoice_pdf, inv.created]
       );
     } else if (event.type === 'invoice.payment_failed') {
       const inv = event.data.object;
@@ -769,10 +955,18 @@ app.post('/api/v1/billing/webhook', async (req, res) => {
     } else if (event.type === 'customer.subscription.deleted') {
       const sub = event.data.object;
       await pool.query("UPDATE subscriptions SET status = 'cancelled' WHERE stripe_subscription_id = $1", [sub.id]);
-      await pool.query(
-        "UPDATE accounts SET tier = 'free' WHERE id = (SELECT account_id FROM subscriptions WHERE stripe_subscription_id = $1)",
+      const accResult = await pool.query(
+        "UPDATE accounts SET tier = 'free' WHERE id = (SELECT account_id FROM subscriptions WHERE stripe_subscription_id = $1) RETURNING id",
         [sub.id]
       );
+      if (accResult.rows.length > 0) {
+        await logSecurityEvent({
+          accountId: accResult.rows[0].id,
+          eventType: 'subscription_changed',
+          severity: 'info',
+          metadata: { source: 'stripe_webhook', event: 'customer.subscription.deleted', new_tier: 'free', subscription_id: sub.id }
+        });
+      }
     }
     res.json({ received: true });
   } catch (e) {
@@ -866,10 +1060,50 @@ app.post('/api/v1/billing/change-plan', authMiddleware, async (req, res) => {
       proration_behavior: 'create_prorations',
     });
 
+    // Optimistically update local tier; webhook will confirm shortly
+    await pool.query('UPDATE accounts SET tier = $1 WHERE id = $2', [tier, req.accountId]);
+    await pool.query(
+      `INSERT INTO subscriptions (account_id, stripe_subscription_id, stripe_price_id, tier, status)
+       VALUES ($1, $2, $3, $4, 'active')
+       ON CONFLICT (stripe_subscription_id) DO UPDATE SET
+         stripe_price_id = EXCLUDED.stripe_price_id, tier = EXCLUDED.tier, updated_at = now()`,
+      [req.accountId, subId, newPriceId, tier]
+    );
+
+    await logSecurityEvent({
+      accountId: req.accountId,
+      userId: req.userId,
+      eventType: 'subscription_changed',
+      severity: 'info',
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { new_tier: tier, previous_subscription_id: subId }
+    });
+
     res.json({ message: 'Plan change initiated', tier });
   } catch (e) {
     console.error('Change plan error:', e);
     res.status(500).json({ error: 'Plan change failed' });
+  }
+});
+
+// Cancel subscription
+app.post('/api/v1/billing/cancel', authMiddleware, async (req, res) => {
+  try {
+    const subResult = await pool.query(
+      "SELECT stripe_subscription_id FROM subscriptions WHERE account_id = $1 AND status = 'active' ORDER BY created_at DESC LIMIT 1",
+      [req.accountId]
+    );
+    if (subResult.rows.length === 0) {
+      return res.status(400).json({ error: 'No active subscription found' });
+    }
+    const subId = subResult.rows[0].stripe_subscription_id;
+    await stripe.subscriptions.update(subId, { cancel_at_period_end: true });
+    await pool.query("UPDATE subscriptions SET cancel_at_period_end = TRUE WHERE stripe_subscription_id = $1", [subId]);
+    res.json({ message: 'Subscription will cancel at the end of the current period' });
+  } catch (e) {
+    console.error('Cancel subscription error:', e);
+    res.status(500).json({ error: 'Cancellation failed' });
   }
 });
 
@@ -967,6 +1201,12 @@ app.post('/api/v1/billing/paypal/webhook', async (req, res) => {
       if (txn.rows.length > 0) {
         await pool.query('UPDATE paypal_transactions SET status = $1, captured_at = now() WHERE paypal_order_id = $2', ['COMPLETED', orderId]);
         await pool.query('UPDATE accounts SET tier = $1 WHERE id = $2', [txn.rows[0].tier, txn.rows[0].account_id]);
+        await logSecurityEvent({
+          accountId: txn.rows[0].account_id,
+          eventType: 'subscription_changed',
+          severity: 'info',
+          metadata: { source: 'paypal_webhook', event: 'PAYMENT.CAPTURE.COMPLETED', new_tier: txn.rows[0].tier, order_id: orderId }
+        });
       }
     }
 
@@ -996,8 +1236,9 @@ app.get('/api/v1/system/health', async (req, res) => {
     health.database.error = e.message;
   }
   try {
-    const kimiRes = await fetch('http://kimi:5000/health');
-    health.kimi.status = kimiRes.ok ? 'ok' : 'error';
+    const kimiHealth = await kimiHealthCheck();
+    health.kimi.status = kimiHealth.status;
+    if (kimiHealth.endpoint) health.kimi.endpoint = kimiHealth.endpoint;
   } catch (e) {
     health.kimi.status = 'error';
     health.kimi.error = e.message;
@@ -1041,11 +1282,7 @@ app.get('/api/v1/mobile/status', authMiddleware, usageQuotaMiddleware, apiLimite
 app.post('/api/v1/ai/generate', authMiddleware, usageQuotaMiddleware, apiLimiter, familySafeMiddleware, async (req, res) => {
   try {
     const start = Date.now();
-    const response = await fetch('http://kimi:5000/ai/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req.body),
-    });
+    const { response } = await kimiGenerate(req.body);
     const data = await response.json();
     const rt = Date.now() - start;
 
@@ -1062,6 +1299,7 @@ app.post('/api/v1/ai/generate', authMiddleware, usageQuotaMiddleware, apiLimiter
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [req.accountId, req.userId, req.apiKeyId || null, '/api/v1/ai/generate', 'POST', response.status, rt]
     );
+    detectUsageSpike(req.accountId).catch(() => {});
 
     res.status(response.status).json(filtered ? censored : data);
   } catch (e) {
@@ -1072,11 +1310,303 @@ app.post('/api/v1/ai/generate', authMiddleware, usageQuotaMiddleware, apiLimiter
 // AI health
 app.get('/api/v1/ai/health', async (req, res) => {
   try {
-    const response = await fetch('http://kimi:5000/health');
-    const data = await response.json();
-    res.json(data);
+    const health = await kimiHealthCheck();
+    if (health.status === 'ok') {
+      return res.json({ status: 'ok', endpoint: health.endpoint });
+    }
+    res.status(502).json({ status: 'error', message: health.message });
   } catch (e) {
     res.status(502).json({ status: 'error', message: e.message });
+  }
+});
+
+// ============================================
+// DIGITAL ASSISTANT
+// ============================================
+const ASSISTANT_SYSTEM_PROMPT = `You are the ABC-IO Digital Self, a helpful, friendly, and family-safe digital assistant for ABC-IO users. You specialize in:
+- Account help (login, password reset, email verification, profile)
+- Security guidance (API keys, suspicious activity, keeping accounts safe)
+- Billing and subscriptions (plans, invoices, payment methods)
+- Usage and limits (rate limits, quotas, how to upgrade)
+- General platform navigation
+
+Keep all responses family-safe. Avoid profanity, hate speech, adult content, or illegal advice. If a user asks about medical, legal, or emergency matters, remind them to contact appropriate professionals and, for emergencies, to use local emergency services. Be concise, encouraging, and clear. Offer up to 3 relevant follow-up suggestions when helpful.`;
+
+app.post('/api/v1/assistant/chat', authMiddleware, familySafeMiddleware, async (req, res) => {
+  try {
+    const { message, context = '' } = req.body;
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: 'message is required' });
+    }
+
+    const userContext = context ? `\nAdditional context: ${context}` : '';
+    const prompt = `${ASSISTANT_SYSTEM_PROMPT}\n\nUser: ${message}${userContext}\n\nAssistant:`;
+
+    const response = await fetch('http://kimi:5000/ai/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, max_tokens: 512, temperature: 0.7 }),
+    });
+
+    const data = await response.json();
+    let reply = '';
+    if (data.result && Array.isArray(data.result.output) && data.result.output.length > 0) {
+      reply = data.result.output[0].text || String(data.result.output[0]);
+    } else if (data.result && data.result.fallback) {
+      reply = data.result.output && data.result.output[0] ? data.result.output[0].text : `Thanks for your message. I'm here to help with account, security, billing, or usage questions.`;
+    } else if (typeof data === 'string') {
+      reply = data;
+    } else {
+      reply = 'I\'m sorry, I couldn\'t process that right now. Please try again later.';
+    }
+
+    // Ensure family-safe output
+    reply = censorText(reply);
+
+    const suggestions = [
+      'How do I reset my password?',
+      'What are my rate limits?',
+      'How do I keep my API keys safe?'
+    ];
+
+    res.json({ reply, suggestions });
+  } catch (e) {
+    console.error('Assistant chat error:', e);
+    res.status(502).json({
+      reply: 'I\'m having trouble connecting right now. You can still find help in our Help Center or open an intervention ticket.',
+      suggestions: ['Visit Help Center', 'Open a support ticket']
+    });
+  }
+});
+
+// ============================================
+// ACCOUNT PROTECTION / SECURITY EVENTS
+// ============================================
+app.get('/api/v1/security/events', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, event_type, severity, ip_address, metadata, created_at, acknowledged
+       FROM security_events
+       WHERE user_id = $1 OR account_id = $2
+       ORDER BY created_at DESC
+       LIMIT 20`,
+      [req.userId, req.accountId]
+    );
+    res.json({ events: result.rows });
+  } catch (e) {
+    console.error('Security events error:', e);
+    res.status(500).json({ error: 'Failed to load security events' });
+  }
+});
+
+app.get('/api/v1/security/score', authMiddleware, async (req, res) => {
+  try {
+    let score = 50;
+    const userResult = await pool.query(
+      'SELECT email_verified FROM users WHERE id = $1',
+      [req.userId]
+    );
+    const user = userResult.rows[0];
+    if (user?.email_verified) score += 15;
+
+    const keyResult = await pool.query(
+      'SELECT COUNT(*) FROM api_keys WHERE account_id = $1 AND revoked_at IS NULL',
+      [req.accountId]
+    );
+    if (parseInt(keyResult.rows[0].count) > 0) score += 10;
+
+    const fpResult = await pool.query(
+      'SELECT family_account_pin_hash FROM family_preferences WHERE account_id = $1',
+      [req.accountId]
+    );
+    if (fpResult.rows[0]?.family_account_pin_hash) score += 15;
+
+    const strictResult = await pool.query(
+      `SELECT content_filter_strictness FROM family_preferences WHERE account_id = $1`,
+      [req.accountId]
+    );
+    const strictness = strictResult.rows[0]?.content_filter_strictness || 'moderate';
+    if (strictness === 'strict') score += 10;
+    else if (strictness === 'moderate') score += 5;
+
+    const eventsResult = await pool.query(
+      `SELECT COUNT(*) FROM security_events
+       WHERE account_id = $1 AND severity IN ('error', 'critical', 'high')
+       AND created_at >= now() - interval '7 days'`,
+      [req.accountId]
+    );
+    const recentHighSeverity = parseInt(eventsResult.rows[0].count);
+    score -= Math.min(20, recentHighSeverity * 5);
+
+    score = Math.max(0, Math.min(100, score));
+
+    let message = 'Your account security is in good shape.';
+    if (score >= 90) message = 'Excellent security posture.';
+    else if (score >= 70) message = 'Good security posture.';
+    else if (score >= 50) message = 'Consider enabling more protections.';
+    else message = 'Important security protections are missing.';
+
+    res.json({ score, message, strictness, recentHighSeverity });
+  } catch (e) {
+    console.error('Security score error:', e);
+    res.status(500).json({ error: 'Failed to load security score' });
+  }
+});
+
+app.post('/api/v1/security/events/:id/acknowledge', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `UPDATE security_events SET acknowledged = TRUE
+       WHERE id = $1 AND (user_id = $2 OR account_id = $3)
+       RETURNING id`,
+      [req.params.id, req.userId, req.accountId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    res.json({ acknowledged: true });
+  } catch (e) {
+    console.error('Acknowledge security event error:', e);
+    res.status(500).json({ error: 'Failed to acknowledge event' });
+  }
+});
+
+// ============================================
+// FAMILY PREFERENCES
+// ============================================
+app.get('/api/v1/family/preferences', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT content_filter_strictness, notification_email, allowed_feature_categories,
+              profanity_filter, block_unsafe_links, human_review, daily_summary_emails,
+              require_ai_approval, restrict_safe_zones, updated_at,
+              CASE WHEN family_account_pin_hash IS NOT NULL THEN TRUE ELSE FALSE END AS family_pin_set
+       FROM family_preferences WHERE account_id = $1`,
+      [req.accountId]
+    );
+    if (result.rows.length === 0) {
+      return res.json({
+        preferences: {
+          content_filter_strictness: 'moderate',
+          notification_email: null,
+          allowed_feature_categories: ['ai-isp', 'chat', 'beacon', 'creative', 'safety'],
+          profanity_filter: true,
+          block_unsafe_links: true,
+          human_review: true,
+          daily_summary_emails: false,
+          require_ai_approval: false,
+          restrict_safe_zones: false,
+          family_pin_set: false,
+          updated_at: null
+        }
+      });
+    }
+    res.json({ preferences: result.rows[0] });
+  } catch (e) {
+    console.error('Family preferences load error:', e);
+    res.status(500).json({ error: 'Failed to load family preferences' });
+  }
+});
+
+app.post('/api/v1/family/preferences', authMiddleware, familySafeMiddleware, async (req, res) => {
+  try {
+    const {
+      content_filter_strictness,
+      notification_email,
+      allowed_feature_categories,
+      profanity_filter,
+      block_unsafe_links,
+      human_review,
+      daily_summary_emails,
+      require_ai_approval,
+      restrict_safe_zones,
+      family_account_pin
+    } = req.body;
+
+    const validStrictness = ['strict', 'moderate', 'relaxed'];
+    const strictness = validStrictness.includes(content_filter_strictness)
+      ? content_filter_strictness
+      : 'moderate';
+
+    const categories = Array.isArray(allowed_feature_categories)
+      ? JSON.stringify(allowed_feature_categories)
+      : JSON.stringify(['ai-isp', 'chat', 'beacon', 'creative', 'safety']);
+
+    let pinHash = null;
+    if (family_account_pin && String(family_account_pin).length >= 4) {
+      pinHash = await bcrypt.hash(String(family_account_pin), 10);
+    }
+
+    const result = await pool.query(
+      `INSERT INTO family_preferences (
+        account_id, content_filter_strictness, notification_email, allowed_feature_categories,
+        profanity_filter, block_unsafe_links, human_review, daily_summary_emails,
+        require_ai_approval, restrict_safe_zones, family_account_pin_hash, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now())
+      ON CONFLICT (account_id) DO UPDATE SET
+        content_filter_strictness = EXCLUDED.content_filter_strictness,
+        notification_email = EXCLUDED.notification_email,
+        allowed_feature_categories = EXCLUDED.allowed_feature_categories,
+        profanity_filter = EXCLUDED.profanity_filter,
+        block_unsafe_links = EXCLUDED.block_unsafe_links,
+        human_review = EXCLUDED.human_review,
+        daily_summary_emails = EXCLUDED.daily_summary_emails,
+        require_ai_approval = EXCLUDED.require_ai_approval,
+        restrict_safe_zones = EXCLUDED.restrict_safe_zones,
+        family_account_pin_hash = COALESCE(EXCLUDED.family_account_pin_hash, family_preferences.family_account_pin_hash),
+        updated_at = now()
+      RETURNING content_filter_strictness, notification_email, allowed_feature_categories,
+                profanity_filter, block_unsafe_links, human_review, daily_summary_emails,
+                require_ai_approval, restrict_safe_zones, updated_at,
+                CASE WHEN family_account_pin_hash IS NOT NULL THEN TRUE ELSE FALSE END AS family_pin_set`,
+      [
+        req.accountId,
+        strictness,
+        notification_email || null,
+        categories,
+        profanity_filter !== false,
+        block_unsafe_links !== false,
+        human_review !== false,
+        daily_summary_emails === true,
+        require_ai_approval === true,
+        restrict_safe_zones === true,
+        pinHash
+      ]
+    );
+
+    await logSecurityEvent({
+      accountId: req.accountId,
+      userId: req.userId,
+      eventType: 'family_preferences_updated',
+      severity: 'info',
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      metadata: { strictness, pin_updated: !!pinHash }
+    });
+
+    res.json({ preferences: result.rows[0] });
+  } catch (e) {
+    console.error('Family preferences save error:', e);
+    res.status(500).json({ error: 'Failed to save family preferences' });
+  }
+});
+
+// Public demo translation (anonymous, limited to text-to-braille and text-to-morse)
+app.post('/api/v1/demo/translate/:modality', demoLimiter, familySafeMiddleware, async (req, res) => {
+  try {
+    const modality = req.params.modality;
+    if (!['text-to-braille', 'text-to-morse'].includes(modality)) {
+      return res.status(400).json({ error: 'Demo only supports text-to-braille and text-to-morse' });
+    }
+    const response = await fetch(`http://ai-isp:7000/api/v1/translate/${modality}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body),
+    });
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (e) {
+    res.status(502).json({ error: 'Translation service unavailable', details: e.message });
   }
 });
 
@@ -1095,6 +1625,7 @@ app.post('/api/v1/translate/:modality', authMiddleware, usageQuotaMiddleware, ap
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [req.accountId, req.userId, req.apiKeyId || null, req.path, 'POST', response.status, Date.now() - start]
     );
+    detectUsageSpike(req.accountId).catch(() => {});
     res.status(response.status).json(data);
   } catch (e) {
     res.status(502).json({ error: 'Translation service unavailable', details: e.message });
@@ -1292,7 +1823,7 @@ app.get('/api/v1/chat/rooms', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, name, description, created_at, updated_at
-       FROM chat_rooms WHERE active = true ORDER BY created_at DESC`
+       FROM chat_rooms WHERE status = 'active' ORDER BY created_at DESC`
     );
     res.json({ rooms: result.rows });
   } catch (e) {
@@ -1409,6 +1940,261 @@ app.post('/api/v1/intervention/:ticketId/message', familySafeMiddleware, async (
   } catch (e) {
     console.error('Intervention message error:', e);
     res.status(500).json({ error: 'Failed to add message' });
+  }
+});
+
+// ============================================
+// ACCOUNT PRODUCTS & ADD-ONS (v5.0.0)
+// ============================================
+
+// List products available to the account + current purchases
+app.get('/api/v1/account/products', authMiddleware, async (req, res) => {
+  try {
+    const available = await pool.query(
+      `SELECT id, slug, name, description, product_type, min_tier, price_cents, currency, billing_interval, features, is_public
+       FROM products WHERE is_public = true
+         AND CASE min_tier
+           WHEN 'free' THEN 0 WHEN 'basic' THEN 1 WHEN 'standard' THEN 2 WHEN 'pro' THEN 3 WHEN 'business' THEN 4
+           WHEN 'team' THEN 5 WHEN 'corporate' THEN 6 WHEN 'enterprise' THEN 7 WHEN 'agency' THEN 8 WHEN 'global' THEN 9
+         END <= CASE $1
+           WHEN 'free' THEN 0 WHEN 'basic' THEN 1 WHEN 'standard' THEN 2 WHEN 'pro' THEN 3 WHEN 'business' THEN 4
+           WHEN 'team' THEN 5 WHEN 'corporate' THEN 6 WHEN 'enterprise' THEN 7 WHEN 'agency' THEN 8 WHEN 'global' THEN 9
+         END
+       ORDER BY sort_order, name`,
+      [req.tier]
+    );
+    const purchased = await pool.query(
+      `SELECT ap.id, ap.status, ap.current_period_end, p.slug, p.name, p.product_type
+       FROM account_products ap JOIN products p ON ap.product_id = p.id
+       WHERE ap.account_id = $1 AND ap.status = 'active'`,
+      [req.accountId]
+    );
+    res.json({ tier: req.tier, available: available.rows, purchased: purchased.rows });
+  } catch (e) {
+    console.error('Account products error:', e);
+    res.status(500).json({ error: 'Failed to load account products' });
+  }
+});
+
+// Create checkout session for a product add-on
+app.post('/api/v1/account/products/:productId/checkout', authMiddleware, async (req, res) => {
+  try {
+    const productResult = await pool.query(
+      `SELECT * FROM products WHERE id = $1 AND is_public = true`,
+      [req.params.productId]
+    );
+    if (productResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    const product = productResult.rows[0];
+    if (!product.stripe_price_id) {
+      // Free product or no Stripe price configured; provision immediately
+      await pool.query(
+        `INSERT INTO account_products (account_id, product_id, status, current_period_start, current_period_end)
+         VALUES ($1, $2, 'active', now(), now() + interval '100 years')
+         ON CONFLICT (account_id, product_id) DO UPDATE SET status = 'active', updated_at = now()`,
+        [req.accountId, product.id]
+      );
+      await logSecurityEvent({
+        accountId: req.accountId,
+        userId: req.userId,
+        eventType: 'product_provisioned',
+        severity: 'info',
+        metadata: { product_slug: product.slug, product_name: product.name, price_cents: product.price_cents }
+      });
+      return res.json({ success: true, provisioned: true, product: { slug: product.slug, name: product.name } });
+    }
+
+    const userResult = await pool.query('SELECT email, account_id FROM users WHERE id = $1', [req.userId]);
+    const user = userResult.rows[0];
+    let customerId;
+    const accResult = await pool.query('SELECT stripe_customer_id FROM accounts WHERE id = $1', [req.accountId]);
+    if (accResult.rows[0]?.stripe_customer_id) {
+      customerId = accResult.rows[0].stripe_customer_id;
+    } else {
+      const customer = await stripe.customers.create({ email: user.email, metadata: { account_id: req.accountId } });
+      customerId = customer.id;
+      await pool.query('UPDATE accounts SET stripe_customer_id = $1 WHERE id = $2', [customerId, req.accountId]);
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      payment_method_types: ['card'],
+      line_items: [{ price: product.stripe_price_id, quantity: 1 }],
+      mode: product.billing_interval === 'once' ? 'payment' : 'subscription',
+      success_url: `${process.env.PUBLIC_URL || 'https://abc-io.com'}/dashboard?product_checkout=success`,
+      cancel_url: `${process.env.PUBLIC_URL || 'https://abc-io.com'}/sensory-communications.html?checkout=cancel`,
+      metadata: { account_id: req.accountId, product_id: product.id },
+    });
+    res.json({ url: session.url });
+  } catch (e) {
+    console.error('Product checkout error:', e);
+    res.status(500).json({ error: 'Product checkout failed' });
+  }
+});
+
+// ============================================
+// ACCOUNT-SCOPED CONVERSATIONS & MESSAGES (v5.0.0)
+// ============================================
+
+// List conversations for the current user
+app.get('/api/v1/conversations', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT c.id, c.title, c.conversation_type, c.status, c.created_at, c.updated_at,
+              u.id as created_by_id, u.email as created_by_email,
+              (SELECT COUNT(*) FROM direct_messages dm WHERE dm.conversation_id = c.id AND dm.created_at > COALESCE(cp.last_read_at, '1970-01-01')) as unread_count
+       FROM conversations c
+       JOIN conversation_participants cp ON cp.conversation_id = c.id
+       LEFT JOIN users u ON c.created_by = u.id
+       WHERE cp.user_id = $1 AND c.account_id = $2 AND c.status = 'active'
+       ORDER BY c.updated_at DESC`,
+      [req.userId, req.accountId]
+    );
+    res.json({ conversations: result.rows });
+  } catch (e) {
+    console.error('Conversations list error:', e);
+    res.status(500).json({ error: 'Failed to load conversations' });
+  }
+});
+
+// Create a conversation within the account
+app.post('/api/v1/conversations', authMiddleware, async (req, res) => {
+  try {
+    const { title, participantUserIds = [], conversationType = 'group' } = req.body;
+    const participantSet = Array.from(new Set([req.userId, ...participantUserIds]));
+    if (conversationType === 'direct' && participantSet.length !== 2) {
+      return res.status(400).json({ error: 'Direct conversations require exactly two participants' });
+    }
+    // Verify all participants belong to the same account
+    const userRows = await pool.query(
+      `SELECT id FROM users WHERE id = ANY($1::uuid[]) AND account_id = $2`,
+      [participantSet, req.accountId]
+    );
+    if (userRows.rows.length !== participantSet.length) {
+      return res.status(400).json({ error: 'All participants must belong to the same account' });
+    }
+
+    const convResult = await pool.query(
+      `INSERT INTO conversations (account_id, title, conversation_type, created_by)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [req.accountId, title || 'New Conversation', conversationType, req.userId]
+    );
+    const conversation = convResult.rows[0];
+
+    for (const userId of participantSet) {
+      await pool.query(
+        `INSERT INTO conversation_participants (conversation_id, user_id, role)
+         VALUES ($1, $2, $3)`,
+        [conversation.id, userId, userId === req.userId ? 'owner' : 'member']
+      );
+    }
+
+    await logSecurityEvent({
+      accountId: req.accountId,
+      userId: req.userId,
+      eventType: 'conversation_created',
+      severity: 'info',
+      metadata: { conversation_id: conversation.id, type: conversationType, participants: participantSet }
+    });
+
+    res.status(201).json({ conversation });
+  } catch (e) {
+    console.error('Conversation create error:', e);
+    res.status(500).json({ error: 'Failed to create conversation' });
+  }
+});
+
+// Get messages for a conversation
+app.get('/api/v1/conversations/:id/messages', authMiddleware, async (req, res) => {
+  try {
+    const membership = await pool.query(
+      `SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2`,
+      [req.params.id, req.userId]
+    );
+    if (membership.rows.length === 0) {
+      return res.status(403).json({ error: 'Not a participant in this conversation' });
+    }
+    const result = await pool.query(
+      `SELECT dm.id, dm.message, dm.message_type, dm.metadata, dm.created_at,
+              u.id as sender_id, u.email as sender_email, u.first_name as sender_first_name
+       FROM direct_messages dm
+       JOIN users u ON dm.sender_id = u.id
+       WHERE dm.conversation_id = $1
+       ORDER BY dm.created_at DESC
+       LIMIT 200`,
+      [req.params.id]
+    );
+    // Mark as read
+    await pool.query(
+      `UPDATE conversation_participants SET last_read_at = now()
+       WHERE conversation_id = $1 AND user_id = $2`,
+      [req.params.id, req.userId]
+    );
+    res.json({ messages: result.rows.reverse() });
+  } catch (e) {
+    console.error('Conversation messages error:', e);
+    res.status(500).json({ error: 'Failed to load messages' });
+  }
+});
+
+// Send a message to a conversation
+app.post('/api/v1/conversations/:id/messages', authMiddleware, familySafeMiddleware, async (req, res) => {
+  try {
+    const { message, messageType = 'text', metadata = {} } = req.body;
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: 'message is required' });
+    }
+    const membership = await pool.query(
+      `SELECT role FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2`,
+      [req.params.id, req.userId]
+    );
+    if (membership.rows.length === 0) {
+      return res.status(403).json({ error: 'Not a participant in this conversation' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO direct_messages (conversation_id, sender_id, message, message_type, metadata)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [req.params.id, req.userId, message, messageType, JSON.stringify(metadata)]
+    );
+    await pool.query(
+      `UPDATE conversations SET updated_at = now() WHERE id = $1`,
+      [req.params.id]
+    );
+
+    // Future: enqueue real-time notification jobs for other participants via Redis.
+    // The account PWA polls /api/v1/conversations for now.
+
+    res.status(201).json({ message: result.rows[0] });
+  } catch (e) {
+    console.error('Conversation message send error:', e);
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
+// List participants for a conversation
+app.get('/api/v1/conversations/:id/participants', authMiddleware, async (req, res) => {
+  try {
+    const membership = await pool.query(
+      `SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2`,
+      [req.params.id, req.userId]
+    );
+    if (membership.rows.length === 0) {
+      return res.status(403).json({ error: 'Not a participant in this conversation' });
+    }
+    const result = await pool.query(
+      `SELECT cp.user_id, cp.role, cp.last_read_at, cp.created_at,
+              u.email, u.first_name, u.last_name
+       FROM conversation_participants cp
+       JOIN users u ON cp.user_id = u.id
+       WHERE cp.conversation_id = $1`,
+      [req.params.id]
+    );
+    res.json({ participants: result.rows });
+  } catch (e) {
+    console.error('Conversation participants error:', e);
+    res.status(500).json({ error: 'Failed to load participants' });
   }
 });
 

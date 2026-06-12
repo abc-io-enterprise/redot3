@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS accounts (
   name VARCHAR(255) NOT NULL,
   slug VARCHAR(255) UNIQUE,
   tier VARCHAR(50) DEFAULT 'free' CHECK (tier IN ('free', 'basic', 'standard', 'pro', 'business', 'team', 'corporate', 'enterprise', 'agency', 'global')),
+  requested_tier VARCHAR(50) DEFAULT 'free' CHECK (requested_tier IN ('free', 'basic', 'standard', 'pro', 'business', 'team', 'corporate', 'enterprise', 'agency', 'global')),
   status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'cancelled')),
   stripe_customer_id VARCHAR(255),
   stripe_subscription_id VARCHAR(255),
@@ -77,6 +78,27 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 CREATE INDEX idx_sessions_user ON sessions(user_id);
 CREATE INDEX idx_sessions_token ON sessions(token_hash);
+
+-- ============================================
+-- FAMILY PREFERENCES
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS family_preferences (
+  account_id UUID PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+  content_filter_strictness VARCHAR(50) DEFAULT 'moderate' CHECK (content_filter_strictness IN ('strict', 'moderate', 'relaxed')),
+  notification_email VARCHAR(255),
+  family_account_pin_hash VARCHAR(255),
+  allowed_feature_categories JSONB DEFAULT '["ai-isp", "chat", "beacon", "creative", "safety"]',
+  profanity_filter BOOLEAN DEFAULT TRUE,
+  block_unsafe_links BOOLEAN DEFAULT TRUE,
+  human_review BOOLEAN DEFAULT TRUE,
+  daily_summary_emails BOOLEAN DEFAULT FALSE,
+  require_ai_approval BOOLEAN DEFAULT FALSE,
+  restrict_safe_zones BOOLEAN DEFAULT FALSE,
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_family_preferences_account ON family_preferences(account_id);
 
 -- ============================================
 -- API KEYS
@@ -192,6 +214,26 @@ CREATE INDEX idx_audit_type ON audit_logs(event_type);
 CREATE INDEX idx_audit_created ON audit_logs(created_at);
 
 -- ============================================
+-- SECURITY EVENTS (Account Protection)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS security_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  event_type TEXT NOT NULL,
+  severity TEXT NOT NULL CHECK (severity IN ('info', 'warning', 'error', 'high', 'critical')),
+  ip_address TEXT,
+  user_agent TEXT,
+  metadata JSONB,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  acknowledged BOOLEAN DEFAULT FALSE
+);
+
+CREATE INDEX idx_security_events_user_created ON security_events(user_id, created_at DESC);
+CREATE INDEX idx_security_events_account ON security_events(account_id);
+
+-- ============================================
 -- INTERVENTION QUEUE (8AM-8PM EST Human Escalation)
 -- ============================================
 
@@ -280,17 +322,47 @@ CREATE TABLE IF NOT EXISTS help_articles (
   slug VARCHAR(255) UNIQUE NOT NULL,
   title VARCHAR(255) NOT NULL,
   content TEXT NOT NULL,
+  summary TEXT,
   excerpt TEXT,
   tags TEXT[],
   published BOOLEAN DEFAULT FALSE,
   view_count INTEGER DEFAULT 0,
+  track_progress BOOLEAN DEFAULT FALSE,
+  onboarding_week INTEGER,
+  estimated_minutes INTEGER,
+  difficulty TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Add onboarding/progress columns if they do not exist (idempotent upgrades)
+ALTER TABLE help_articles ADD COLUMN IF NOT EXISTS track_progress BOOLEAN DEFAULT FALSE;
+ALTER TABLE help_articles ADD COLUMN IF NOT EXISTS onboarding_week INTEGER;
+ALTER TABLE help_articles ADD COLUMN IF NOT EXISTS estimated_minutes INTEGER;
+ALTER TABLE help_articles ADD COLUMN IF NOT EXISTS difficulty TEXT;
+
 CREATE INDEX idx_help_articles_slug ON help_articles(slug);
 CREATE INDEX idx_help_articles_category ON help_articles(category_id);
 CREATE INDEX idx_help_articles_published ON help_articles(published);
+CREATE INDEX idx_help_articles_onboarding_week ON help_articles(onboarding_week);
+
+-- ============================================
+-- USER HELP PROGRESS
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS user_progress (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  article_slug TEXT NOT NULL,
+  completed BOOLEAN DEFAULT FALSE,
+  completed_at TIMESTAMPTZ,
+  progress_percent INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id, article_slug)
+);
+
+CREATE INDEX idx_user_progress_user ON user_progress(user_id);
+CREATE INDEX idx_user_progress_article ON user_progress(article_slug);
 
 -- ============================================
 -- OPERATIONS CHAT & TEAM INTERFACE
@@ -299,6 +371,7 @@ CREATE INDEX idx_help_articles_published ON help_articles(published);
 CREATE TABLE IF NOT EXISTS chat_rooms (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
+  description TEXT,
   room_type VARCHAR(50) DEFAULT 'operations' CHECK (room_type IN ('operations', 'support', 'alert', 'intervention')),
   status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'archived')),
   created_at TIMESTAMPTZ DEFAULT now()
@@ -384,9 +457,121 @@ Content-Type: application/json
 ('ai-isp-cross-sensory-overview', 'AI-ISP Cross-Sensory Overview', '<p>The AI-ISP service provides cross-sensory translation for accessibility and interfacing. It supports Braille, Morse code, haptic feedback, speech-to-text, and sign language stubs.</p><h3>Use Cases</h3><ul><li>Accessibility apps for visually impaired users</li><li>Emergency communication via Morse</li><li>Haptic navigation systems</li></ul><h3>Endpoint</h3><p><code>POST /api/v1/translate/:modality</code></p><p>Replace <code>:modality</code> with the desired translation target.</p>', 'An overview of the AI-ISP cross-sensory translation capabilities.', (SELECT id FROM help_categories WHERE slug = 'ai-isp'), true, ARRAY['ai-isp', 'translation', 'accessibility', 'braille', 'morse'])
 ON CONFLICT DO NOTHING;
 
+-- Seed 24-month (104-week) onboarding curriculum articles
+INSERT INTO help_articles (slug, title, content, excerpt, category_id, published, tags, track_progress, onboarding_week, estimated_minutes, difficulty) VALUES
+('onboarding-account-setup', 'Account Setup', '<p>Welcome to your first two weeks with ABC-IO. This phase covers account creation, email verification, profile completion, and generating your first API key.</p><h3>Checklist</h3><ul><li>Verify your email address</li><li>Complete your profile</li><li>Generate a read-only API key</li><li>Review the dashboard layout</li></ul>', 'Get your ABC-IO account ready in the first two weeks.', (SELECT id FROM help_categories WHERE slug = 'getting-started'), true, ARRAY['onboarding', 'account', 'setup'], true, 1, 15, 'beginner'),
+('onboarding-security-best-practices', 'Security Best Practices', '<p>Weeks 3-4 focus on locking down your account. Learn how to rotate API keys, restrict CORS origins, monitor audit logs, and recognize suspicious activity.</p><h3>Key Topics</h3><ul><li>Strong, unique passwords</li><li>API key rotation</li><li>Audit log review</li><li>Phishing awareness</li></ul>', 'Secure your account and API keys in weeks 3-4.', (SELECT id FROM help_categories WHERE slug = 'security-privacy'), true, ARRAY['onboarding', 'security', 'best practices'], true, 3, 20, 'beginner'),
+('onboarding-api-basics', 'API Basics', '<p>During weeks 5-8 you will learn the fundamentals of the ABC-IO API: authentication, rate limits, common response formats, and making your first successful requests.</p><h3>Practice</h3><ul><li>Authenticate with Bearer token</li><li>Call /api/v1/ai/health</li><li>Handle 429 rate-limit responses</li></ul>', 'Learn the ABC-IO API fundamentals in weeks 5-8.', (SELECT id FROM help_categories WHERE slug = 'api-integration'), true, ARRAY['onboarding', 'api', 'basics'], true, 5, 30, 'beginner'),
+('onboarding-beacon-location', 'Beacon & Location Services', '<p>Weeks 9-12 introduce the public safety beacon system. Understand how to emit, query, and acknowledge beacons, plus location privacy controls.</p><h3>Topics</h3><ul><li>Beacon types: emergency, transit, SOS</li><li>Emitting a beacon</li><li>Region search</li><li>Responder acknowledgments</li></ul>', 'Master beacon and location services in weeks 9-12.', (SELECT id FROM help_categories WHERE slug = 'beacon-safety'), true, ARRAY['onboarding', 'beacon', 'location', 'safety'], true, 9, 25, 'intermediate'),
+('onboarding-ai-isp-translation', 'AI ISP & Translation', '<p>Weeks 13-16 dive into AI-ISP cross-sensory translation: text-to-Braille, text-to-Morse, haptic patterns, and speech-to-text integration.</p><h3>Hands-on</h3><ul><li>Translate text to Braille</li><li>Send Morse output</li><li>Build a haptic alert</li></ul>', 'Explore AI-ISP translation features in weeks 13-16.', (SELECT id FROM help_categories WHERE slug = 'ai-isp'), true, ARRAY['onboarding', 'ai-isp', 'translation'], true, 13, 35, 'intermediate'),
+('onboarding-billing-upgrades', 'Billing & Upgrades', '<p>By weeks 17-20 you should understand billing, invoices, plan limits, and how to upgrade through Stripe or PayPal.</p><h3>Key Concepts</h3><ul><li>Subscription tiers</li><li>Usage tracking</li><li>Invoice history</li><li>Plan upgrades and downgrades</li></ul>', 'Understand billing and upgrade paths in weeks 17-20.', (SELECT id FROM help_categories WHERE slug = 'accounts-billing'), true, ARRAY['onboarding', 'billing', 'upgrades'], true, 17, 20, 'beginner'),
+('onboarding-family-safety', 'Family Safety', '<p>Weeks 21-24 focus on family safety features: shared beacon alerts, guardian contacts, and safe-zone notifications.</p><h3>Setup</h3><ul><li>Add guardian contacts</li><li>Configure safe zones</li><li>Test beacon notifications</li></ul>', 'Configure family safety features in weeks 21-24.', (SELECT id FROM help_categories WHERE slug = 'beacon-safety'), true, ARRAY['onboarding', 'family', 'safety'], true, 21, 25, 'beginner'),
+('onboarding-advanced-api', 'Advanced API', '<p>Weeks 25-36 move into advanced API usage: webhooks, batch requests, error handling, and optimizing throughput.</p><h3>Topics</h3><ul><li>Webhook integration</li><li>Batching requests</li><li>Circuit-breaker patterns</li><li>Retry strategies</li></ul>', 'Level up your API integration in weeks 25-36.', (SELECT id FROM help_categories WHERE slug = 'api-integration'), true, ARRAY['onboarding', 'api', 'advanced'], true, 25, 45, 'advanced'),
+('onboarding-team-corporate', 'Team & Corporate', '<p>Weeks 37-52 cover team management: adding members, roles, corporate billing, and SSO readiness.</p><h3>Modules</h3><ul><li>Invite team members</li><li>Assign roles</li><li>Consolidated billing</li><li>Audit and compliance basics</li></ul>', 'Scale ABC-IO across your team or company in weeks 37-52.', (SELECT id FROM help_categories WHERE slug = 'education'), true, ARRAY['onboarding', 'team', 'corporate'], true, 37, 40, 'intermediate'),
+('onboarding-year-2-optimization', 'Year 2 Optimization', '<p>Weeks 53-78 are about optimization: caching, monitoring, cost controls, and performance tuning.</p><h3>Focus Areas</h3><ul><li>Response caching</li><li>Prometheus and Grafana dashboards</li><li>Cost alerting</li><li>Load testing</li></ul>', 'Optimize performance and cost in year two.', (SELECT id FROM help_categories WHERE slug = 'education'), true, ARRAY['onboarding', 'optimization', 'monitoring'], true, 53, 50, 'advanced'),
+('onboarding-compliance-audit', 'Compliance & Audit', '<p>Weeks 79-104 prepare your organization for compliance reviews, audit logs, and data retention policies.</p><h3>Modules</h3><ul><li>Audit log exports</li><li>Data retention rules</li><li>Access reviews</li><li>Incident response</li></ul>', 'Prepare for compliance and audits in weeks 79-104.', (SELECT id FROM help_categories WHERE slug = 'security-privacy'), true, ARRAY['onboarding', 'compliance', 'audit'], true, 79, 60, 'advanced'),
+('onboarding-troubleshooting-support', 'Troubleshooting & Support', '<p>Ongoing reference for diagnosing issues, escalating to human operators, and using the help widget and intervention queue.</p><h3>Resources</h3><ul><li>Common error codes</li><li>Self-heal and auto-heal</li><li>Intervention tickets</li><li>Support channels</li></ul>', 'Ongoing troubleshooting and support resources.', (SELECT id FROM help_categories WHERE slug = 'troubleshooting'), true, ARRAY['onboarding', 'troubleshooting', 'support'], true, 105, 30, 'beginner')
+ON CONFLICT DO NOTHING;
+
 -- Seed default operations chat room
 INSERT INTO chat_rooms (name, room_type, status) VALUES
   ('Operations Command', 'operations', 'active'),
   ('Support Queue', 'support', 'active'),
   ('Alert Channel', 'alert', 'active')
+ON CONFLICT DO NOTHING;
+
+-- ============================================
+-- PRODUCTS & ADD-ONS (v5.0.0)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug VARCHAR(255) UNIQUE NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  product_type VARCHAR(50) DEFAULT 'addon' CHECK (product_type IN ('tier', 'addon', 'feature')),
+  min_tier VARCHAR(50) DEFAULT 'free' CHECK (min_tier IN ('free', 'basic', 'standard', 'pro', 'business', 'team', 'corporate', 'enterprise', 'agency', 'global')),
+  stripe_price_id VARCHAR(255),
+  price_cents INTEGER,
+  currency VARCHAR(3) DEFAULT 'usd',
+  billing_interval VARCHAR(50) DEFAULT 'month' CHECK (billing_interval IN ('once', 'month', 'year')),
+  features JSONB DEFAULT '[]',
+  is_public BOOLEAN DEFAULT TRUE,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_products_slug ON products(slug);
+CREATE INDEX idx_products_public ON products(is_public, sort_order);
+
+CREATE TABLE IF NOT EXISTS account_products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'cancelled', 'expired')),
+  stripe_subscription_id VARCHAR(255),
+  current_period_start TIMESTAMPTZ,
+  current_period_end TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(account_id, product_id)
+);
+
+CREATE INDEX idx_account_products_account ON account_products(account_id);
+CREATE INDEX idx_account_products_product ON account_products(product_id);
+
+-- ============================================
+-- ACCOUNT-SCOPED DIRECT MESSAGING (v5.0.0)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  title VARCHAR(255),
+  conversation_type VARCHAR(50) DEFAULT 'group' CHECK (conversation_type IN ('direct', 'group', 'support')),
+  status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_conversations_account ON conversations(account_id);
+CREATE INDEX idx_conversations_updated ON conversations(updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS conversation_participants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role VARCHAR(50) DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member')),
+  last_read_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(conversation_id, user_id)
+);
+
+CREATE INDEX idx_conversation_participants_conversation ON conversation_participants(conversation_id);
+CREATE INDEX idx_conversation_participants_user ON conversation_participants(user_id);
+
+CREATE TABLE IF NOT EXISTS direct_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  message TEXT NOT NULL,
+  message_type VARCHAR(50) DEFAULT 'text' CHECK (message_type IN ('text', 'translation', 'beacon', 'system')),
+  metadata JSONB,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_direct_messages_conversation ON direct_messages(conversation_id);
+CREATE INDEX idx_direct_messages_created ON direct_messages(created_at DESC);
+
+-- ============================================
+-- SEED PRODUCTS (v5.0.0)
+-- ============================================
+
+INSERT INTO products (slug, name, description, product_type, min_tier, price_cents, billing_interval, features, is_public, sort_order) VALUES
+  ('global-sensory-interface-communications', 'Global Sensory Interface Communications Provider', 'Multi-sensory, interface-to-interface communication across mobile, desktop, and wearable devices. Includes account-scoped messaging, cross-sensory translation relay, and cellular/satellite failover awareness.', 'feature', 'free', 0, 'month', '["account-scoped messaging","cross-sensory translation relay","cellular/satellite failover awareness","multi-device sync"]', true, 1),
+  ('mobile-cellular-node', 'Mobile Cellular Node License', 'Enable a mobile device as a full cellular backup node on the ABC-IO mesh. Includes priority routing, beacon relay, and emergency message caching.', 'addon', 'basic', 4999, 'month', '["cellular backup node","priority routing","beacon relay","emergency message cache"]', true, 2),
+  ('ai-isp-premium', 'AI-ISP Premium Translation Pack', 'Unlock higher-rate cross-sensory translation with priority queueing and additional modalities.', 'addon', 'pro', 1999, 'month', '["priority translation queue","expanded modalities","higher rate limits"]', true, 3),
+  ('enterprise-support', 'Enterprise 24/7 Support', '24/7 human escalation, dedicated operator channel, and quarterly business reviews.', 'addon', 'enterprise', 49900, 'month', '["24/7 human escalation","dedicated operator channel","quarterly review"]', true, 4)
 ON CONFLICT DO NOTHING;

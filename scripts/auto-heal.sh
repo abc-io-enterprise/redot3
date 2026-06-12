@@ -40,7 +40,7 @@ log "Phase 1: Checking service availability..."
 
 HEALTHY_SERVICES=0
 UNHEALTHY_SERVICES=0
-SERVICES_ARRAY=("gateway" "kimi" "owner-dashboard" "mobile-gateway" "public-portal" "operator-station" "postgres" "redis" "prometheus" "grafana" "worker")
+SERVICES_ARRAY=("gateway" "kimi" "owner-dashboard" "mobile-gateway" "public-portal" "operator-station" "beacon-pwa" "account-pwa" "postgres" "redis" "prometheus" "grafana" "worker")
 
 for SERVICE in "${SERVICES_ARRAY[@]}"; do
   if docker compose ps "$SERVICE" | grep -q "Up"; then

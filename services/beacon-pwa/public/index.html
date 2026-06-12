@@ -20,6 +20,9 @@
     button { padding: 0.75rem 1.25rem; border: none; border-radius: 8px; background: #103050; color: #fff; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
     button:hover { background: #0a2438; }
     button:disabled { opacity: 0.6; cursor: not-allowed; }
+    select { padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid #ced4da; background: #fff; font-size: 1rem; }
+    label { font-weight: 600; margin-right: 0.5rem; }
+    .radius-row { margin: 0.75rem 0 0.5rem; }
     .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; color: #fff; margin-right: 4px; }
     .emergency { background: #c0392b; }
     .transit { background: #2980b9; }
@@ -36,7 +39,10 @@
     .status { margin-top: 0.5rem; font-size: 0.9rem; }
     .status.ok { color: #27ae60; }
     .status.err { color: #c0392b; }
+    .loading { color: #6c757d; font-size: 0.9rem; }
+    .spinner::after { content: " ⏳"; }
     .install-hint { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.9rem; }
+    .source-note { font-size: 0.8rem; font-style: italic; color: #6c757d; }
   </style>
 </head>
 <body>
@@ -68,6 +74,17 @@
     <h2>🛰️ Free Public Awareness Beacon</h2>
     <p>Get weather, public safety alerts, nearby suggestions, and local events for your location. <strong>No account required.</strong></p>
     <p>Your location is only used when you click the button below. We do not track you, store your location, or notify anyone where you are.</p>
+
+    <div class="radius-row">
+      <label for="radiusSelect">Search radius:</label>
+      <select id="radiusSelect" aria-label="Search radius">
+        <option value="5">5 km</option>
+        <option value="10" selected>10 km</option>
+        <option value="25">25 km</option>
+        <option value="50">50 km</option>
+      </select>
+    </div>
+
     <button class="success" id="awarenessBtn" style="background:#27ae60">Share My Location &amp; Get Info</button>
     <div id="awarenessResult"></div>
     <div class="privacy">
@@ -123,8 +140,6 @@
 </footer>
 
 <script>
-  document.getElementById('ts') && (document.getElementById('ts').textContent = new Date().toLocaleString());
-
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(err => console.error('SW registration failed:', err));
   }
@@ -142,6 +157,7 @@
   const refreshBtn = document.getElementById('refreshBtn');
   const awarenessBtn = document.getElementById('awarenessBtn');
   const awarenessResult = document.getElementById('awarenessResult');
+  const radiusSelect = document.getElementById('radiusSelect');
 
   function setStatus(el, text, isError) {
     el.textContent = text;
@@ -154,47 +170,117 @@
     return div.innerHTML;
   }
 
-  function fetchAwareness(lat, lng) {
-    awarenessResult.innerHTML = '<p class="small">Loading public awareness info...</p>';
-    fetch('/api/v1/beacon/awareness?lat=' + lat + '&lng=' + lng + '&radiusKm=10')
-      .then(r => r.json())
-      .then(data => {
-        let html = '<div class="awareness-grid">';
-        html += '<div class="awareness-card"><h3>🌤️ Weather</h3>' +
-          '<p class="small">' + escapeHtml(data.weather.condition) + '<br>' +
-          data.weather.temperatureF + '°F, wind ' + data.weather.windSpeedMph + ' mph<br>' +
-          '<em>Source: ' + escapeHtml(data.weather.source) + '</em></p></div>';
+  // In-app cache for the last awareness response (15 minutes, keyed by rounded coords + radius)
+  const AWARENESS_CACHE_TTL = 15 * 60 * 1000;
+  const AWARENESS_COORD_PRECISION = 3;
+  const AWARENESS_CACHE_PREFIX = 'beaconAwareness_';
 
-        html += '<div class="awareness-card"><h3>🚨 Public Safety Alerts</h3>';
-        if (data.safetyAlerts && data.safetyAlerts.length > 0) {
-          html += '<ul>' + data.safetyAlerts.map(a =>
-            '<li><span class="badge ' + (a.type === 'emergency' ? 'emergency' : a.type === 'transit' ? 'transit' : 'sos') + '">' +
-            a.type.toUpperCase() + '</span> ' + escapeHtml(a.message || 'Alert') + ' (' + a.distanceKm + ' km)</li>'
-          ).join('') + '</ul>';
-        } else {
-          html += '<p class="small">No active safety alerts in this area.</p>';
-        }
-        html += '</div>';
+  function awarenessCacheKey(lat, lng, radius) {
+    return AWARENESS_CACHE_PREFIX +
+      lat.toFixed(AWARENESS_COORD_PRECISION) + ',' +
+      lng.toFixed(AWARENESS_COORD_PRECISION) + ',' + radius;
+  }
 
-        html += '<div class="awareness-card"><h3>📍 Nearby Suggestions</h3><ul>' +
-          data.nearbySuggestions.map(s => '<li>' + escapeHtml(s) + '</li>').join('') + '</ul></div>';
+  function getCachedAwareness(key) {
+    try {
+      const raw = sessionStorage.getItem(key);
+      if (!raw) return null;
+      const entry = JSON.parse(raw);
+      if (Date.now() - entry.ts > AWARENESS_CACHE_TTL) {
+        sessionStorage.removeItem(key);
+        return null;
+      }
+      return entry.data;
+    } catch (e) {
+      return null;
+    }
+  }
 
-        html += '<div class="awareness-card"><h3>🎉 Public Events</h3><ul>' +
-          data.publicEvents.map(e => '<li>' + escapeHtml(e) + '</li>').join('') + '</ul></div>';
+  function setCachedAwareness(key, data) {
+    try {
+      sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
+    } catch (e) {
+      // Ignore quota errors
+    }
+  }
 
-        html += '</div>';
-        awarenessResult.innerHTML = html;
-      })
-      .catch(err => {
-        awarenessResult.innerHTML = '<p class="small err">Error: ' + escapeHtml(err.message) + '</p>';
-      });
+  function renderAwareness(data, fromCache) {
+    const cacheNote = fromCache ? '<p class="small">Showing cached info from the last 15 minutes.</p>' : '';
+    const place = data.location && data.location.name ? data.location.name : null;
+    const placeHtml = place
+      ? '<div class="awareness-card"><h3>📍 Approximate area</h3><p class="small">Near ' + escapeHtml(place) + '</p></div>'
+      : '';
+
+    const nearbyLabel = data.suggestionsSource === 'openstreetmap'
+      ? '📍 Nearby public places'
+      : '📍 Nearby suggestions (general)';
+    const nearbySource = data.suggestionsSource === 'openstreetmap'
+      ? '<p class="source-note">Sourced from public OpenStreetMap data. No exact address is stored or shared.</p>'
+      : '';
+
+    let html = cacheNote + '<div class="awareness-grid">' + placeHtml;
+
+    html += '<div class="awareness-card"><h3>🌤️ Weather</h3>' +
+      '<p class="small">' + escapeHtml(data.weather.condition) + '<br>' +
+      data.weather.temperatureF + '°F, wind ' + data.weather.windSpeedMph + ' mph<br>' +
+      '<em>Source: ' + escapeHtml(data.weather.source) + '</em></p></div>';
+
+    html += '<div class="awareness-card"><h3>🚨 Public Safety Alerts</h3>';
+    if (data.safetyAlerts && data.safetyAlerts.length > 0) {
+      html += '<ul>' + data.safetyAlerts.map(a =>
+        '<li><span class="badge ' + (a.type === 'emergency' ? 'emergency' : a.type === 'transit' ? 'transit' : 'sos') + '">' +
+        a.type.toUpperCase() + '</span> ' + escapeHtml(a.message || 'Alert') + ' (' + a.distanceKm + ' km)</li>'
+      ).join('') + '</ul>';
+    } else {
+      html += '<p class="small">No active safety alerts in this area.</p>';
+    }
+    html += '</div>';
+
+    html += '<div class="awareness-card"><h3>' + nearbyLabel + '</h3><ul>' +
+      data.nearbySuggestions.map(s => '<li>' + escapeHtml(s) + '</li>').join('') + '</ul>' +
+      nearbySource + '</div>';
+
+    html += '<div class="awareness-card"><h3>🎉 Community events near you (sampled)</h3><ul>' +
+      data.publicEvents.map(e => '<li>' + escapeHtml(e) + '</li>').join('') + '</ul>' +
+      '<p class="source-note">These are example community reminders, not live event listings.</p></div>';
+
+    html += '</div>';
+    awarenessResult.innerHTML = html;
+  }
+
+  async function fetchAwareness(lat, lng) {
+    const radius = parseInt(radiusSelect.value, 10) || 10;
+    const cacheKey = awarenessCacheKey(lat, lng, radius);
+    const cached = getCachedAwareness(cacheKey);
+
+    awarenessResult.innerHTML = '<p class="loading spinner">Getting info for your area…</p>';
+
+    if (cached) {
+      renderAwareness(cached, true);
+      return;
+    }
+
+    try {
+      const r = await fetch('/api/v1/beacon/awareness?lat=' + encodeURIComponent(lat) +
+        '&lng=' + encodeURIComponent(lng) + '&radiusKm=' + encodeURIComponent(radius));
+      if (!r.ok) {
+        const errBody = await r.json().catch(() => ({}));
+        throw new Error(errBody.message || 'Server returned ' + r.status);
+      }
+      const data = await r.json();
+      setCachedAwareness(cacheKey, data);
+      renderAwareness(data, false);
+    } catch (err) {
+      awarenessResult.innerHTML = '<p class="status err">Unable to load awareness info right now: ' +
+        escapeHtml(err.message) + '</p><p class="small">You can try again in a moment or choose a different radius.</p>';
+    }
   }
 
   awarenessBtn.addEventListener('click', () => {
-    awarenessResult.innerHTML = '<p class="small">Acquiring location (one-time, not stored)...</p>';
+    awarenessResult.innerHTML = '<p class="loading spinner">Acquiring location (one-time, not stored)…</p>';
     navigator.geolocation.getCurrentPosition(
       (pos) => fetchAwareness(pos.coords.latitude, pos.coords.longitude),
-      (err) => { awarenessResult.innerHTML = '<p class="small err">Location error: ' + escapeHtml(err.message) + '</p>'; }
+      (err) => { awarenessResult.innerHTML = '<p class="status err">Location error: ' + escapeHtml(err.message) + '</p>'; }
     );
   });
 

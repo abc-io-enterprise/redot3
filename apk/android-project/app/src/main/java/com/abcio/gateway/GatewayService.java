@@ -39,12 +39,18 @@ public class GatewayService extends Service {
     private static final int NOTIFICATION_ID = 1;
     private static final String PREFS_NAME = "ABCIOGatewayPrefs";
     private static final String KEY_BEACON_QUEUE = "beaconQueue";
+    private static final String KEY_MESSAGE_QUEUE = "messageQueue";
+    private static final String KEY_PRIMARY_DOMAIN = "primaryDomain";
+    private static final String KEY_MOBILE_GATEWAY_HOST = "mobileGatewayHost";
+    private static final String KEY_AI1_HOST = "ai1Host";
+    private static final String KEY_AI2_HOST = "ai2Host";
+    private static final String KEY_OWNER_TOKEN = "ownerToken";
 
-    // Hardcoded autonomous backend endpoints
-    private static final String PRIMARY_HOST = "162.254.32.142";
-    private static final String AI1_HOST = "192.227.212.235";
-    private static final String AI2_HOST = "192.227.212.237";
-    private static final String DOMAIN = "abc-io.com";
+    // Default autonomous backend endpoints
+    private static final String DEFAULT_PRIMARY_DOMAIN = "abc-io.com";
+    private static final String DEFAULT_MOBILE_GATEWAY_HOST = "162.254.32.142:5050";
+    private static final String DEFAULT_AI1_HOST = "192.227.212.235";
+    private static final String DEFAULT_AI2_HOST = "192.227.212.237";
 
     private GatewayServer server;
     private PowerManager.WakeLock wakeLock;
@@ -54,8 +60,11 @@ public class GatewayService extends Service {
     private int requestCount = 0;
     private int beaconCount = 0;
     private int forwardedCount = 0;
+    private int messageCount = 0;
+    private int consecutiveFailures = 0;
+    private int consecutivePasses = 0;
     private boolean publicSystemOnline = false;
-    private String currentMode = "AUTONOMOUS"; // AUTONOMOUS, FAILOVER, RELAY
+    private String currentMode = "AUTONOMOUS"; // AUTONOMOUS, FAILOVER, RELAY, RECOVERING
 
     @Override
     public void onCreate() {
@@ -195,11 +204,28 @@ public class GatewayService extends Service {
 
     private void checkPublicSystemHealth() {
         executor.execute(() -> {
-            boolean online = httpPing("https://" + DOMAIN + "/health", 8000);
-            publicSystemOnline = online;
-            currentMode = online ? "RELAY" : "FAILOVER";
-            if (!online) {
+            String primaryDomain = prefs.getString(KEY_PRIMARY_DOMAIN, DEFAULT_PRIMARY_DOMAIN);
+            boolean online = httpPing("https://" + primaryDomain + "/api/v1/system/health", 8000);
+            if (online) {
+                consecutiveFailures = 0;
+                consecutivePasses++;
+                if (consecutivePasses >= 2) {
+                    publicSystemOnline = true;
+                    if ("FAILOVER".equals(currentMode)) currentMode = "RECOVERING";
+                    else if ("RECOVERING".equals(currentMode)) currentMode = "RELAY";
+                    else currentMode = "RELAY";
+                }
+            } else {
+                consecutivePasses = 0;
+                consecutiveFailures++;
+                if (consecutiveFailures >= 3) {
+                    publicSystemOnline = false;
+                    currentMode = "FAILOVER";
+                }
+            }
+            if (publicSystemOnline) {
                 flushBeaconQueue();
+                flushMessageQueue();
             }
         });
     }
@@ -221,14 +247,111 @@ public class GatewayService extends Service {
         }
     }
 
+    private String httpPostJson(String urlString, String json, int timeout) {
+        HttpURLConnection conn = null;
+        InputStream is = null;
+        try {
+            URL url = new URL(urlString);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(timeout);
+            conn.setReadTimeout(timeout);
+            OutputStream os = conn.getOutputStream();
+            os.write(json.getBytes("UTF-8"));
+            os.close();
+            int code = conn.getResponseCode();
+            if (code >= 200 && code < 300) {
+                is = conn.getInputStream();
+            } else {
+                is = conn.getErrorStream();
+            }
+            if (is == null) return null;
+            byte[] buffer = new byte[4096];
+            StringBuilder sb = new StringBuilder();
+            int n;
+            while ((n = is.read(buffer)) != -1) sb.append(new String(buffer, 0, n, "UTF-8"));
+            return (code >= 200 && code < 300) ? sb.toString() : null;
+        } catch (Exception e) {
+            return null;
+        } finally {
+            if (is != null) try { is.close(); } catch (Exception ignored) {}
+            if (conn != null) conn.disconnect();
+        }
+    }
+
     private void queueBeacon(JSONObject beacon) {
         String existing = prefs.getString(KEY_BEACON_QUEUE, "[]");
         try {
             JSONArray arr = new JSONArray(existing);
             arr.put(beacon);
+            if (arr.length() > 500) {
+                JSONArray trimmed = new JSONArray();
+                for (int i = arr.length() - 500; i < arr.length(); i++) trimmed.put(arr.get(i));
+                arr = trimmed;
+            }
             prefs.edit().putString(KEY_BEACON_QUEUE, arr.toString()).apply();
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private void queueMessage(JSONObject message) {
+        String existing = prefs.getString(KEY_MESSAGE_QUEUE, "[]");
+        try {
+            JSONArray arr = new JSONArray(existing);
+            arr.put(message);
+            if (arr.length() > 500) {
+                JSONArray trimmed = new JSONArray();
+                for (int i = arr.length() - 500; i < arr.length(); i++) trimmed.put(arr.get(i));
+                arr = trimmed;
+            }
+            prefs.edit().putString(KEY_MESSAGE_QUEUE, arr.toString()).apply();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void flushMessageQueue() {
+        String existing = prefs.getString(KEY_MESSAGE_QUEUE, "[]");
+        try {
+            JSONArray arr = new JSONArray(existing);
+            if (arr.length() == 0) return;
+            if (!publicSystemOnline) return;
+
+            JSONArray remaining = new JSONArray();
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject msg = arr.getJSONObject(i);
+                boolean sent = forwardMessageToPrimary(msg);
+                if (!sent) remaining.put(msg);
+            }
+            prefs.edit().putString(KEY_MESSAGE_QUEUE, remaining.toString()).apply();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private boolean forwardMessageToPrimary(JSONObject msg) {
+        HttpURLConnection conn = null;
+        try {
+            String primaryDomain = prefs.getString(KEY_PRIMARY_DOMAIN, DEFAULT_PRIMARY_DOMAIN);
+            URL url = new URL("https://" + primaryDomain + "/api/v1/admin/escalate");
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(10000);
+            OutputStream os = conn.getOutputStream();
+            os.write(msg.toString().getBytes("UTF-8"));
+            os.close();
+            int code = conn.getResponseCode();
+            return code >= 200 && code < 300;
+        } catch (Exception e) {
+            return false;
+        } finally {
+            if (conn != null) conn.disconnect();
         }
     }
 
@@ -258,7 +381,8 @@ public class GatewayService extends Service {
     private boolean forwardBeaconToPrimary(JSONObject beacon) {
         HttpURLConnection conn = null;
         try {
-            URL url = new URL("https://" + DOMAIN + "/api/v1/beacon/emit");
+            String primaryDomain = prefs.getString(KEY_PRIMARY_DOMAIN, DEFAULT_PRIMARY_DOMAIN);
+            URL url = new URL("https://" + primaryDomain + "/api/v1/beacon/emit");
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json");
@@ -325,8 +449,6 @@ public class GatewayService extends Service {
                     json.put("mode", service.currentMode);
                     json.put("network", service.getNetworkType());
                     json.put("public_online", service.publicSystemOnline);
-                    json.put("owner", "Christopher Porreca");
-                    json.put("company", "redot1");
                     json.put("version", "2.1.0-autonomous");
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -341,10 +463,31 @@ public class GatewayService extends Service {
                     json.put("port", 5050);
                     json.put("requests", service.requestCount);
                     json.put("beacons", service.beaconCount);
+                    json.put("messages", service.messageCount);
                     json.put("forwarded", service.forwardedCount);
                     json.put("network", service.getNetworkType());
                     json.put("mode", service.currentMode);
                     json.put("public_online", service.publicSystemOnline);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return newFixedLengthResponse(Response.Status.OK, "application/json", json.toString());
+            }
+
+            if ("/api/backup/status".equals(uri)) {
+                JSONObject json = new JSONObject();
+                try {
+                    json.put("mode", service.currentMode);
+                    json.put("public_online", service.publicSystemOnline);
+                    json.put("network", service.getNetworkType());
+                    json.put("beacons_queued", service.prefs.getString(KEY_BEACON_QUEUE, "[]").length());
+                    json.put("messages_queued", service.prefs.getString(KEY_MESSAGE_QUEUE, "[]").length());
+                    JSONObject nodes = new JSONObject();
+                    nodes.put("primary", service.prefs.getString(KEY_PRIMARY_DOMAIN, DEFAULT_PRIMARY_DOMAIN));
+                    nodes.put("mobile_gateway", service.prefs.getString(KEY_MOBILE_GATEWAY_HOST, DEFAULT_MOBILE_GATEWAY_HOST));
+                    nodes.put("ai1", service.prefs.getString(KEY_AI1_HOST, DEFAULT_AI1_HOST));
+                    nodes.put("ai2", service.prefs.getString(KEY_AI2_HOST, DEFAULT_AI2_HOST));
+                    json.put("nodes", nodes);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -384,6 +527,63 @@ public class GatewayService extends Service {
                 }
             }
 
+            if ("/api/backup/message".equals(uri) && "POST".equals(method)) {
+                service.messageCount++;
+                Map<String, String> files = new HashMap<>();
+                try {
+                    session.parseBody(files);
+                    String postData = files.get("postData");
+                    if (postData == null || postData.isEmpty()) postData = "{}";
+                    JSONObject msg = new JSONObject(postData);
+                    msg.put("received_at", System.currentTimeMillis());
+
+                    if (service.publicSystemOnline) {
+                        service.executor.execute(() -> {
+                            boolean sent = service.forwardMessageToPrimary(msg);
+                            if (!sent) service.queueMessage(msg);
+                        });
+                    } else {
+                        service.queueMessage(msg);
+                    }
+                    return newFixedLengthResponse(Response.Status.OK, "application/json",
+                            "{\"stored\":true,\"mode\":\"" + service.currentMode + "\"}");
+                } catch (Exception e) {
+                    return newFixedLengthResponse(Response.Status.BAD_REQUEST, "application/json",
+                            "{\"error\":\"invalid request\"}");
+                }
+            }
+
+            if ("/api/backup/ai/generate".equals(uri) && "POST".equals(method)) {
+                Map<String, String> files = new HashMap<>();
+                try {
+                    session.parseBody(files);
+                    String postData = files.get("postData");
+                    if (postData == null || postData.isEmpty()) postData = "{}";
+                    JSONObject req = new JSONObject(postData);
+                    String prompt = req.optString("prompt", "");
+                    if (prompt.isEmpty()) {
+                        return newFixedLengthResponse(Response.Status.BAD_REQUEST, "application/json",
+                                "{\"error\":\"prompt required\"}");
+                    }
+                    if (service.publicSystemOnline) {
+                        String primaryDomain = service.prefs.getString(KEY_PRIMARY_DOMAIN, DEFAULT_PRIMARY_DOMAIN);
+                        String result = service.httpPostJson("https://" + primaryDomain + "/api/v1/ai/generate", req.toString(), 20000);
+                        if (result != null) {
+                            return newFixedLengthResponse(Response.Status.OK, "application/json", result);
+                        }
+                    }
+                    // Offline fallback
+                    JSONObject offline = new JSONObject();
+                    offline.put("status", "offline");
+                    offline.put("text", "[OFFLINE MODE] Your request has been queued for processing when connectivity is restored.");
+                    offline.put("model", "offline-fallback");
+                    return newFixedLengthResponse(Response.Status.SERVICE_UNAVAILABLE, "application/json", offline.toString());
+                } catch (Exception e) {
+                    return newFixedLengthResponse(Response.Status.BAD_REQUEST, "application/json",
+                            "{\"error\":\"invalid request\"}");
+                }
+            }
+
             if ("/".equals(uri) || "/index.html".equals(uri)) {
                 String html = buildStatusPage();
                 return newFixedLengthResponse(Response.Status.OK, "text/html", html);
@@ -417,10 +617,14 @@ public class GatewayService extends Service {
             sb.append("<div class='network-badge'>Network: ").append(service.getNetworkType()).append("</div>");
             sb.append("<div class='network-badge'>Requests: ").append(service.requestCount).append("</div>");
             sb.append("<div class='network-badge'>Beacons: ").append(service.beaconCount).append("</div>");
-            sb.append("<p>Primary: ").append(PRIMARY_HOST).append("<br>AI1: ").append(AI1_HOST).append("<br>AI2: ").append(AI2_HOST).append("</p>");
+            sb.append("<p>Primary: ").append(service.prefs.getString(KEY_PRIMARY_DOMAIN, DEFAULT_PRIMARY_DOMAIN))
+              .append("<br>Mobile Gateway: ").append(service.prefs.getString(KEY_MOBILE_GATEWAY_HOST, DEFAULT_MOBILE_GATEWAY_HOST))
+              .append("<br>AI1: ").append(service.prefs.getString(KEY_AI1_HOST, DEFAULT_AI1_HOST))
+              .append("<br>AI2: ").append(service.prefs.getString(KEY_AI2_HOST, DEFAULT_AI2_HOST))
+              .append("</p>");
             sb.append("<button class='btn' onclick='sendBeacon()'>Send Emergency Beacon</button>");
-            sb.append("<div class='owner'>Owner: Christopher Porreca / redot1<br>cporreca@abc-io.com | 585-629-9120</div>");
-            sb.append("<div class='privacy'>Owner-only device. No personal data retained. Beacons are queued and forwarded when public system recovers.</div>");
+            sb.append("<div class='owner'>Owner-only autonomous device</div>");
+            sb.append("<div class='privacy'>Owner-only device. No personal data retained. Beacons and messages are queued and forwarded when public system recovers.</div>");
             sb.append("</div>");
             sb.append("<script>function sendBeacon(){navigator.geolocation.getCurrentPosition(pos=>{");
             sb.append("fetch('/api/beacon',{method:'POST',headers:{'Content-Type':'application/json'},");

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Onboarding — ABC-IO</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;background:#0a0a2e;color:#e2e8f0;line-height:1.6}
+a{color:#00ff88;text-decoration:none}
+.container{max-width:1100px;margin:0 auto;padding:0 24px}
+.nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0}
+.nav .logo{font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.5px}
+.nav .logo span{color:#00ff88}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:#94a3b8;font-size:14px;font-weight:500;transition:.2s}
+.nav-links a:hover{color:#fff}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:.2s}
+.btn-primary{background:#00ff88;color:#0a0a2e}
+.btn-primary:hover{background:#00dd77}
+.btn-outline{background:transparent;border:1px solid #334155;color:#e2e8f0}
+.btn-outline:hover{border-color:#00ff88;color:#00ff88}
+.btn-sm{padding:6px 14px;font-size:13px}
+.hero{padding:50px 0 30px;text-align:center}
+.hero h1{font-size:36px;font-weight:700;color:#fff;line-height:1.1}
+.hero p{font-size:15px;color:#94a3b8;margin:12px auto 20px;max-width:560px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:28px}
+.stat-card{background:#0f1633;border:1px solid #1e293b;border-radius:12px;padding:18px;text-align:center}
+.stat-card .value{font-size:28px;font-weight:700;color:#00ff88}
+.stat-card .label{font-size:13px;color:#94a3b8;margin-top:4px}
+.progress-card{background:#0f1633;border:1px solid #1e293b;border-radius:12px;padding:20px;margin-bottom:28px}
+.progress-card h2{font-size:16px;font-weight:600;color:#fff;margin-bottom:12px}
+.progress-bar{height:12px;background:#1e293b;border-radius:999px;overflow:hidden;margin-bottom:8px}
+.progress-bar>div{height:100%;background:#00ff88;width:0%;transition:width .4s ease}
+.progress-meta{display:flex;justify-content:space-between;font-size:13px;color:#94a3b8}
+.section-title{font-size:18px;font-weight:600;color:#fff;margin:28px 0 14px}
+.recommendations{display:grid;gap:12px;margin-bottom:28px}
+.rec-card{background:#0f1633;border:1px solid #1e293b;border-radius:12px;padding:18px;transition:.2s}
+.rec-card:hover{border-color:#00ff88}
+.rec-card h3{font-size:15px;font-weight:600;color:#fff;margin-bottom:6px}
+.rec-card p{font-size:13px;color:#64748b;margin-bottom:10px}
+.rec-card .meta{display:flex;gap:10px;font-size:12px;color:#94a3b8}
+.rec-card .meta span{background:#1e293b;padding:3px 8px;border-radius:4px}
+.roadmap{display:grid;gap:12px}
+.phase{background:#0f1633;border:1px solid #1e293b;border-radius:12px;padding:18px;position:relative;overflow:hidden}
+.phase.current{border-color:#00ff88;box-shadow:0 0 0 1px rgba(0,255,136,.15)}
+.phase.completed{opacity:.7}
+.phase-bar{position:absolute;top:0;left:0;bottom:0;width:4px;background:#334155}
+.phase.current .phase-bar{background:#00ff88}
+.phase.completed .phase-bar{background:#00ff88}
+.phase-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.phase h3{font-size:15px;font-weight:600;color:#fff}
+.phase .weeks{font-size:12px;color:#94a3b8;background:#1e293b;padding:3px 8px;border-radius:4px}
+.phase p{font-size:13px;color:#64748b}
+.phase-status{font-size:12px;color:#00ff88;margin-top:10px;font-weight:600}
+.empty{text-align:center;color:#64748b;font-size:14px;padding:40px 0}
+.login-prompt{text-align:center;background:#0f1633;border:1px dashed #334155;border-radius:12px;padding:28px;margin-bottom:28px}
+.login-prompt p{font-size:14px;color:#94a3b8;margin-bottom:12px}
+.footer{border-top:1px solid #1e293b;padding:40px 0;text-align:center;color:#64748b;font-size:14px;margin-top:40px}
+.footer-links{display:flex;gap:20px;justify-content:center;margin-bottom:16px;flex-wrap:wrap}
+.footer-links a{color:#94a3b8;font-size:14px}
+.footer-links a:hover{color:#fff}
+@media(max-width:640px){.hero h1{font-size:28px}.nav-links{display:none}}
+</style>
+  <link rel="stylesheet" href="/brand.css">
+</head>
+<body>
+<header class="brand-header">
+  <div class="header-inner">
+    <a href="/" class="logo-link">
+      <img src="/abc-io_logo.png" alt="ABC-IO" class="logo-img">
+      <span class="brand-name">ABC-IO</span>
+    </a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/features.html">Features</a>
+      <a href="/pricing.html">Pricing</a>
+      <a href="/community.html">Community</a>
+      <a href="/solutions.html">Solutions</a>
+      <a href="/help.html">Help</a>
+      <a href="/learn.html">Learn</a>
+      <a href="/onboarding.html">Onboarding</a>
+      <a href="/mobile-app.html">Mobile App</a>
+      <a href="/dashboard.html">Dashboard</a>
+    </nav>
+  </div>
+</header>
+<main>
+<section class="hero">
+  <div class="container">
+    <h1>Your 2-Year Onboarding Roadmap</h1>
+    <p>A personalized 24-month curriculum to take you from first login to ABC-IO expert.</p>
+    <div>
+      <a href="/learn.html" class="btn btn-outline">Browse eLibrary</a>
+      <a href="/help.html" class="btn btn-outline">Help Center</a>
+    </div>
+  </div>
+</section>
+
+<section class="container">
+  <div id="loginPrompt" class="login-prompt" style="display:none">
+    <p>Sign in to see your personalized onboarding progress and recommendations.</p>
+    <a href="/login.html" class="btn btn-primary">Log In</a>
+  </div>
+
+  <div id="dashboard" style="display:none">
+    <div class="stats">
+      <div class="stat-card"><div class="value" id="statWeek">—</div><div class="label">Current Week</div></div>
+      <div class="stat-card"><div class="value" id="statPercent">0%</div><div class="label">Complete</div></div>
+      <div class="stat-card"><div class="value" id="statCompleted">0</div><div class="label">Articles Done</div></div>
+      <div class="stat-card"><div class="value" id="statTotal">0</div><div class="label">Total Tracks</div></div>
+    </div>
+
+    <div class="progress-card">
+      <h2>🗓 Roadmap Progress</h2>
+      <div class="progress-bar"><div id="progressFill"></div></div>
+      <div class="progress-meta">
+        <span id="progressText">0% complete</span>
+        <span id="progressCount">0 / 0 articles</span>
+      </div>
+    </div>
+
+    <h2 class="section-title">Next Recommended Steps</h2>
+    <div id="recommendations"><div class="empty">Loading recommendations...</div></div>
+
+    <h2 class="section-title">Full Roadmap</h2>
+    <div id="roadmap"><div class="empty">Loading roadmap...</div></div>
+  </div>
+</section>
+</main>
+<footer class="brand-footer">
+  <div class="footer-inner">
+    <div>
+      <h4>ABC-IO</h4>
+      <p>Global Sensory Interface Communications Provider and AI Software ISP System.</p>
+    </div>
+    <div>
+      <h4>Contact</h4>
+      <p>Christopher Porreca / redot1</p>
+      <p><a href="mailto:cporreca@abc-io.com">cporreca@abc-io.com</a></p>
+      <p><a href="tel:585-629-9120">585-629-9120</a></p>
+    </div>
+    <div>
+      <h4>Legal</h4>
+      <p><a href="/privacy.html">Privacy Policy</a></p>
+      <p><a href="/terms.html">Terms of Service</a></p>
+    </div>
+    <p class="copyright">&copy; 2026 ABC-IO by Christopher Porreca / redot1. All rights reserved. Private operational system.</p>
+  </div>
+</footer>
+
+<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#0f1633;border-top:1px solid #1e293b;padding:16px 24px;z-index:1000">
+  <div style="max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+    <span style="font-size:13px;color:#94a3b8">We use cookies to improve your experience. By continuing, you agree to our use of cookies.</span>
+    <button onclick="acceptCookies()" style="padding:8px 16px;border-radius:6px;background:#00ff88;color:#0a0a2e;font-size:13px;font-weight:600;border:none;cursor:pointer;white-space:nowrap">Accept</button>
+  </div>
+</div>
+
+<script>
+const API='/api';
+const token=localStorage.getItem('abcio_token');
+const phases=[
+  {slug:'onboarding-account-setup', title:'Account Setup', weeks:'Weeks 1-2', start:1, end:2, desc:'Account creation, verification, first API key, and dashboard orientation.'},
+  {slug:'onboarding-security-best-practices', title:'Security Best Practices', weeks:'Weeks 3-4', start:3, end:4, desc:'Rotate keys, monitor audit logs, and recognize suspicious activity.'},
+  {slug:'onboarding-api-basics', title:'API Basics', weeks:'Weeks 5-8', start:5, end:8, desc:'Authentication, rate limits, response formats, and first successful requests.'},
+  {slug:'onboarding-beacon-location', title:'Beacon & Location Services', weeks:'Weeks 9-12', start:9, end:12, desc:'Emit, query, and acknowledge public-safety beacons.'},
+  {slug:'onboarding-ai-isp-translation', title:'AI ISP & Translation', weeks:'Weeks 13-16', start:13, end:16, desc:'Cross-sensory translation: Braille, Morse, haptic, and speech-to-text.'},
+  {slug:'onboarding-billing-upgrades', title:'Billing & Upgrades', weeks:'Weeks 17-20', start:17, end:20, desc:'Invoices, plan limits, and upgrading via secure payment processor or additional payment option.'},
+  {slug:'onboarding-family-safety', title:'Family Safety', weeks:'Weeks 21-24', start:21, end:24, desc:'Guardian contacts, safe zones, and shared beacon alerts.'},
+  {slug:'onboarding-advanced-api', title:'Advanced API', weeks:'Weeks 25-36', start:25, end:36, desc:'Webhooks, batching, retries, and optimizing throughput.'},
+  {slug:'onboarding-team-corporate', title:'Team & Corporate', weeks:'Weeks 37-52', start:37, end:52, desc:'Team members, roles, corporate billing, and SSO readiness.'},
+  {slug:'onboarding-year-2-optimization', title:'Year 2 Optimization', weeks:'Weeks 53-78', start:53, end:78, desc:'Caching, monitoring, cost controls, and performance tuning.'},
+  {slug:'onboarding-compliance-audit', title:'Compliance & Audit', weeks:'Weeks 79-104', start:79, end:104, desc:'Audit logs, data retention, access reviews, and incident response.'},
+  {slug:'onboarding-troubleshooting-support', title:'Troubleshooting & Support', weeks:'Ongoing', start:105, end:999, desc:'Diagnosing issues, escalation, and ongoing support resources.'}
+];
+
+async function api(path,opts={}){
+  const res=await fetch(`${API}${path}`,{...opts,headers:{...opts.headers,'Authorization':`Bearer ${token}`}});
+  if(res.status===401){ localStorage.removeItem('abcio_token'); location.href='/login.html'; }
+  return res;
+}
+
+async function loadData(){
+  if(!token){
+    document.getElementById('loginPrompt').style.display='block';
+    renderRoadmap({},1);
+    return;
+  }
+  document.getElementById('dashboard').style.display='block';
+  try{
+    const [progressRes, recsRes]=await Promise.all([api('/v1/help/progress'), api('/v1/help/recommendations')]);
+    const progress=await progressRes.json();
+    const recs=await recsRes.json();
+    updateStats(progress, recs.current_week);
+    renderRecommendations(recs.recommendations||[]);
+    renderRoadmap(progress.progress||{}, recs.current_week);
+  }catch(e){
+    document.getElementById('recommendations').innerHTML='<div class="empty">Unable to load recommendations.</div>';
+    document.getElementById('roadmap').innerHTML='<div class="empty">Unable to load roadmap.</div>';
+  }
+}
+
+function updateStats(progress, currentWeek){
+  document.getElementById('statWeek').textContent=currentWeek||'—';
+  document.getElementById('statPercent').textContent=(progress.percent_complete||0)+'%';
+  document.getElementById('statCompleted').textContent=progress.completed||0;
+  document.getElementById('statTotal').textContent=progress.total||0;
+  document.getElementById('progressFill').style.width=(progress.percent_complete||0)+'%';
+  document.getElementById('progressText').textContent=(progress.percent_complete||0)+'% complete';
+  document.getElementById('progressCount').textContent=`${progress.completed||0} / ${progress.total||0} articles`;
+}
+
+function renderRecommendations(recommendations){
+  if(!recommendations.length){
+    document.getElementById('recommendations').innerHTML='<div class="empty">No upcoming recommendations. Great work!</div>';
+    return;
+  }
+  const html=recommendations.map(r=>{
+    const meta=[];
+    if(r.difficulty) meta.push(`<span>${escapeHtml(r.difficulty)}</span>`);
+    if(r.estimated_minutes) meta.push(`<span>${r.estimated_minutes} min</span>`);
+    if(r.onboarding_week) meta.push(`<span>Week ${r.onboarding_week}</span>`);
+    return `<div class="rec-card">
+      <h3><a href="/help-article.html?slug=${encodeURIComponent(r.slug)}">${escapeHtml(r.title)}</a></h3>
+      <p>${escapeHtml(r.excerpt||'')}</p>
+      <div class="meta">${meta.join('')} <a href="/help-article.html?slug=${encodeURIComponent(r.slug)}" class="btn btn-primary btn-sm">Start</a></div>
+    </div>`;
+  }).join('');
+  document.getElementById('recommendations').innerHTML=html;
+}
+
+function renderRoadmap(progressMap, currentWeek){
+  const html=phases.map(p=>{
+    const done=progressMap[p.slug]&&progressMap[p.slug].completed;
+    const isCurrent=currentWeek>=p.start && currentWeek<=p.end;
+    const status=done?'✓ Completed':(isCurrent?'→ Current focus':'Upcoming');
+    const cls=done?'completed':(isCurrent?'current':'');
+    return `<div class="phase ${cls}">
+      <div class="phase-bar"></div>
+      <div class="phase-header">
+        <h3><a href="/help-article.html?slug=${encodeURIComponent(p.slug)}">${escapeHtml(p.title)}</a></h3>
+        <span class="weeks">${escapeHtml(p.weeks)}</span>
+      </div>
+      <p>${escapeHtml(p.desc)}</p>
+      <div class="phase-status">${status}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('roadmap').innerHTML=`<div class="roadmap">${html}</div>`;
+}
+
+function escapeHtml(t){
+  const d=document.createElement('div');d.textContent=t;return d.innerHTML;
+}
+function acceptCookies(){localStorage.setItem('abcio_cookie_consent','1');document.getElementById('cookieBanner').style.display='none';}
+if(!localStorage.getItem('abcio_cookie_consent')){var el=document.getElementById('cookieBanner');if(el)el.style.display='block';}
+
+loadData();
+</script>
+</body>
+</html>

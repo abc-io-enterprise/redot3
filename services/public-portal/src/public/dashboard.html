@@ -4,11 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — ABC-IO</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:#0a0a2e;color:#e2e8f0;min-height:100vh}
+body{font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;background:#0a0a2e;color:#e2e8f0;min-height:100vh}
 .nav{display:flex;justify-content:space-between;align-items:center;padding:16px 32px;border-bottom:1px solid #1e293b}
 .nav .logo{font-size:18px;font-weight:700;color:#fff}
 .nav .logo span{color:#00ff88}
@@ -123,7 +122,7 @@ async function loadBilling() {
     html += `<div class="row"><span class="label">${new Date(inv.invoice_date).toLocaleDateString()}</span><span class="value">$${(inv.amount_paid / 100).toFixed(2)} ${inv.currency?.toUpperCase()}</span></div>`;
   });
   html += `<div style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="billingPortal()">Billing Portal</button> <a href="/pricing.html" class="btn btn-outline btn-sm">Upgrade Plan</a></div>`;
-  html += `<div style="margin-top:8px;font-size:12px;color:#64748b">PayPal backup available</div>`;
+  html += `<div style="margin-top:8px;font-size:12px;color:#64748b">additional payment option available</div>`;
   document.getElementById('billingContent').innerHTML = html;
 }
 
@@ -237,6 +236,41 @@ loadProfile().then(loadBilling).then(loadSubscription).then(loadKeys).then(loadU
 function acceptCookies(){localStorage.setItem('abcio_cookie_consent','1');document.getElementById('cookieBanner').style.display='none';}
 if(!localStorage.getItem('abcio_cookie_consent')){var el=document.getElementById('cookieBanner');if(el)el.style.display='block';}
 </script>
+<div class="help-widget">
+  <button class="help-widget-btn" onclick="toggleHelpWidget()" title="Help & Support">?</button>
+  <div class="help-panel" id="helpPanel">
+    <div class="help-panel-header">
+      <h4>Need help?</h4>
+      <p>Learn, onboard, or chat with support.</p>
+    </div>
+    <div class="help-panel-body">
+      <a href="/help.html"><span class="icon">📖</span> Help Center</a>
+      <a href="/learn.html"><span class="icon">📚</span> eLibrary</a>
+      <a href="/onboarding.html"><span class="icon">🗓</span> Onboarding Roadmap</a>
+      <a href="#" onclick="openAssistant(); return false;"><span class="icon">🤖</span> Ask Digital Assistant</a>
+    </div>
+    <div class="help-panel-footer">
+      <button onclick="toggleHelpWidget()">Close</button>
+    </div>
+  </div>
+</div>
+<script>
+function toggleHelpWidget(){
+  document.getElementById('helpPanel').classList.toggle('open');
+}
+function openAssistant(){
+  toggleHelpWidget();
+  const chat = document.getElementById('chatWidget');
+  const fab = document.getElementById('chatFab');
+  if (chat) chat.style.display = 'flex';
+  if (fab) fab.style.display = 'none';
+}
+document.addEventListener('click', function(e){
+  const widget=document.querySelector('.help-widget');
+  if(!widget.contains(e.target)) document.getElementById('helpPanel').classList.remove('open');
+});
+</script>
+
 </body>
 </html>
 

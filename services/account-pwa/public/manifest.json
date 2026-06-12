@@ -1,0 +1,24 @@
+{
+  "name": "ABC-IO Account Interface",
+  "short_name": "ABC-IO Account",
+  "description": "Private account interface for the Universal AI Interface Platform — messaging, services, and billing.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0a0a2e",
+  "theme_color": "#00ff88",
+  "scope": "./",
+  "icons": [
+    {
+      "src": "./abc-io_logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./abc-io_logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

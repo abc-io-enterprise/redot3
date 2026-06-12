@@ -103,6 +103,7 @@ services:
       - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/abc_io
       - PUBLIC_SIGNING_KEY=${PUBLIC_SIGNING_KEY}
       - PUBLIC_SIGNING_FINGERPRINT=${PUBLIC_SIGNING_FINGERPRINT}
+      - JWT_SECRET=${JWT_SECRET}
     restart: unless-stopped
     depends_on:
       - gateway
@@ -115,6 +116,18 @@ services:
     restart: unless-stopped
     environment:
       - NODE_ENV=production
+
+  account-pwa:
+    build:
+      context: ./services/account-pwa
+    ports:
+      - '8100:3000'
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - GATEWAY_URL=http://gateway:4000
+    depends_on:
+      - gateway
 
   kimi:
     build:

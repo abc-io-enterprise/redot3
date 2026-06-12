@@ -1,0 +1,131 @@
+# ABC-IO v5.0.0 — Phase 1 Deployment Handoff
+
+## What was built in this session
+
+1. **Database extensions** (`services/postgres/init.sql`)
+   - `products`, `account_products` tables for purchasable add-ons.
+   - `conversations`, `conversation_participants`, `direct_messages` tables for account-scoped messaging.
+   - Seeded products: Global Sensory Interface Communications Provider, Mobile Cellular Node License, AI-ISP Premium, Enterprise Support.
+
+2. **Gateway API extensions** (`services/gateway/src/index.js`)
+   - `GET /api/v1/account/products`
+   - `POST /api/v1/account/products/:productId/checkout`
+   - `GET /api/v1/conversations`
+   - `POST /api/v1/conversations`
+   - `GET /api/v1/conversations/:id/messages`
+   - `POST /api/v1/conversations/:id/messages`
+   - `GET /api/v1/conversations/:id/participants`
+
+3. **Account-aware PWA** (`services/account-pwa/`)
+   - Login, dashboard, messaging, account/billing, manifest, service worker.
+   - Served at `/account/` via NGINX (`http://localhost:8100` in dev).
+
+4. **Public portal updates**
+   - New `/sensory-communications.html` product page.
+   - Updated `/pricing.html` with NYS pricing and lock-in notice.
+   - Updated `/mobile-app.html` with Account PWA install instructions.
+
+5. **Owner/operator seed script** (`scripts/seed-owner-accounts.js`)
+   - Creates `cporreca@abc-io.com` (always-free owner) and `cplexmath@abc-io.com` (reserved system operator, deactivated).
+   - Prints temporary passwords to stdout — rotate immediately.
+
+6. **Operational updates**
+   - `scripts/health-check.sh` now checks `account-pwa`.
+   - `scripts/auto-heal.sh` service list includes `account-pwa` and `beacon-pwa`.
+   - `package.json` workspace list includes `services/account-pwa`.
+   - `config/nginx.conf` and `config/locations.conf` route `/account/` to the new PWA.
+
+## Validation performed
+
+- `node --check` passed for `services/gateway/src/index.js`, `services/account-pwa/server.js`, and `scripts/seed-owner-accounts.js`.
+- `docker compose config` passed for `docker-compose.yml`, `compose.prod.yml`, `compose.replica.yml`, and `compose.dev.yml`.
+- `services/postgres/init.sql` executed successfully against a fresh PostgreSQL 15 container; products and conversation tables verified.
+
+## Local Windows limitation
+
+This Windows host has many TCP ports reserved by the OS (4000, 7000, 15432, 18080, etc.), so the full stack could not be bound to local ports for end-to-end testing. This is an environmental limitation, not a code defect. Deployment on a Linux VPS will not have this issue.
+
+## Pre-deployment checklist (must be completed by you)
+
+### 1. VPS / DNS prerequisites
+- [ ] Linux VPS (Ubuntu 22.04/24.04 or Debian 12 recommended) with Docker + Docker Compose installed.
+- [ ] DNS A record for `abc-io.com` → VPS public IP.
+- [ ] DNS A record for `www.abc-io.com` → VPS public IP (optional but recommended).
+- [ ] DNS A record for `headscale.abc-io.com` → VPS public IP if using VPN mesh.
+- [ ] Ports 80, 443, 4000, 5050, 8080, 8085, 8088, 8090, 8100, 8500, 9091, 14000, 16686, 3005, 3006, 5000, 7000, 41641/udp open in the VPS firewall.
+
+### 2. Secrets
+- [ ] Copy `.env.example` to `.env` on the VPS and fill in real values.
+- [ ] Generate strong values for `JWT_SECRET`, `OWNER_SIGNING_KEY`, `OWNER_BIOMETRIC_SECRET`, `GATEWAY_API_KEY`, `SELF_HEAL_TOKEN`, `REDOT1_API_KEY`.
+- [ ] Configure real `POSTGRES_PASSWORD`.
+- [ ] Configure real Stripe keys: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and all `STRIPE_PRICE_ID_*` values.
+- [ ] Configure real PayPal keys if accepting PayPal: `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`.
+- [ ] Configure SMTP: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`.
+- [ ] Configure signing keys/fingerprints: `OWNER_SIGNING_KEY`/`FINGERPRINT`, `MOBILE_SIGNING_KEY`/`FINGERPRINT`, `PUBLIC_SIGNING_KEY`/`FINGERPRINT`.
+- [ ] Set `OWNER_SESSION_TOKEN`, `OWNER_ACCOUNT_EMAIL`, `OWNER_ACCOUNT_PASSWORD`, `OWNER_BIOMETRIC_SECRET` for the owner dashboard.
+
+### 3. SSL/TLS
+- [ ] Run certbot on the VPS to obtain certificates for `abc-io.com` and `www.abc-io.com`.
+- [ ] Ensure `/etc/letsencrypt/live/abc-io.com/` exists and is mounted into the nginx container.
+
+### 4. Deploy
+```bash
+# On the VPS, in /opt/redot2 (or your chosen path)
+git clone https://github.com/abc-io-enterprise/redot2.git /opt/redot2
+cd /opt/redot2
+cp .env.example .env
+# Edit .env with production secrets
+
+docker compose -f compose.prod.yml up -d --build
+sleep 30
+bash scripts/health-check.sh
+```
+
+### 5. Seed owner/operator accounts
+```bash
+cd /opt/redot2
+node scripts/seed-owner-accounts.js
+```
+- Save the printed passwords in a password manager.
+- Log in as `cporreca@abc-io.com` at `https://abc-io.com/account/`.
+- The operator account `cplexmath@abc-io.com` is created as **deactivated** per your instruction that it should be reserved/not usable.
+
+### 6. Stripe product setup (required for paid add-ons)
+- [ ] In the Stripe Dashboard, create prices for each tier (Free, Basic, Standard, Pro, Business, Team, Corporate, Enterprise, Agency, Global).
+- [ ] Optionally create Stripe prices for add-ons:
+  - Mobile Cellular Node License ($49.99/month)
+  - AI-ISP Premium Translation Pack ($19.99/month)
+  - Enterprise 24/7 Support ($499.00/month)
+- [ ] Copy each Stripe price ID into the matching `STRIPE_PRICE_ID_*` env var and into the `products.stripe_price_id` column in Postgres.
+- [ ] Configure the Stripe webhook endpoint: `https://abc-io.com/api/v1/billing/webhook`.
+
+### 7. Post-deploy verification
+- [ ] `https://abc-io.com/` loads the public portal.
+- [ ] `https://abc-io.com/sensory-communications.html` loads the product page.
+- [ ] `https://abc-io.com/account/` loads the Account PWA.
+- [ ] `POST https://abc-io.com/api/v1/auth/register` creates a new user.
+- [ ] `POST https://abc-io.com/api/v1/auth/login` returns a JWT.
+- [ ] `GET https://abc-io.com/api/v1/account/products` returns products.
+- [ ] `POST https://abc-io.com/api/v1/conversations` and related endpoints work.
+- [ ] `./scripts/health-check.sh` passes from the VPS.
+
+### 8. GitHub publish
+- [ ] Commit the changes: `git add -A && git commit -m "feat: account pwa, products, and account-scoped messaging"`
+- [ ] Push to GitHub with your authenticated credentials: `git push origin master`
+- [ ] Verify CI passes (`.github/workflows/ci.yml`).
+
+## Security notes
+
+- Do not commit `.env`.
+- Do not share the temporary passwords printed by `seed-owner-accounts.js` in chat or email; rotate them immediately.
+- The `cplexmath@abc-io.com` operator account is seeded with `status = 'deactivated'`. Activate it only from the owner dashboard if you later need a usable operator account.
+- Review `.security/SECRETS_INVENTORY.md` for rotation schedule.
+
+## Support
+
+If any step fails, check the service logs:
+```bash
+docker compose -f compose.prod.yml logs -f gateway
+docker compose -f compose.prod.yml logs -f postgres
+docker compose -f compose.prod.yml logs -f account-pwa
+```

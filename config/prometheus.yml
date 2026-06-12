@@ -4,7 +4,7 @@ global:
 scrape_configs:
   - job_name: 'abc_io_gateway'
     static_configs:
-      - targets: ['gateway:4000']
+      - targets: ['gateway:4000', '162.254.32.142:4000', '192.227.212.235:4000', '192.227.212.237:4000']
         labels:
           service: 'gateway'
 
@@ -22,19 +22,19 @@ scrape_configs:
 
   - job_name: 'abc_io_kimi'
     static_configs:
-      - targets: ['kimi:5000']
+      - targets: ['kimi:5000', '162.254.32.142:5000', '192.227.212.235:5000', '192.227.212.237:5000']
         labels:
           service: 'kimi'
 
   - job_name: 'abc_io_mobile_gateway'
     static_configs:
-      - targets: ['mobile-gateway:5050']
+      - targets: ['mobile-gateway:5050', '162.254.32.142:5050', '192.227.212.235:5050', '192.227.212.237:5050']
         labels:
           service: 'mobile-gateway'
 
   - job_name: 'abc_io_public_portal'
     static_configs:
-      - targets: ['public-portal:8090']
+      - targets: ['public-portal:8090', '162.254.32.142:8090', '192.227.212.235:8090', '192.227.212.237:8090']
         labels:
           service: 'public-portal'
 
