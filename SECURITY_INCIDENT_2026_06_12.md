@@ -2,14 +2,14 @@
 
 **Date:** 2026-06-12
 **Severity:** Critical
-**Status:** Open — requires owner action
+**Status:** Open — owner accepts rotation post-go-live
 **Reporter:** Automated agent review
 
 ---
 
 ## Summary
 
-During the launch-request handoff, plaintext secrets were included in a user message. The secrets listed below must be treated as compromised and rotated before any production deployment.
+During the launch-request handoff, plaintext secrets were included in a user message. The secrets listed below must be treated as compromised.
 
 ## Exposed Variables
 
@@ -30,7 +30,15 @@ The following environment variable names had live values exposed in chat. Actual
 3. **Revoke old keys/passwords** after confirming new ones work.
 4. **Do not paste secrets into chat or any unencrypted channel again.**
 
-## Verification
+## Owner Decision
+
+**2026-06-12:** Owner stated secrets will be rotated once the system is live. This creates a vulnerability window between go-live and rotation completion. If proceeding with current secrets, rotation must be the **first post-launch action** and completed before any production traffic or billing events.
+
+**Recommended safer path:**
+- Option A: Rotate secrets **before** deployment.
+- Option B: Deploy with placeholder/dummy secrets, verify the stack starts, then rotate and recreate containers immediately.
+
+## Verification Checklist
 
 - [ ] Mistral API key rotated and old key revoked
 - [ ] Kimi API key rotated and old key revoked
