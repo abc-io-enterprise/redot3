@@ -114,7 +114,7 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
     });
     const data = await res.json();
     if (res.ok) {
-      localStorage.setItem('abcio_token', data.token);
+      localStorage.setItem('abc_io_token', data.token);
       const selectedTier = selectedTierInput.value.toLowerCase();
       if (selectedTier && selectedTier !== 'free') {
         succ.textContent = 'Account created! Opening secure checkout...';

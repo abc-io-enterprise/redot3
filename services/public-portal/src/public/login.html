@@ -84,7 +84,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     });
     const data = await res.json();
     if (res.ok) {
-      localStorage.setItem('abcio_token', data.token);
+      localStorage.setItem('abc_io_token', data.token);
       location.href = '/dashboard';
     } else {
       err.textContent = data.error || 'Login failed';

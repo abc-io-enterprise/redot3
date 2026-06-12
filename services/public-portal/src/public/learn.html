@@ -152,12 +152,12 @@ let categories=[];
 let progressMap={};
 let activeCategory='all';
 
-const token=localStorage.getItem('abcio_token');
+const token=localStorage.getItem('abc_io_token');
 
 async function api(path,opts={}){
   if(!token) return null;
   const res=await fetch(`${API}${path}`,{...opts,headers:{...opts.headers,'Authorization':`Bearer ${token}`}});
-  if(res.status===401){ localStorage.removeItem('abcio_token'); }
+  if(res.status===401){ localStorage.removeItem('abc_io_token'); }
   return res;
 }
 

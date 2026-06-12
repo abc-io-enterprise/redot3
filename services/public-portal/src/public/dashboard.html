@@ -89,12 +89,12 @@ body{font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;back
 </div>
 <script>
 const API = '/api';
-const token = localStorage.getItem('abcio_token');
+const token = localStorage.getItem('abc_io_token');
 if (!token) location.href = '/login';
 
 async function api(path, opts = {}) {
   const res = await fetch(`${API}${path}`, { ...opts, headers: { ...opts.headers, 'Authorization': `Bearer ${token}` } });
-  if (res.status === 401) { localStorage.removeItem('abcio_token'); location.href = '/login'; }
+  if (res.status === 401) { localStorage.removeItem('abc_io_token'); location.href = '/login'; }
   return res;
 }
 
@@ -191,7 +191,7 @@ async function loadUsage() {
     <div class="row"><span class="label">Status</span><span class="value" style="color:#00ff88">Active</span></div>`;
 }
 
-function logout() { localStorage.removeItem('abcio_token'); location.href = '/login'; }
+function logout() { localStorage.removeItem('abc_io_token'); location.href = '/login'; }
 
 loadProfile().then(loadBilling).then(loadSubscription).then(loadKeys).then(loadUsage);
 </script>

@@ -160,7 +160,7 @@ a{color:#00ff88;text-decoration:none}
 
 <script>
 const API='/api';
-const token=localStorage.getItem('abcio_token');
+const token=localStorage.getItem('abc_io_token');
 const phases=[
   {slug:'onboarding-account-setup', title:'Account Setup', weeks:'Weeks 1-2', start:1, end:2, desc:'Account creation, verification, first API key, and dashboard orientation.'},
   {slug:'onboarding-security-best-practices', title:'Security Best Practices', weeks:'Weeks 3-4', start:3, end:4, desc:'Rotate keys, monitor audit logs, and recognize suspicious activity.'},
@@ -178,7 +178,7 @@ const phases=[
 
 async function api(path,opts={}){
   const res=await fetch(`${API}${path}`,{...opts,headers:{...opts.headers,'Authorization':`Bearer ${token}`}});
-  if(res.status===401){ localStorage.removeItem('abcio_token'); location.href='/login.html'; }
+  if(res.status===401){ localStorage.removeItem('abc_io_token'); location.href='/login.html'; }
   return res;
 }
 
