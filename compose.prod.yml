@@ -467,8 +467,10 @@ services:
       context: ./services/worker
     environment:
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/abc_io}
     depends_on:
       - redis
+      - postgres
     restart: unless-stopped
     logging:
       driver: 'json-file'

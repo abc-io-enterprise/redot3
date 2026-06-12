@@ -1,12 +1,12 @@
 # ABC-IO v2.0 / redot3 — Final System Status
 
-**Date:** 2026-06-12  
-**Owner:** Christopher Porreca / redot1  
-**Public Contact:** support@abc-io.com | (585) 348-7120  
-**Domain:** https://abc-io.com  
-**GitHub:** https://github.com/abc-io-enterprise/redot3  
-**Version:** v5.0.0  
-**Latest Commit:** `11ee545`  
+**Date:** 2026-06-12
+**Owner:** Christopher Porreca / redot1
+**Public Contact:** support@abc-io.com | (585) 348-7120
+**Domain:** https://abc-io.com
+**GitHub:** https://github.com/abc-io-enterprise/redot3
+**Version:** v5.0.0
+**Latest Commit:** `ac1dd81`
 
 ---
 
@@ -14,68 +14,38 @@
 
 **SYSTEM: READY FOR OWNER REVIEW**
 
-The repository has been audited, completed, documented, packaged, and pushed to GitHub. All compose files validate, no secrets are committed, the public landing page is reachable, and master archives have been created. Production VPS deployment of the latest changes is an owner-gated action that requires SSH access and DNS verification.
+The repository has been audited, launch blockers fixed, documentation updated, and master archives created. All compose files validate, no secrets are committed, and the public landing page is reachable. The current codebase is ready for owner review and production execution, but live VPS deployment and DNS verification remain owner-gated actions.
 
 ---
 
-## Completed Work
+## Completed Work (this cycle)
 
 ### Repository & Code
-- ✅ 21-service Docker Compose platform validated (`docker compose config` passes for all 7 compose files)
-- ✅ Infrastructure inconsistencies fixed (path drift, staging Redis auth, release workflow, replica nginx, Namecheap API user)
-- ✅ `scripts/restore-postgres.sh` and `scripts/create-completed-archive.py` added
-- ✅ Public portal extensionless routes fixed (`/login`, `/signup`, `/dashboard`, `/contact`, etc.)
-- ✅ Token key standardized to `abc_io_token` across public portal and PWAs
-- ✅ React redot3-portal integrated at `/portal/` with nginx routing
-- ✅ All changes committed and pushed to:
-  - `abc-io-enterprise/redot2` (`master` → `11ee545`)
-  - `abc-io-enterprise/redot3` (`master` → `11ee545`)
-
-### Documentation
-- ✅ `docs/ARCHITECTURE.md`
-- ✅ `docs/DEPLOYMENT.md`
-- ✅ `docs/OPERATIONS.md`
-- ✅ `docs/SECURITY.md`
-- ✅ `docs/BILLING.md`
-- ✅ `docs/ACCOUNT_TIERS.md`
-- ✅ `docs/DATA_ISOLATION.md`
-- ✅ `docs/HELP_CENTER_PLAN.md`
-- ✅ `docs/LAUNCH_CHECKLIST.md`
-- ✅ `docs/OWNER_ACTIONS_REQUIRED.md`
-- ✅ `docs/NAMECHEAP_DEPLOYMENT.md`
-- ✅ `docs/VPS_DEPLOYMENT.md`
-- ✅ `docs/BACKUP_AND_RECOVERY.md`
-- ✅ `docs/REDOT3_PUBLISH_AND_DEPLOY.md` updated
-- ✅ `AGENTS.md` updated
-
-### Legal Policies
-- ✅ `legal/TERMS_OF_SERVICE.md`
-- ✅ `legal/PRIVACY_POLICY.md`
-- ✅ `legal/SUPPORT_POLICY.md`
-- ✅ `legal/REFUND_POLICY.md`
-- ✅ `legal/ACCEPTABLE_USE_POLICY.md`
-
-### Manifests
-- ✅ `final_system_manifest.json`
-- ✅ `project_audit_report.md`
-- ✅ `launch_readiness_report.md`
+- ✅ Fixed `worker` service `DATABASE_URL` omission across all compose files.
+- ✅ Aligned local dev `REDIS_URL` handling and added missing `KIMI_ENDPOINTS` / `AI_ISP_URL` / `REDIS_URL` to `gateway`.
+- ✅ Updated `.env.example` Redis URL guidance for production authentication.
+- ✅ Removed Windows path artifact directories (`config/*;C/`).
+- ✅ Restored `config/headscale/config.yaml` after accidental deletion.
+- ✅ All 7 compose files validate (`docker compose config`).
 
 ### Master Archives (in `Documents/`)
-- ✅ `completed-redot1-abc-io-live.zip` — 34.73 MB, 451 files
-- ✅ `REDOT5.ZIP` — 34.73 MB, 451 files (full v5.0.0 system)
-- ✅ `REDOT3.ZIP` — 1.32 MB, 112 files (redot3 React portal source)
+- ✅ `REDOT3.ZIP` — redot3-portal React source
+- ✅ `REDOT5.ZIP` — full private system archive for future cloud migration
+- ✅ `completed-redot1-abc-io-live.zip` — master working backup
+- ✅ Exclusions applied: `.env`, secrets, `node_modules`, caches, Docker volumes, transient files.
 
 ### Verification
-- ✅ `scripts/verify-env-safety.py` — PASS (`.env` is gitignored and EFS-encrypted)
+- ✅ `scripts/verify-env-safety.py` — PASS (`.env` gitignored, untracked, EFS-encrypted)
 - ✅ `scripts/full-system-audit.py` — PASS
 - ✅ Public site `https://abc-io.com/` — HTTP 200
 - ✅ Public health `https://abc-io.com/health` — HTTP 200
+- ✅ `docker compose config` for all 7 compose files — PASS
 
 ---
 
 ## Remaining Owner-Gated Actions
 
-The following require owner credentials or dashboard access and are documented in `docs/OWNER_ACTIONS_REQUIRED.md`:
+The following require owner credentials or dashboard access. Full details are in `docs/OWNER_ACTIONS_REQUIRED.md`:
 
 | ID | Action | Owner |
 |---|---|---|
@@ -84,13 +54,13 @@ The following require owner credentials or dashboard access and are documented i
 | PAY-01 | Finalize Stripe dashboard webhooks and price IDs | Christopher Porreca |
 | PAY-02 | Finalize PayPal dashboard credentials and webhook ID | Christopher Porreca |
 | EMAIL-01 | Configure and test SMTP provider | Christopher Porreca |
-| REG-01 | Verify domain registrar auto-renewal for `abc-io.com` | Christopher Porreca |
+| SSL-01 | Verify Let's Encrypt certificate renewal path on VPS | Christopher Porreca |
 
 ---
 
 ## Sign-Off
 
-Repository work is complete and ready for owner review and production execution.
+Repository work is complete and ready for owner review and production execution. No additional agent work can proceed without owner-only access.
 
 **Christopher Porreca**  
 Owner, redot1 / ABC-IO  
@@ -98,5 +68,4 @@ support@abc-io.com | (585) 348-7120
 
 ---
 
-*ABC-IO — Global Sensory Interface Communications Provider.*  
-*100 Years Nonstop — Always On, Always Yours, Always Here.*
+*ABC-IO — 100 Years Nonstop — Always On, Always Yours, Always Here.*

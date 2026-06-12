@@ -9,7 +9,7 @@
   "location": "Rochester, New York",
   "tagline": "100 Years Nonstop — Always On, Always Yours, Always Here",
   "baseline_date": "2026-06-12",
-  "generated_at": "2026-06-12T09:55:17-04:00",
+  "generated_at": "2026-06-12T16:25:00-04:00",
   "status": "SYSTEM: READY FOR OWNER REVIEW",
   "components_found": {
     "services": [
@@ -76,6 +76,19 @@
       ".github/workflows/gcp-deploy.yml"
     ],
     "docs": [
+      "docs/ARCHITECTURE.md",
+      "docs/DEPLOYMENT.md",
+      "docs/OPERATIONS.md",
+      "docs/SECURITY.md",
+      "docs/BILLING.md",
+      "docs/ACCOUNT_TIERS.md",
+      "docs/DATA_ISOLATION.md",
+      "docs/HELP_CENTER_PLAN.md",
+      "docs/LAUNCH_CHECKLIST.md",
+      "docs/OWNER_ACTIONS_REQUIRED.md",
+      "docs/NAMECHEAP_DEPLOYMENT.md",
+      "docs/VPS_DEPLOYMENT.md",
+      "docs/BACKUP_AND_RECOVERY.md",
       "docs/REDOT3_PUBLISH_AND_DEPLOY.md",
       "docs/ABC_IO_V2_PRODUCTION_RUNBOOK.md",
       "docs/MASTER_DEPLOYMENT_RUNBOOK.md",
@@ -108,17 +121,37 @@
       ".security/SAML_SSO_TEMPLATE.md"
     ]
   },
-  "components_created": [
-    "legal/TERMS_OF_SERVICE.md",
-    "legal/PRIVACY_POLICY.md",
-    "legal/SUPPORT_POLICY.md",
-    "legal/REFUND_POLICY.md",
-    "legal/ACCEPTABLE_USE_POLICY.md",
-    "final_system_manifest.json",
-    "project_audit_report.md",
-    "launch_readiness_report.md"
+  "components_created_this_cycle": [
+    "scripts/create-master-archives.py",
+    "master_archive_manifest.json",
+    "updated compose files with worker DATABASE_URL and gateway Redis/AI_ISP/KIMI_ENDPOINTS",
+    "updated .env.example Redis URL guidance",
+    "updated FINAL_STATUS.md",
+    "updated REDOT3-AND-REDOT5_DONE.md"
   ],
   "blockers": {
+    "resolved_this_cycle": [
+      {
+        "id": "FIX-01",
+        "item": "worker service missing DATABASE_URL in all compose files",
+        "resolution": "Added DATABASE_URL to worker in docker-compose.yml, compose.prod.yml, compose.staging.yml, compose.replica.yml, compose.replica-ai1.yml, compose.replica-ai2.yml"
+      },
+      {
+        "id": "FIX-02",
+        "item": "gateway missing REDIS_URL, KIMI_ENDPOINTS, AI_ISP_URL in local dev compose",
+        "resolution": "Added environment variables and redis depends_on to gateway in docker-compose.yml"
+      },
+      {
+        "id": "FIX-03",
+        "item": "Windows path artifact directories in config/",
+        "resolution": "Removed config/headscale;C/, config/locations.conf;C/, config/nginx.conf;C/"
+      },
+      {
+        "id": "FIX-04",
+        "item": ".env.example Redis URL did not match production authenticated URL",
+        "resolution": "Updated REDIS_URL to redis://:${REDIS_PASSWORD}@redis:6379/0 with explanatory comment"
+      }
+    ],
     "owner_gated_external_actions": [
       {
         "id": "DNS-01",
@@ -141,13 +174,13 @@
         "owner": "Christopher Porreca"
       },
       {
-        "id": "GH-01",
-        "item": "GitHub organization admin access is required to publish the redot3 repository and configure branch protection.",
+        "id": "EMAIL-01",
+        "item": "Email provider credentials (SMTP host, port, user, password) must be configured and tested.",
         "owner": "Christopher Porreca"
       },
       {
-        "id": "EMAIL-01",
-        "item": "Email provider credentials (SMTP host, port, user, password) must be configured and tested.",
+        "id": "SSL-01",
+        "item": "Let's Encrypt certificate renewal path on VPS must be verified before production traffic.",
         "owner": "Christopher Porreca"
       },
       {
@@ -168,7 +201,7 @@
     },
     "production": {
       "status": "SYSTEM: READY FOR OWNER REVIEW",
-      "notes": "compose.prod.yml validates. Blocked by owner-gated external actions: DNS, VPS SSH, payment dashboards, email provider, and registrar."
+      "notes": "compose.prod.yml validates. Blocked by owner-gated external actions: DNS, VPS SSH, payment dashboards, email provider, SSL renewal, and registrar."
     }
   },
   "verification_results": {
@@ -191,7 +224,7 @@
     },
     "legal_docs_created": {
       "status": "PASS",
-      "notes": "All five legal/policy files created under legal/ with placeholder effective dates."
+      "notes": "All five legal/policy files exist under legal/ with placeholder effective dates."
     },
     "full_system_audit": {
       "status": "PASS",
@@ -201,13 +234,9 @@
       "status": "PASS",
       "notes": "https://abc-io.com/ and /health return HTTP 200."
     },
-    "git_push": {
-      "status": "PASS",
-      "notes": "Commit 700ee90 pushed to abc-io-enterprise/redot2 and abc-io-enterprise/redot3."
-    },
     "master_archives": {
       "status": "PASS",
-      "notes": "completed-redot1-abc-io-live.zip (34.73 MB, 451 files), REDOT5.ZIP (34.73 MB, 451 files), and REDOT3.ZIP (1.32 MB, 112 files) created in Documents."
+      "notes": "REDOT3.ZIP (1.33 MB, 112 files), REDOT5.ZIP (34.71 MB, 428 files), and completed-redot1-abc-io-live.zip (34.72 MB, 428 files) created in Documents."
     }
   },
   "owner_actions_required": [
@@ -218,7 +247,7 @@
     "Log in to the Stripe dashboard and verify webhook endpoints, price IDs, and product catalog.",
     "Log in to the PayPal dashboard and verify client credentials, webhook ID, and product linkage.",
     "Configure and test SMTP credentials for transactional and support email.",
-    "Verify GitHub organization admin access for abc-io-enterprise and repository redot3.",
+    "Verify Let's Encrypt certificate renewal path on VPS before production traffic.",
     "Confirm domain registrar settings and auto-renewal for abc-io.com.",
     "Populate .env from .env.example with production secrets and deploy using compose.prod.yml."
   ],

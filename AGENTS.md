@@ -11,7 +11,7 @@ ABC-IO v2.0 (codename `redot2`) is a containerized, multi-service platform devel
 
 The system is designed for local development, single-primary VPS production, and multi-node deployments. It is orchestrated with Docker Compose and provides:
 
-- **`gateway`** — Central Express.js API gateway with JWT/API-key authentication, per-tier rate limiting, Stripe and PayPal billing, email flows, and routing to backend services.
+- **`gateway`** — Central Express.js API gateway with JWT/API-key authentication, per-tier rate limiting, Stripe and PayPal billing, email flows, cross-sensory translation proxying, and routing to backend services.
 - **`operator-station`** — Operational dashboard that aggregates health/status from the gateway, owner dashboard, mobile gateway, public portal, and infrastructure services. Renders inline HTML/CSS/JS from a single Express file.
 - **`owner-dashboard`** — Privileged admin interface for service lifecycle control, deployment updates, APK backup status, and beacon relay. It executes `docker compose` and `git` commands directly via `child_process.execSync`.
 - **`mobile-gateway`** — Mobile-facing API with HMAC signing, cellular backup/failover logic, upstream node health checks, beacon relay, and emergency message caching.
@@ -23,7 +23,7 @@ The system is designed for local development, single-primary VPS production, and
 - **`beacon`** — Public-safety beacon backend with PostgreSQL storage, 24-hour TTL, haversine region search, and responder acknowledgments.
 - **`kimi`** — Python/Flask AI adapter that proxies to Mistral or Kimi with circuit breaker, response cache, retry logic, and offline fallback. Also includes a small standalone Redis consumer (`worker.py`) for the `abc_io_tasks` list.
 - **`worker`** — Background Python worker that consumes the Redis list `redot2:jobs:queue` for `ai_inference`, `health_check`, and `security_scan` jobs, storing results with a 1-hour TTL.
-- **`ai-isp`** — Cross-sensory translation service (Braille, Morse, Haptic, speech-to-text stubs, sign-language stubs) served by Gunicorn.
+- **`ai-isp`** — Cross-sensory translation service (Braille, Morse, Haptic, speech-to-text, sign-language) served by Gunicorn.
 - **`autonomous`** — Self-healing orchestrator that monitors core services, restarts failed containers, and queues alerts via Redis.
 - **Desktop orchestrator** — `scripts/autonomous-orchestrator.py` monitors public endpoints from the owner's machine and activates cellular fallback.
 - **Desktop admin backend** — `admin-desktop/server.py` serves the offline-capable admin UI and proxies local commands.
@@ -37,19 +37,19 @@ The entire stack is intended to run on a single primary VPS or as a multi-host d
 ## v5.0.0 Phase 1 Additions
 
 ### Account-aware PWA
-- New service `account-pwa` (Node.js 20 Alpine + Express, port `8100` host / `3000` container).
-- New service `interface-pwa` (Node.js 20 Alpine + Express, port `8110` host / `3010` container) with cross-sensory sessions, devices, and translation.
-- Serves a single-page PWA at `/account/` via NGINX with Web App Manifest and service worker.
+- Service `account-pwa` (Node.js 20 Alpine + Express, host port `8100`, container port `3000`).
+- Service `interface-pwa` (Node.js 20 Alpine + Express, host port `8110`, container port `3010`) with cross-sensory sessions, devices, and translation.
+- Served as single-page PWAs at `/account/` and `/interface/` via NGINX with Web App Manifest and service worker.
 - Supports JWT login against the gateway, account dashboard, conversation list, messaging, product catalog, and Stripe checkout.
 
 ### Account-scoped messaging
-- New PostgreSQL tables: `conversations`, `conversation_participants`, `direct_messages`.
-- New gateway routes under `/api/v1/conversations` and `/api/v1/conversations/:id/messages`.
+- PostgreSQL tables: `conversations`, `conversation_participants`, `direct_messages`.
+- Gateway routes under `/api/v1/conversations` and `/api/v1/conversations/:id/messages`.
 - Messages are scoped to users within the same account; participants must belong to the account.
 
 ### Products and add-ons
-- New PostgreSQL tables: `products`, `account_products`.
-- New gateway routes: `GET /api/v1/account/products` and `POST /api/v1/account/products/:productId/checkout`.
+- PostgreSQL tables: `products`, `account_products`.
+- Gateway routes: `GET /api/v1/account/products` and `POST /api/v1/account/products/:productId/checkout`.
 - Seeded products include the free `global-sensory-interface-communications` feature, `mobile-cellular-node` addon, `ai-isp-premium`, and `enterprise-support`.
 
 ### Owner/operator seeding
@@ -80,9 +80,9 @@ The entire stack is intended to run on a single primary VPS or as a multi-host d
 | VPN / Mesh | Headscale (Tailscale-compatible WireGuard control server) |
 | Container Orchestration | Docker Compose |
 | CI/CD | GitHub Actions |
-| Build Tooling | **None of the following exist at project level** except where noted for `redot3-portal`:** React, Vue, TypeScript compiler config, Webpack, ESLint, Prettier, Jest, `pyproject.toml`, `Cargo.toml`, `Makefile`. `services/redot3-portal/` uses React 19, TypeScript, Vite, Tailwind CSS, and ESLint. |
+| Build Tooling | **None of the following exist at project level** except where noted for `redot3-portal`: React, Vue, TypeScript compiler config, Webpack, ESLint, Prettier, Jest, `pyproject.toml`, `Cargo.toml`, `Makefile`. `services/redot3-portal/` uses React 19, TypeScript, Vite, Tailwind CSS, and ESLint. |
 
-All Node.js frontends are vanilla HTML/CSS/JS. There is no React, Vue, TypeScript, or bundler anywhere in the project.
+All Node.js frontends are vanilla HTML/CSS/JS. There is no React, Vue, TypeScript, or bundler anywhere in the project outside `services/redot3-portal`.
 
 ---
 
@@ -91,7 +91,7 @@ All Node.js frontends are vanilla HTML/CSS/JS. There is no React, Vue, TypeScrip
 ```
 .
 ├── package.json                # Root npm workspace metadata + npm scripts
-├── docker-compose.yml          # Local 21-service full-stack orchestration
+├── docker-compose.yml          # Local 22-service full-stack orchestration
 ├── compose.dev.yml             # Dev environment with live-reload mounts
 ├── compose.staging.yml         # Staging orchestration (alternate host ports)
 ├── compose.prod.yml            # Production orchestration (ports 80/443, limits, healthchecks)
@@ -110,7 +110,7 @@ All Node.js frontends are vanilla HTML/CSS/JS. There is no React, Vue, TypeScrip
 │   ├── public-portal/src/index.js (+ src/public/)
 │   ├── beacon-pwa/server.js (+ public/)
 │   ├── account-pwa/server.js (+ public/)
-  ├── interface-pwa/server.js (+ public/)
+│   ├── interface-pwa/server.js (+ public/)
 │   ├── redot3-portal/          # React 19 + Vite SPA (new in redot3)
 │   ├── beacon/src/index.js
 │   ├── kimi/app.py, worker.py, requirements.txt
@@ -118,7 +118,7 @@ All Node.js frontends are vanilla HTML/CSS/JS. There is no React, Vue, TypeScrip
 │   ├── ai-isp/src/app.py (+ src/translators/), Dockerfile, requirements.txt
 │   ├── autonomous/orchestrator.py, Dockerfile, requirements.txt
 │   └── postgres/init.sql
-├── scripts/                    # 40+ operational/automation scripts
+├── scripts/                    # 45+ operational/automation scripts
 ├── admin-desktop/              # Local offline admin UI (index.html + server.py)
 ├── apk/                        # Android APK deliverables, keystore, build scripts
 ├── docs/                       # Runbooks, roadmaps, audit checklists
@@ -156,7 +156,7 @@ sleep 20
 docker compose -f compose.dev.yml up -d
 ```
 
-`compose.dev.yml` only starts `gateway`, `operator-station`, and `postgres`, mounting `./services/gateway/src` and `./services/operator-station/src` for live reloading.
+`compose.dev.yml` starts four services: `gateway`, `operator-station`, `interface-pwa`, and `postgres`. It mounts `./services/gateway/src`, `./services/operator-station/src`, and the full `./services/interface-pwa` directory for live reloading. The Postgres password is hardcoded to `postgres` in this file.
 
 ### Production
 
@@ -202,6 +202,8 @@ The root `package.json` exposes:
 | `npm run orchestrator:daemon` | `python scripts/autonomous-orchestrator.py --daemon` |
 | `npm run desktop:admin` | `python admin-desktop/server.py` |
 | `npm run deploy:vps` | `bash scripts/deploy-vps-cluster.sh` |
+| `npm run portal:build` | `npm run build -w services/redot3-portal` |
+| `npm run portal:dev` | `npm run dev -w services/redot3-portal` |
 | `npm run lint` / `npm run format` | Echo that linting/formatting are not configured |
 
 ### Staging
@@ -257,7 +259,7 @@ docker compose -f compose.staging.yml up -d
 
 ### Per-Service Notes
 
-- **`gateway`** — Single-file Express app (`services/gateway/src/index.js`). Exposes versioned routes under `/api/v1/`. Connects to PostgreSQL via `DATABASE_URL`, to AI services via `KIMI_ENDPOINTS`, to the translation service at `http://ai-isp:7000`, to the beacon service at `http://beacon:3000`, and to Stripe/PayPal APIs.
+- **`gateway`** — Single-file Express app (`services/gateway/src/index.js`, ~2,600 lines). Exposes versioned routes under `/api/v1/`. Connects to PostgreSQL via `DATABASE_URL`, to AI services via `KIMI_ENDPOINTS`, to the translation service at `http://ai-isp:7000`, to the beacon service at `http://beacon:3000`, and to Stripe/PayPal APIs. Implements tiered rate limiting, family-safe content filtering, usage-spike detection, Prometheus metrics rendering, and security-event logging.
 - **`operator-station`** — Polls hard-coded internal health URLs and TCP ports, reads `/tmp/abc-io-health.state`, and serves a single inline HTML dashboard.
 - **`owner-dashboard`** — Requires `x-owner-token` equal to `OWNER_SESSION_TOKEN`. Login computes the biometric token as `HMAC-SHA256(OWNER_BIOMETRIC_SECRET || OWNER_SIGNING_KEY, email + password)`. Executes `docker compose`/`git` commands directly; production compose mounts `/var/run/docker.sock`.
 - **`mobile-gateway`** — Maintains in-memory backup state (`standby`/`active`/`recovery`) with beacon cache (max 500) and emergency messages (max 1000). Upstream nodes default to `primary` (`162.254.32.142:4000`), `ai1` (`192.227.212.235:5000`), and `ai2` (`192.227.212.237:5000`).
@@ -268,7 +270,7 @@ docker compose -f compose.staging.yml up -d
 - **`worker`** — Consumes `redot2:jobs:queue`. Job types: `ai_inference`, `health_check`, `security_scan`. Stores results in Redis with key `redot2:jobs:processed:<job_id>` and a 1-hour TTL.
 - **`redot3-portal`** — React 19 SPA built with Vite and served by nginx. Deployed under `/portal/`. The `BrowserRouter` basename is set to `/portal` and the Vite base URL is `/portal/` so all assets and client-side routes resolve correctly behind the NGINX sub-path proxy. Built as a static site in a multi-stage Docker image; healthcheck hits `/health` on the container's nginx port.
 - **`ai-isp`** — Fully implemented. Translation endpoints include `speech-to-text`, `text-to-braille`, `text-to-morse`, `text-to-haptic`, `braille-to-text`, `morse-to-text`, `haptic-to-text`, `text-to-speech`, `text-to-sign`, `sign-to-text`, plus `/api/v1/translate/universal` and `/api/v1/matrix`.
-- **`autonomous`** — HTTP/TCP-checks all core services every `CHECK_INTERVAL_SECONDS` (default 30) and restarts failed containers via `docker compose -f /opt/redot2/compose.prod.yml restart <service>` (max 3 heals per service). Pushes `autonomous_alert` jobs to `redot2:jobs:queue`.
+- **`autonomous`** — HTTP/TCP-checks core services every `CHECK_INTERVAL_SECONDS` (default 30) and restarts failed containers via `docker compose -f /opt/redot2/compose.prod.yml restart <service>` (max 3 heals per service). Pushes `autonomous_alert` jobs to `redot2:jobs:queue`.
 
 ### Desktop / Offline Components
 
@@ -285,17 +287,86 @@ docker compose -f compose.staging.yml up -d
 
 ---
 
+## Code Organization and Module Divisions
+
+### Gateway (`services/gateway/src/index.js`)
+The gateway is a monolithic Express file organized into functional sections:
+1. Database/email client setup and environment validation.
+2. Cross-sensory translation helpers (local Morse/Braille fallbacks plus `ai-isp` proxy).
+3. Security event logging, usage-spike detection, and intervention queue.
+4. Prometheus metrics rendering.
+5. PayPal helper functions.
+6. Express middleware stack (`helmet`, `cors`, `morgan`, `express-rate-limit`, JSON body parser, raw Stripe webhook body parser).
+7. Family-safe content filter.
+8. Authentication helpers (JWT HS256, API key SHA-256, tier extraction).
+9. Route handlers for auth, accounts, users, billing (Stripe/PayPal), AI proxy, translation, conversations/messages, products, beacon, usage, admin, metrics, and webhooks.
+
+### Owner Dashboard (`services/owner-dashboard/src/index.js`)
+- Auth (`/api/auth`, `/api/logout`)
+- System status/health
+- Service restart/stop/start
+- Maintenance mode toggle
+- Backup/download APK
+- Git pull/deploy/rollback endpoints
+- Biometric token verification via HMAC-SHA256
+
+### Mobile Gateway (`services/mobile-gateway/src/index.js`)
+- Redis-backed emergency cache
+- Upstream node health checks (`primary`, `ai1`, `ai2`)
+- Backup/failover state machine (`standby`/`active`/`recovery`)
+- HMAC signing endpoint
+- Beacon relay and emergency message endpoints
+
+### Public Portal (`services/public-portal/src/index.js`)
+- Static site serving from `src/public/`
+- `/api/signature`
+- Help articles and progress APIs
+
+### Beacon (`services/beacon/src/index.js`)
+- Public-safety beacon backend
+- PostgreSQL haversine search
+- 24-hour TTL, periodic purge
+- Responder acknowledgments
+- External API calls (Open-Meteo, BigDataCloud, Overpass API)
+
+### Kimi (`services/kimi/app.py`)
+- Circuit breaker, in-memory cache, retry decorator
+- `call_mistral()` / `call_kimi()` chat-completions wrappers
+- `/health`, `/ai/generate`, `/ai/health` endpoints
+
+### AI-ISP (`services/ai-isp/src/app.py` + `src/translators/`)
+- Modular translators: `braille.py`, `morse.py`, `haptic.py`, `speech.py`, `sign.py`
+- 5×5×25 cross-sensory matrix
+- Translation endpoints and `/api/v1/translate/universal`, `/api/v1/matrix`
+
+### Worker (`services/worker/worker.py`)
+- Consumes `redot2:jobs:queue`
+- Job types: `ai_inference`, `health_check`, `security_scan`
+- Stores results in Redis with 1-hour TTL
+- Email alerting helper
+
+### Autonomous (`services/autonomous/orchestrator.py`)
+- Health-checks services via HTTP/TCP
+- Restarts failed containers via Docker Compose
+- Max 3 heals per service
+- Queues `autonomous_alert` jobs to Redis
+
+### Database (`services/postgres/init.sql`)
+Tables include: `accounts`, `users`, `email_verifications`, `password_resets`, `sessions`, `family_preferences`, `api_keys`, `subscriptions`, `invoices`, `paypal_transactions`, `usage_logs`, `audit_logs`, `security_events`, `intervention_queue`, `beacons`, `beacon_acknowledgments`, `beacon_notifications`, `products`, `account_products`, `conversations`, `conversation_participants`, `direct_messages`, `help_categories`, `help_articles`, `user_progress`.
+
+---
+
 ## Code Style Guidelines
 
 ### JavaScript (Node.js services)
 
-- Use **CommonJS** (`require` / `module.exports`). Do **not** use ES modules.
+- Use **CommonJS** (`require` / `module.exports`). Do **not** use ES modules, except inside `services/redot3-portal`.
 - Use `const` and `let`; avoid `var`.
 - Prefer `async/await` over raw callbacks.
 - Read the port from `process.env.PORT` with a numeric fallback, e.g. `Number(process.env.PORT || 4000)`.
 - Express apps should use `express.json()` middleware for JSON bodies.
 - Use `helmet` in production-facing services where it is already present (`gateway`, `owner-dashboard`, `mobile-gateway`, `public-portal`, `beacon-pwa`, `account-pwa`, `interface-pwa`, `beacon`). `operator-station` does not currently use helmet.
-- Frontends are served as static files from `src/public/` (or `public/` in `beacon-pwa`) using `express.static`.
+- Frontends are served as static files from `src/public/` (or `public/` in `beacon-pwa`, `account-pwa`, `interface-pwa`) using `express.static`.
 - Inline HTML/CSS/JS in server-rendered responses is acceptable and matches existing patterns.
 - **`redot3-portal` is the exception:** it is a React 19 + TypeScript + Vite SPA with a build step (`npm run build`) and is served by nginx, not Express.
 
@@ -322,7 +393,7 @@ docker compose -f compose.staging.yml up -d
 
 ### General
 
-- There is **no ESLint, Prettier, TypeScript, or Jest** configuration in this project. Do not add them unless explicitly requested.
+- There is **no ESLint, Prettier, TypeScript, or Jest** configuration in this project outside `services/redot3-portal`. Do not add them unless explicitly requested.
 - The project language for comments and documentation is **English**.
 
 ---
@@ -368,7 +439,7 @@ docker compose -f compose.staging.yml up -d
    Validates required files, compose files, git status/tags, APK artifacts, public endpoints, autonomous wiring, and documentation presence.
 
 7. **CI build validation:**
-   The `ci.yml` workflow builds Docker images for all services and validates `docker-compose.yml`, `compose.dev.yml`, `compose.staging.yml`, `compose.prod.yml`, `compose.replica.yml`, `compose.replica-ai1.yml`, and `compose.replica-ai2.yml` with `docker compose config`.
+   The `ci.yml` workflow builds Docker images for 12 services and validates `docker-compose.yml`, `compose.dev.yml`, `compose.staging.yml`, `compose.prod.yml`, `compose.replica.yml`, `compose.replica-ai1.yml`, and `compose.replica-ai2.yml` with `docker compose config`.
 
 ---
 
@@ -381,7 +452,7 @@ docker compose -f compose.staging.yml up -d
 - Run `python scripts/verify-env-safety.py` to confirm `.env` is gitignored, not tracked, and encrypted.
 - Copy `.env.example` to `.env` and fill in production values before deploying.
 - Production secrets are stored in **GitHub Repository Secrets** and synchronized to the VPS `.env` at deploy time via `scripts/set-github-secrets.sh`.
-- Required secret groups include: `POSTGRES_PASSWORD`, `MISTRAL_API_KEY`, `MISTRAL_MODEL`, `MISTRAL_API_BASE_URL`, `KIMI_API_KEY`, `KIMI_MODEL`, `KIMI_API_BASE_URL`, `KIMI_ENDPOINTS`, owner/mobile/public signing keys and fingerprints, `OWNER_SESSION_TOKEN`, `OWNER_ACCOUNT_EMAIL`, `OWNER_ACCOUNT_PASSWORD`, `OWNER_BIOMETRIC_SECRET`, `GATEWAY_API_KEY`, `SELF_HEAL_TOKEN`, `JWT_SECRET`, Stripe secrets + 10 `STRIPE_PRICE_ID_*`, PayPal secrets, `PUBLIC_URL`, `CORS_ORIGIN`, `SMTP_*`, Headscale/Gitea/Namecheap placeholders, and VPS SSH passwords.
+- Required secret groups include: `POSTGRES_PASSWORD`, `MISTRAL_API_KEY`, `MISTRAL_MODEL`, `MISTRAL_API_BASE_URL`, `KIMI_API_KEY`, `KIMI_MODEL`, `KIMI_API_BASE_URL`, `KIMI_ENDPOINTS`, `OWNER_SIGNING_KEY`, `OWNER_SIGNING_FINGERPRINT`, `MOBILE_SIGNING_KEY`, `MOBILE_SIGNING_FINGERPRINT`, `PUBLIC_SIGNING_KEY`, `PUBLIC_SIGNING_FINGERPRINT`, `OWNER_SESSION_TOKEN`, `OWNER_ACCOUNT_EMAIL`, `OWNER_ACCOUNT_PASSWORD`, `OWNER_BIOMETRIC_SECRET`, `GATEWAY_API_KEY`, `SELF_HEAL_TOKEN`, `JWT_SECRET`, `REDIS_PASSWORD`, Stripe secrets + 10 `STRIPE_PRICE_ID_*`, PayPal secrets, `PUBLIC_URL`, `CORS_ORIGIN`, `SMTP_*`, Headscale/Gitea/Namecheap placeholders, VPS SSH passwords (`VPS_REDOT1_PASSWORD`, `VPS_AI1_PASSWORD`, `VPS_AI2_PASSWORD`), and `REDOT1_API_KEY`.
 - See `.security/SECRETS_INVENTORY.md` for the canonical list and rotation schedule.
 
 ### Signing and Privacy Verification
@@ -445,10 +516,10 @@ Severity-based SLAs (from `docs/SECURITY_RUNBOOK.md`):
 
 ## Deployment Architecture
 
-- **Single-primary VPS mode:** run `compose.prod.yml` with all 21 services; NGINX listens on `80`/`443` and terminates/proxies traffic.
+- **Single-primary VPS mode:** run `compose.prod.yml` with all 22 services; NGINX listens on `80`/`443` and terminates/proxies traffic.
 - **Local dev mode:** `docker compose up -d` uses `docker-compose.yml` with local ports (`4000`, `8080`, `8500`, `5050`, `3005`, `8100`, `8110`, `5000`, `7000`, `3006`, `8088`, `9091`, `14000`, `16686`, `8085`, etc.). Note: `public-portal` and `redot3-portal` host ports are intentionally removed in local compose; access them via NGINX (`http://localhost:8088/` and `http://localhost:8088/portal/`).
 - **Purchasable 5-environment platform:** The system is packaged for personal or professional use across `compose.dev.yml`, `compose.staging.yml`, `compose.prod.yml`, `compose.replica-ai1.yml`, and `compose.replica-ai2.yml`. See `docs/REDOT3_PUBLISH_AND_DEPLOY.md` for Namecheap/VS Code deployment.
-- **Live-reload dev mode:** `compose.dev.yml` only starts `gateway`, `operator-station`, and `postgres` with volume mounts.
+- **Live-reload dev mode:** `compose.dev.yml` starts `gateway`, `operator-station`, `interface-pwa`, and `postgres` with volume mounts.
 - **Replica / multi-node mode:** `compose.replica-ai1.yml` and `compose.replica-ai2.yml` run gateway, public-portal, mobile-gateway, beacon-pwa, account-pwa, interface-pwa, kimi, ai-isp, beacon, worker, and nginx on `ai1`/`ai2`, sharing the primary DB/Redis.
 - **Headscale mesh:** `scripts/deploy-vps-cluster.sh` and `scripts/deploy-triple-node.py` deploy a 3-node topology (redot1 full stack + ai1/ai2 replicas) and join them into a Headscale WireGuard mesh.
 - **Staged deployment:** `scripts/deploy-staged-redot1.py` deploys the stack in **7 ordered waves** (infra → gateway → dashboards → AI → beacon → monitoring/autonomous → nginx) to avoid OOM on a 4GB VPS.
@@ -464,13 +535,27 @@ Severity-based SLAs (from `docs/SECURITY_RUNBOOK.md`):
 
 ---
 
+## Key Configuration Files
+
+| File | Purpose |
+|---|---|
+| `config/nginx.conf` | HTTP server, upstream definitions for triple-node failover, rate-limit zones |
+| `config/locations.conf` | Route mapping, PWA sub-paths (`/account/`, `/interface/`, `/portal/`, `/beacon/`), `/api/` proxy rules |
+| `config/locations.replica.conf` | Replica-node variant of route mapping |
+| `config/prometheus.yml` | Scrape configs for all services across primary + replica nodes |
+| `config/headscale/config.yaml` | WireGuard control server configuration |
+| `.env.example` | Canonical template for all required secrets |
+| `services/postgres/init.sql` | Idempotent database initialization and schema |
+
+---
+
 ## CI/CD Workflows
 
 All workflows live in `.github/workflows/`:
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| `ci.yml` | Push/PR to `main`/`master` (ignores `**.md`, `docs/**`, `.security/**`) | Build all service Docker images; validate `docker-compose.yml`, `compose.dev.yml`, `compose.staging.yml`, `compose.prod.yml`, `compose.replica.yml`, `compose.replica-ai1.yml`, and `compose.replica-ai2.yml`. |
+| `ci.yml` | Push/PR to `main`/`master` (ignores `**.md`, `docs/**`, `.security/**`) | Build 12 service Docker images; validate `docker-compose.yml`, `compose.dev.yml`, `compose.staging.yml`, `compose.prod.yml`, `compose.replica.yml`, `compose.replica-ai1.yml`, and `compose.replica-ai2.yml`. |
 | `branch-protection.yml` | PR to `main`/`master` | Enforce PR descriptions, semantic commits, no WIP/Draft markers, and linked-issue hint. |
 | `codeql-analysis.yml` | Push/PR to `main`/`master`, weekly (`0 3 * * 0`) | GitHub CodeQL static security analysis for JavaScript and Python. |
 | `dependency-review.yml` | PR to `main`/`master` | Scan dependency changes, fail on `moderate` severity, enforce license compliance. **Allows:** MIT, Apache-2.0, BSD, ISC, Python-2.0, Unlicense, CC0-1.0, 0BSD, BlueOak-1.0.0. **Denies:** GPL, AGPL, and LGPL variants. |
@@ -536,9 +621,9 @@ All remotes are pre-configured. Run `git remote -v` to view them. Private repos 
 - The desktop orchestrator expects SSH passwords in environment variables (`VPS_REDOT1_PASSWORD`, `VPS_AI1_PASSWORD`, `VPS_AI2_PASSWORD`).
 - The autonomous APK uses `androidx.biometric` and NanoHTTPD; build via `scripts/build-autonomous-apk.sh` or Android Studio.
 - Do not assume test files exist. Validation is done via shell scripts and CI compose validation.
-- When modifying a Node.js service, remember that `compose.dev.yml` only includes `gateway`, `operator-station`, and `postgres`. Other services must be tested with the full `docker-compose.yml` or `compose.prod.yml`.
+- When modifying a Node.js service, remember that `compose.dev.yml` only includes `gateway`, `operator-station`, `interface-pwa`, and `postgres`. Other services must be tested with the full `docker-compose.yml` or `compose.prod.yml`.
 - The `ai-isp` service directory is fully implemented and deployed; it is **not** a placeholder.
 - The project language for comments and documentation is **English**.
 - When creating or updating enterprise documentation, keep sensitive values (passwords, keys, tokens) out of Git. Reference `.security/SECRETS_INVENTORY.md` instead.
-- Node.js Dockerfiles in `services/*` run `npm install --production` inside the image; they no longer rely on copying a pre-existing `node_modules` directory.
+- Node.js Dockerfiles in `services/*` run `npm install --production` inside the image; they do not rely on copying a pre-existing `node_modules` directory.
 - `.env` is gitignored and blocked from being read by agent tools; treat any values you need as sourced from `.env.example` and the service compose environment blocks.

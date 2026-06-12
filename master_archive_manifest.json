@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-06-12T20:21:02.199067+00:00",
+  "repo_root": "C:\\Users\\cplexmath\\OneDrive\\Documents\\redot2",
+  "archives": {
+    "REDOT3.ZIP": {
+      "path": "C:\\Users\\cplexmath\\Documents\\REDOT3.ZIP",
+      "size_bytes": 1389494,
+      "size_mb": 1.33,
+      "files": 112,
+      "description": "React 19 redot3-portal source only"
+    },
+    "REDOT5.ZIP": {
+      "path": "C:\\Users\\cplexmath\\Documents\\REDOT5.ZIP",
+      "size_bytes": 36400291,
+      "size_mb": 34.71,
+      "files": 428,
+      "description": "Full private system archive for future cloud migration"
+    },
+    "completed-redot1-abc-io-live.zip": {
+      "path": "C:\\Users\\cplexmath\\Documents\\completed-redot1-abc-io-live.zip",
+      "size_bytes": 36410563,
+      "size_mb": 34.72,
+      "files": 428,
+      "description": "Master working backup of live system"
+    }
+  }
+}

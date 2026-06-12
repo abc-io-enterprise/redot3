@@ -1,189 +1,110 @@
-# ABC-IO v2.0 redot2 — Project Audit Report
+# Project Audit Report — ABC-IO v2.0 / redot3
 
-**Owner:** Christopher Porreca  
-**Business:** ABC-IO / redot1  
-**Domain:** https://abc-io.com  
-**Support:** support@abc-io.com · (585) 348-7120  
-**Location:** Rochester, New York  
-**Tagline:** 100 Years Nonstop — Always On, Always Yours, Always Here  
-**Baseline Date:** 2026-06-12  
-**Generated:** 2026-06-12T09:55:17-04:00  
-**Overall Status:** SYSTEM: READY FOR OWNER REVIEW
+**Date:** 2026-06-12
+**Owner:** Christopher Porreca / redot1
+**Repository:** `c:\Users\cplexmath\OneDrive\Documents\redot2`
+**Remote:** https://github.com/abc-io-enterprise/redot3
+**Status:** SYSTEM: READY FOR OWNER REVIEW
 
 ---
 
-## 1. Executive Summary
+## 1. Audit Scope
 
-This report audits the ABC-IO v2.0 (redot2) repository for completeness, legal readiness, and deployment posture. The codebase contains a multi-service Docker Compose platform with public portals, PWAs, AI services, monitoring, and security controls. New legal and manifest artifacts have been added to support launch readiness.
+This audit covers:
+- Repository structure and active services
+- Docker Compose orchestration files
+- Public-facing website and React portal
+- Gateway API, authentication, billing, and messaging
+- Database schema
+- CI/CD workflows
+- Documentation and legal policies
+- Security posture and secret handling
+- Backup/archives
+- Live public site verification
 
 ---
 
-## 2. Components Found
+## 2. Repository Summary
 
-### 2.1 Services
+- **Services:** 15 active service implementations
+- **Compose files:** 7 (dev, local, staging, prod, replica template, ai1, ai2)
+- **Public pages:** 27 HTML pages in `services/public-portal/src/public/`
+- **React portal:** 20 routes in `services/redot3-portal/`
+- **Docs:** 25+ documents in `docs/`
+- **Legal policies:** 5 in `legal/`
+- **Scripts:** 45+ operational/automation scripts
+- **CI/CD workflows:** 10 GitHub Actions workflows
 
-| Service | Runtime | Role |
+---
+
+## 3. Findings
+
+### 3.1 Strengths
+- Comprehensive 22-service Docker Compose platform.
+- Full auth system (register, login, logout, password reset, email verification, JWT).
+- 10-tier account model with per-tier rate limiting and usage quotas.
+- Stripe billing integration with verified webhooks.
+- Account-scoped messaging and product catalog.
+- Cross-sensory translation engine (`ai-isp`).
+- Self-healing autonomous orchestrator.
+- Public-safety beacon backend.
+- Help center, onboarding, and eLibrary APIs.
+- All legal/policy documents present.
+- `.env` is gitignored and EFS-encrypted.
+- Pre-commit hook blocks secrets.
+
+### 3.2 Issues Resolved This Cycle
+| ID | Issue | Resolution |
 |---|---|---|
-| gateway | Node.js 20 Alpine | Central API gateway |
-| operator-station | Node.js 20 Alpine | Operations dashboard |
-| owner-dashboard | Node.js 20 Alpine | Privileged admin interface |
-| mobile-gateway | Node.js 20 Alpine | Mobile/cellular/satellite gateway |
-| public-portal | Node.js 20 Alpine | Public marketing/help site |
-| beacon-pwa | Node.js 20 Alpine | Beacon Progressive Web App |
-| account-pwa | Node.js 20 Alpine | Account-aware PWA |
-| interface-pwa | Node.js 20 Alpine | Cross-sensory interface PWA |
-| redot3-portal | Node.js 20 Alpine | Successor portal workspace |
-| kimi | Python 3.12 | Mistral/Kimi AI adapter |
-| ai-isp | Python 3.11 | Cross-sensory translation engine |
-| worker | Python 3.12 | Background job processor |
-| autonomous | Python 3.12 | Self-healing orchestrator |
-| beacon | Node.js 20 Alpine | Public-safety beacon backend |
-| postgres | PostgreSQL 15 Alpine | Relational database |
+| FIX-01 | `worker` service missing `DATABASE_URL` in compose files | Added to all 7 compose files |
+| FIX-02 | `gateway` missing `REDIS_URL`, `KIMI_ENDPOINTS`, `AI_ISP_URL` in local dev | Added to `docker-compose.yml` |
+| FIX-03 | Windows path artifact directories in `config/` | Removed `config/*;C/` directories |
+| FIX-04 | `.env.example` `REDIS_URL` did not match production authenticated URL | Updated with comment and authenticated URL template |
 
-### 2.2 Public Portal Pages
+### 3.3 Outstanding Launch Blockers (Owner-Gated)
+| ID | Issue | Owner Action |
+|---|---|---|
+| DNS-01 | Namecheap DNS A records must point to VPS IPs | Confirm in Namecheap dashboard |
+| VPS-01 | Production compose must be deployed via SSH | SSH to redot1/ai1/ai2 |
+| PAY-01 | Stripe webhooks and price IDs must be finalized | Log in to Stripe dashboard |
+| PAY-02 | PayPal credentials and webhook ID must be finalized | Log in to PayPal dashboard |
+| EMAIL-01 | SMTP provider must be configured and tested | Configure email provider |
+| SSL-01 | Let's Encrypt renewal path must be verified | Check VPS certbot/renewal |
+| REG-01 | Domain registrar auto-renewal must be confirmed | Check Namecheap domain settings |
 
-`services/public-portal/src/public/` contains 27 HTML pages, including:
-
-- Home, About, Features, Solutions, Pricing, Mobile App
-- Sensory Communications, Human, Learn, Community
-- Docs, Help, Help Article, FAQ, Contact
-- Login, Signup, Forgot/Reset Password, Verify Email
-- Dashboard, Family Dashboard, Customer Area, Onboarding
-- Beacon, Privacy, Terms
-
-### 2.3 PWAs
-
-- account-pwa
-- interface-pwa
-- beacon-pwa
-
-### 2.4 Workflows
-
-`.github/workflows/` contains:
-
-- ci.yml
-- deploy.yml
-- release.yml
-- codeql-analysis.yml
-- dependency-review.yml
-- secret-scanning.yml
-- privacy-checks.yml
-- branch-protection.yml
-- secrets-rotation-reminder.yml
-- gcp-deploy.yml
-
-### 2.5 Documentation
-
-`docs/` contains:
-
-- REDOT3_PUBLISH_AND_DEPLOY.md
-- ABC_IO_V2_PRODUCTION_RUNBOOK.md
-- MASTER_DEPLOYMENT_RUNBOOK.md
-- SECURITY_RUNBOOK.md
-- DISASTER_RECOVERY.md
-- ENTERPRISE_DEPLOYMENT.md
-- ENTERPRISE_SETUP_RUNBOOK.md
-- GITHUB_ENTERPRISE_MIGRATION.md
-- ONBOARDING.md
-- AUDIT_CHECKLIST.md
-- ACCESSIBILITY_AND_INTERFACING_SPEC.md
-- 20_YEAR_ROADMAP.md
-
-### 2.6 Security & Operations
-
-`.security/` contains:
-
-- SECRETS_INVENTORY.md
-- BRANCH_PROTECTION.md
-- SECRETS_ROTATION_LOG.md
-- AUDIT_LOG_STREAMING.md
-- OPERATIONAL_AUDIT.md
-- IP_ALLOWLIST.md
-- SAML_SSO_TEMPLATE.md
+### 3.4 Warnings (Non-Blocking)
+- `worker` has no HTTP health endpoint; operator-station/autonomous probe it as `http://worker:5000/health`. This creates monitoring noise but no functional outage.
+- Several Node.js services lack `package-lock.json`, making builds less reproducible.
+- `logger` service is a busybox placeholder.
+- GCP deploy workflow is a placeholder.
+- Public portal and redot3-portal use different design systems/branding.
+- `human.html` owner dashboard is served from public portal static folder with client-side gating only.
 
 ---
 
-## 3. Components Created
+## 4. Verification Results
 
-The following files were created or updated as part of this audit:
-
-| File | Purpose |
+| Check | Result |
 |---|---|
-| `legal/TERMS_OF_SERVICE.md` | Standard SaaS terms of service |
-| `legal/PRIVACY_POLICY.md` | Data collection and privacy practices |
-| `legal/SUPPORT_POLICY.md` | Support hours, channels, and response targets |
-| `legal/REFUND_POLICY.md` | Refund eligibility and process |
-| `legal/ACCEPTABLE_USE_POLICY.md` | Permitted and prohibited use of the Service |
-| `final_system_manifest.json` | Machine-readable system manifest |
-| `project_audit_report.md` | This audit report |
-| `launch_readiness_report.md` | Launch readiness summary |
-| `docs/REDOT3_PUBLISH_AND_DEPLOY.md` | Updated to reference new manifests and legal docs |
+| `docker compose config` (all 7 files) | PASS |
+| `scripts/verify-env-safety.py` | PASS |
+| `scripts/full-system-audit.py` | PASS |
+| `https://abc-io.com/` | HTTP 200 |
+| `https://abc-io.com/health` | HTTP 200 |
+| Master archives created | PASS |
+| No secrets committed | PASS |
 
 ---
 
-## 4. Blockers
+## 5. Recommendations
 
-The following owner-gated external actions must be completed before production launch:
-
-| ID | Blocker | Owner |
-|---|---|---|
-| DNS-01 | Namecheap DNS A records for abc-io.com, www, ai1, ai2, and optional subdomains | Christopher Porreca |
-| VPS-01 | VPS SSH access to redot1 (162.254.32.142), ai1 (192.227.212.235), ai2 (192.227.212.237) | Christopher Porreca |
-| PAY-01 | Stripe dashboard credentials, webhook endpoints, and price IDs | Christopher Porreca |
-| PAY-02 | PayPal dashboard credentials, webhook ID, and product linkage | Christopher Porreca |
-| GH-01 | GitHub organization admin access to publish redot3 and configure branch protection | Christopher Porreca |
-| EMAIL-01 | Email provider credentials and SMTP configuration | Christopher Porreca |
-| REG-01 | Domain registrar account verification and renewal settings for abc-io.com | Christopher Porreca |
+1. Deploy to staging first and validate end-to-end flows before production.
+2. Add HTTP health endpoint to `worker` or remove health probe references.
+3. Add `package-lock.json` to all Node.js services for reproducible builds.
+4. Unify branding between public-portal and redot3-portal, or clearly redirect one to the other.
+5. Review `human.html` placement and access controls before production.
+6. Replace `[EFFECTIVE_DATE]` placeholders in legal files before go-live.
 
 ---
 
-## 5. Readiness by Deployment Target
-
-| Target | Status | Notes |
-|---|---|---|
-| Development | SYSTEM: READY FOR PRODUCTION | Local compose files validate; services can be started with `docker compose up -d`. |
-| Staging | SYSTEM: READY FOR STAGING | compose.staging.yml validates; requires staging host, populated .env, DNS/SSL. |
-| Production | SYSTEM: READY FOR OWNER REVIEW | compose.prod.yml validates; blocked by owner-gated external actions. |
-
----
-
-## 6. Verification Results
-
-| Check | Result | Notes |
-|---|---|---|
-| `docker-compose.yml` config | PASS | `docker compose config` succeeded |
-| `compose.dev.yml` config | PASS | `docker compose config` succeeded |
-| `compose.staging.yml` config | PASS | `docker compose config` succeeded |
-| `compose.prod.yml` config | PASS | `docker compose config` succeeded |
-| No secrets committed | PASS | `.env` is gitignored; no credential files tracked |
-| `.env` safe | PASS | `.env` exists locally and is excluded from git; `.env.example` is the template |
-| Legal docs created | PASS | All five policy files created with placeholder effective dates |
-
----
-
-## 7. Owner Actions Required
-
-1. Review and approve the five legal/policy documents under `legal/`.
-2. Replace `[EFFECTIVE_DATE]` placeholders in each legal file with the actual go-live date.
-3. Confirm Namecheap DNS records for `abc-io.com`, `www`, `ai1`, and `ai2` are pointed at the correct VPS IPs.
-4. Restore or confirm SSH access to `redot1`, `ai1`, and `ai2` for deployment.
-5. Log in to the Stripe dashboard and verify webhook endpoints, price IDs, and product catalog.
-6. Log in to the PayPal dashboard and verify client credentials, webhook ID, and product linkage.
-7. Configure and test SMTP credentials for transactional and support email.
-8. Verify GitHub organization admin access for `abc-io-enterprise` and repository `redot3`.
-9. Confirm domain registrar settings and auto-renewal for `abc-io.com`.
-10. Populate `.env` from `.env.example` with production secrets and deploy using `compose.prod.yml`.
-
----
-
-## 8. Next Steps
-
-1. Run `scripts/health-check.sh` after `docker compose up -d` to confirm local service health.
-2. Run `scripts/full-system-audit.py` to validate required files, compose files, and documentation.
-3. Publish the updated repository to `abc-io-enterprise/redot3` when ready.
-4. Deploy to staging first, then promote to production after owner sign-off.
-5. Schedule a post-launch review to monitor uptime, support load, and security events.
-
----
-
-*100 Years Nonstop — Always On, Always Yours, Always Here*
+*ABC-IO — 100 Years Nonstop — Always On, Always Yours, Always Here.*
