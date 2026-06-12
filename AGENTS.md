@@ -101,7 +101,7 @@ All Node.js frontends are vanilla HTML/CSS/JS. There is no React, Vue, TypeScrip
 ├── .env.example                # Template for required secrets
 ├── .env                        # Populated secrets (gitignored; never commit)
 ├── .gitignore / .dockerignore
-├── config/                     # nginx.conf, locations.conf, prometheus.yml, headscale/
+├── config/                     # nginx.conf, locations.conf, locations.replica.conf, prometheus.yml, headscale/
 ├── services/                   # Active v2.0 service implementations
 │   ├── gateway/src/index.js
 │   ├── operator-station/src/index.js

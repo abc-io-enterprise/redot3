@@ -1,0 +1,213 @@
+{
+  "manifest": "ABC-IO v2.0 redot2 — Final System Manifest",
+  "version": "v5.0.0",
+  "owner": "Christopher Porreca",
+  "business": "ABC-IO / redot1",
+  "domain": "abc-io.com",
+  "support_email": "support@abc-io.com",
+  "support_phone": "(585) 348-7120",
+  "location": "Rochester, New York",
+  "tagline": "100 Years Nonstop — Always On, Always Yours, Always Here",
+  "baseline_date": "2026-06-12",
+  "generated_at": "2026-06-12T09:55:17-04:00",
+  "status": "SYSTEM: READY FOR OWNER REVIEW",
+  "components_found": {
+    "services": [
+      "gateway",
+      "operator-station",
+      "owner-dashboard",
+      "mobile-gateway",
+      "public-portal",
+      "beacon-pwa",
+      "account-pwa",
+      "interface-pwa",
+      "redot3-portal",
+      "kimi",
+      "ai-isp",
+      "worker",
+      "autonomous",
+      "beacon",
+      "postgres"
+    ],
+    "public_pages": [
+      "index.html",
+      "about.html",
+      "features.html",
+      "solutions.html",
+      "pricing.html",
+      "mobile-app.html",
+      "sensory-communications.html",
+      "human.html",
+      "learn.html",
+      "community.html",
+      "docs.html",
+      "help.html",
+      "help-article.html",
+      "faq.html",
+      "contact.html",
+      "login.html",
+      "signup.html",
+      "forgot-password.html",
+      "reset-password.html",
+      "verify-email.html",
+      "dashboard.html",
+      "family-dashboard.html",
+      "customer-area.html",
+      "onboarding.html",
+      "beacon.html",
+      "privacy.html",
+      "terms.html"
+    ],
+    "pwas": [
+      "account-pwa",
+      "interface-pwa",
+      "beacon-pwa"
+    ],
+    "workflows": [
+      ".github/workflows/ci.yml",
+      ".github/workflows/deploy.yml",
+      ".github/workflows/release.yml",
+      ".github/workflows/codeql-analysis.yml",
+      ".github/workflows/dependency-review.yml",
+      ".github/workflows/secret-scanning.yml",
+      ".github/workflows/privacy-checks.yml",
+      ".github/workflows/branch-protection.yml",
+      ".github/workflows/secrets-rotation-reminder.yml",
+      ".github/workflows/gcp-deploy.yml"
+    ],
+    "docs": [
+      "docs/REDOT3_PUBLISH_AND_DEPLOY.md",
+      "docs/ABC_IO_V2_PRODUCTION_RUNBOOK.md",
+      "docs/MASTER_DEPLOYMENT_RUNBOOK.md",
+      "docs/SECURITY_RUNBOOK.md",
+      "docs/DISASTER_RECOVERY.md",
+      "docs/ENTERPRISE_DEPLOYMENT.md",
+      "docs/ENTERPRISE_SETUP_RUNBOOK.md",
+      "docs/GITHUB_ENTERPRISE_MIGRATION.md",
+      "docs/ONBOARDING.md",
+      "docs/AUDIT_CHECKLIST.md",
+      "docs/ACCESSIBILITY_AND_INTERFACING_SPEC.md",
+      "docs/20_YEAR_ROADMAP.md"
+    ],
+    "compose_files": [
+      "docker-compose.yml",
+      "compose.dev.yml",
+      "compose.staging.yml",
+      "compose.prod.yml",
+      "compose.replica.yml",
+      "compose.replica-ai1.yml",
+      "compose.replica-ai2.yml"
+    ],
+    "security_files": [
+      ".security/SECRETS_INVENTORY.md",
+      ".security/BRANCH_PROTECTION.md",
+      ".security/SECRETS_ROTATION_LOG.md",
+      ".security/AUDIT_LOG_STREAMING.md",
+      ".security/OPERATIONAL_AUDIT.md",
+      ".security/IP_ALLOWLIST.md",
+      ".security/SAML_SSO_TEMPLATE.md"
+    ]
+  },
+  "components_created": [
+    "legal/TERMS_OF_SERVICE.md",
+    "legal/PRIVACY_POLICY.md",
+    "legal/SUPPORT_POLICY.md",
+    "legal/REFUND_POLICY.md",
+    "legal/ACCEPTABLE_USE_POLICY.md",
+    "final_system_manifest.json",
+    "project_audit_report.md",
+    "launch_readiness_report.md"
+  ],
+  "blockers": {
+    "owner_gated_external_actions": [
+      {
+        "id": "DNS-01",
+        "item": "Namecheap DNS A records for abc-io.com, www, ai1, ai2, and optional subdomains must be configured by the domain owner.",
+        "owner": "Christopher Porreca"
+      },
+      {
+        "id": "VPS-01",
+        "item": "VPS SSH access to redot1 (162.254.32.142), ai1 (192.227.212.235), and ai2 (192.227.212.237) is required for remote deployment.",
+        "owner": "Christopher Porreca"
+      },
+      {
+        "id": "PAY-01",
+        "item": "Stripe dashboard credentials, webhook endpoints, and price IDs must be finalized in the Stripe account.",
+        "owner": "Christopher Porreca"
+      },
+      {
+        "id": "PAY-02",
+        "item": "PayPal dashboard credentials, webhook ID, and product linkage must be finalized in the PayPal account.",
+        "owner": "Christopher Porreca"
+      },
+      {
+        "id": "GH-01",
+        "item": "GitHub organization admin access is required to publish the redot3 repository and configure branch protection.",
+        "owner": "Christopher Porreca"
+      },
+      {
+        "id": "EMAIL-01",
+        "item": "Email provider credentials (SMTP host, port, user, password) must be configured and tested.",
+        "owner": "Christopher Porreca"
+      },
+      {
+        "id": "REG-01",
+        "item": "Domain registrar account verification and renewal settings for abc-io.com must be confirmed.",
+        "owner": "Christopher Porreca"
+      }
+    ]
+  },
+  "readiness_by_deployment_target": {
+    "development": {
+      "status": "SYSTEM: READY FOR PRODUCTION",
+      "notes": "Local compose files validate. All services can be started locally with docker compose up -d."
+    },
+    "staging": {
+      "status": "SYSTEM: READY FOR STAGING",
+      "notes": "compose.staging.yml validates. Requires VPS or staging host, populated .env, and DNS/SSL setup before public access."
+    },
+    "production": {
+      "status": "SYSTEM: READY FOR OWNER REVIEW",
+      "notes": "compose.prod.yml validates. Blocked by owner-gated external actions: DNS, VPS SSH, payment dashboards, email provider, and registrar."
+    }
+  },
+  "verification_results": {
+    "docker_compose_config": {
+      "docker-compose.yml": "PASS",
+      "compose.dev.yml": "PASS",
+      "compose.staging.yml": "PASS",
+      "compose.prod.yml": "PASS"
+    },
+    "secrets_committed": {
+      "status": "PASS",
+      "notes": ".env is listed in .gitignore. No .env, .key, .secret, .pem, .p12, or .pfx files are tracked in git."
+    },
+    "env_safe": {
+      "status": "PASS",
+      "notes": ".env exists locally and is gitignored. .env.example is the committed template and contains no live secrets."
+    },
+    "legal_docs_created": {
+      "status": "PASS",
+      "notes": "All five legal/policy files created under legal/ with placeholder effective dates."
+    }
+  },
+  "owner_actions_required": [
+    "Review and approve the five legal/policy documents under legal/.",
+    "Replace [EFFECTIVE_DATE] placeholders in each legal file with the actual go-live date.",
+    "Confirm Namecheap DNS records for abc-io.com, www, ai1, and ai2 are pointed at the correct VPS IPs.",
+    "Restore or confirm SSH access to redot1, ai1, and ai2 for deployment.",
+    "Log in to the Stripe dashboard and verify webhook endpoints, price IDs, and product catalog.",
+    "Log in to the PayPal dashboard and verify client credentials, webhook ID, and product linkage.",
+    "Configure and test SMTP credentials for transactional and support email.",
+    "Verify GitHub organization admin access for abc-io-enterprise and repository redot3.",
+    "Confirm domain registrar settings and auto-renewal for abc-io.com.",
+    "Populate .env from .env.example with production secrets and deploy using compose.prod.yml."
+  ],
+  "next_steps": [
+    "Run scripts/health-check.sh after local docker compose up -d to confirm all services are healthy.",
+    "Run scripts/full-system-audit.py to validate required files, compose files, and documentation.",
+    "Publish the updated repository to abc-io-enterprise/redot3 when ready.",
+    "Deploy to staging first, then promote to production after owner sign-off.",
+    "Schedule a post-launch review to monitor uptime, support load, and security events."
+  ]
+}

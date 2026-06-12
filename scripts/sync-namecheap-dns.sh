@@ -6,8 +6,8 @@
 set -e
 
 # Load from environment
-NC_USER="${NAMECHEAP_USER:-ccplexmath}"
-NC_API_KEY="${NAMECHEAP_VPS_API_KEY}"
+NC_USER="${NAMECHEAP_USER:-cporreca}"
+NC_API_KEY="${NAMECHEAP_API_KEY:-${NAMECHEAP_VPS_API_KEY:-}}"
 NC_CLIENT_IP="${NAMECHEAP_CLIENT_IP:-$(curl -4 -s ifconfig.me)}"
 DOMAIN="${NAMECHEAP_DOMAIN:-abc-io.com}"
 
@@ -23,8 +23,9 @@ echo "Client IP: $NC_CLIENT_IP"
 echo ""
 
 if [ -z "$NC_API_KEY" ]; then
-    echo "ERROR: NAMECHEAP_VPS_API_KEY not set"
+    echo "ERROR: NAMECHEAP_API_KEY not set"
     echo "Set it in .env and source it before running this script."
+    echo "(Legacy fallback: NAMECHEAP_VPS_API_KEY is also accepted.)"
     exit 1
 fi
 

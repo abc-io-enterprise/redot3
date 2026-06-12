@@ -90,7 +90,7 @@ def deploy_node(name, config):
         log("  [OK] Bundle uploaded")
 
         log("  Extracting bundle...")
-        out, err, code = run_cmd(ssh, "cd /opt && rm -rf abc-io && tar -xzf {}".format(BUNDLE_NAME), timeout=120)
+        out, err, code = run_cmd(ssh, "cd /opt && rm -rf redot2 && tar -xzf {}".format(BUNDLE_NAME), timeout=120)
         if code != 0:
             log("  [FAIL] Extract failed: {}".format(err))
             return False
@@ -99,7 +99,7 @@ def deploy_node(name, config):
         if os.path.exists(ENV_PATH):
             log("  Uploading .env...")
             sftp = ssh.open_sftp()
-            sftp.put(ENV_PATH, "/opt/abc-io/.env")
+            sftp.put(ENV_PATH, "/opt/redot2/.env")
             sftp.close()
             log("  [OK] .env uploaded")
         else:
@@ -107,9 +107,9 @@ def deploy_node(name, config):
 
         log("  Starting services...")
         if services:
-            cmd = 'cd /opt/abc-io && docker system prune -af --volumes >/dev/null 2>&1 || true && docker-compose -f compose.prod.yml up -d {}'.format(services)
+            cmd = 'cd /opt/redot2 && docker system prune -af --volumes >/dev/null 2>&1 || true && docker-compose -f compose.prod.yml up -d {}'.format(services)
         else:
-            cmd = 'cd /opt/abc-io && bash startup.sh'
+            cmd = 'cd /opt/redot2 && bash startup.sh'
 
         out, err, code = run_cmd(ssh, cmd, timeout=600)
         for line in out.split('\n'):

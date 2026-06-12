@@ -14,24 +14,24 @@ echo "ABC-IO Production Deployment Bundle"
 echo "Tag: $DEPLOY_TAG"
 echo "================================================"
 
-mkdir -p "$BUNDLE_DIR/abc-io"
+mkdir -p "$BUNDLE_DIR/redot2"
 
 # Copy essential files
 echo "[1/5] Copying source code..."
-git archive HEAD | tar -x -C "$BUNDLE_DIR/abc-io"
+git archive HEAD | tar -x -C "$BUNDLE_DIR/redot2"
 
 # Copy pre-installed node_modules (not in git)
 echo "[2/5] Copying pre-built node_modules..."
 if [ -d "services/gateway/node_modules" ]; then
-  cp -r services/gateway/node_modules "$BUNDLE_DIR/abc-io/services/gateway/"
+  cp -r services/gateway/node_modules "$BUNDLE_DIR/redot2/services/gateway/"
   echo "  Gateway node_modules copied ($(du -sh services/gateway/node_modules | cut -f1))"
 fi
 
 # Copy APK (not in git)
 echo "[3/5] Copying APK artifact..."
-mkdir -p "$BUNDLE_DIR/abc-io/apk"
-cp apk/redot2-operator.apk "$BUNDLE_DIR/abc-io/apk/" 2>/dev/null || echo "WARNING: APK not found"
-cp apk/redot2-latest.apk "$BUNDLE_DIR/abc-io/apk/" 2>/dev/null || true
+mkdir -p "$BUNDLE_DIR/redot2/apk"
+cp apk/redot2-operator.apk "$BUNDLE_DIR/redot2/apk/" 2>/dev/null || echo "WARNING: APK not found"
+cp apk/redot2-latest.apk "$BUNDLE_DIR/redot2/apk/" 2>/dev/null || true
 
 # Copy .env securely (warn user)
 echo "[4/5] Preparing environment..."
@@ -41,14 +41,14 @@ echo "   Do NOT commit .env to git."
 echo ""
 
 # Create a .env.deploy template
-cat > "$BUNDLE_DIR/abc-io/.env.deploy.template" << 'ENVEOF'
-# Copy your local .env file to the VPS as /opt/abc-io/.env
+cat > "$BUNDLE_DIR/redot2/.env.deploy.template" << 'ENVEOF'
+# Copy your local .env file to the VPS as /opt/redot2/.env
 # Then run: docker compose -f compose.prod.yml up -d
 ENVEOF
 
 # Create startup script
 echo "[5/5] Creating startup script..."
-cat > "$BUNDLE_DIR/abc-io/startup.sh" << 'STARTEOF'
+cat > "$BUNDLE_DIR/redot2/startup.sh" << 'STARTEOF'
 #!/bin/bash
 set -e
 
@@ -115,10 +115,10 @@ echo "================================================"
 echo "ABC-IO is LIVE"
 echo "================================================"
 STARTEOF
-chmod +x "$BUNDLE_DIR/abc-io/startup.sh"
+chmod +x "$BUNDLE_DIR/redot2/startup.sh"
 
 # Create deploy instructions
-cat > "$BUNDLE_DIR/abc-io/DEPLOY-README.txt" << 'READMEEOF'
+cat > "$BUNDLE_DIR/redot2/DEPLOY-README.txt" << 'READMEEOF'
 ================================================
 ABC-IO v2.0 Production Deployment
 ================================================
@@ -127,13 +127,13 @@ ABC-IO v2.0 Production Deployment
    scp abc-io-deploy-*.tar.gz root@YOUR_VPS_IP:/opt/
 
 2. Extract on the VPS:
-   cd /opt && tar -xzf abc-io-deploy-*.tar.gz
+   cd /opt && rm -rf redot2 && tar -xzf abc-io-deploy-*.tar.gz
 
 3. Copy your .env file:
-   scp .env root@YOUR_VPS_IP:/opt/abc-io/
+   scp .env root@YOUR_VPS_IP:/opt/redot2/
 
 4. Start the system:
-   cd /opt/abc-io && bash startup.sh
+   cd /opt/redot2 && bash startup.sh
 
 5. Verify:
    curl http://YOUR_VPS_IP:8500/health
@@ -148,7 +148,7 @@ IMPORTANT: VPS nodes have 20GB HDD. Local files must stay under 10GB.
 The deploy script auto-prunes Docker images before deployment.
 
 For AI nodes, after step 2, only start AI services:
-  docker compose -f compose.prod.yml up -d kimi worker redis headscale
+  cd /opt/redot2 && docker compose -f compose.prod.yml up -d kimi worker redis headscale
 
 ================================================
 READMEEOF
@@ -156,7 +156,7 @@ READMEEOF
 # Package
 echo "[6/6] Creating bundle..."
 cd "$BUNDLE_DIR"
-tar -czf "$PROJECT_DIR/$BUNDLE_NAME" abc-io/
+tar -czf "$PROJECT_DIR/$BUNDLE_NAME" redot2/
 
 echo ""
 echo "================================================"
@@ -166,7 +166,7 @@ echo "Size: $(du -h "$PROJECT_DIR/$BUNDLE_NAME" | cut -f1)"
 echo ""
 echo "Deploy to VPS:"
 echo "  scp $BUNDLE_NAME root@162.254.32.142:/opt/"
-echo "  ssh root@162.254.32.142 'cd /opt && tar -xzf $BUNDLE_NAME && cd abc-io && bash startup.sh'"
+echo "  ssh root@162.254.32.142 'cd /opt && tar -xzf $BUNDLE_NAME && cd redot2 && bash startup.sh'"
 echo "================================================"
 
 # Cleanup

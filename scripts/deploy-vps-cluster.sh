@@ -28,7 +28,7 @@ deploy_redot1() {
         set -e
         apt-get update && apt-get install -y docker.io docker-compose git curl
         systemctl enable docker && systemctl start docker
-        mkdir -p /opt/abc-io && cd /opt/abc-io
+        mkdir -p /opt/redot2 && cd /opt/redot2
         if [ -d .git ]; then git fetch origin && git checkout $DEPLOY_TAG && git pull origin $DEPLOY_TAG; else git clone $REPO_URL . && git checkout $DEPLOY_TAG; fi
         cp .env.example .env
         docker-compose -f compose.prod.yml pull
@@ -46,7 +46,7 @@ deploy_ai1() {
         set -e
         apt-get update && apt-get install -y docker.io docker-compose git curl
         systemctl enable docker && systemctl start docker
-        mkdir -p /opt/abc-io && cd /opt/abc-io
+        mkdir -p /opt/redot2 && cd /opt/redot2
         if [ -d .git ]; then git fetch origin && git checkout $DEPLOY_TAG && git pull origin $DEPLOY_TAG; else git clone $REPO_URL . && git checkout $DEPLOY_TAG; fi
         cp .env.example .env
         # Override to run only AI services
@@ -64,7 +64,7 @@ deploy_ai2() {
         set -e
         apt-get update && apt-get install -y docker.io docker-compose git curl
         systemctl enable docker && systemctl start docker
-        mkdir -p /opt/abc-io && cd /opt/abc-io
+        mkdir -p /opt/redot2 && cd /opt/redot2
         if [ -d .git ]; then git fetch origin && git checkout $DEPLOY_TAG && git pull origin $DEPLOY_TAG; else git clone $REPO_URL . && git checkout $DEPLOY_TAG; fi
         cp .env.example .env
         docker compose -f compose.prod.yml up -d kimi worker redis headscale
@@ -78,7 +78,7 @@ EOF
 generate_headscale_key() {
     echo "[MESH] Generating Headscale pre-auth key on redot1..."
     local PREAUTH_KEY
-    PREAUTH_KEY=$(ssh -o StrictHostKeyChecking=no root@$REDOT1_IP "docker compose -f /opt/abc-io/compose.prod.yml exec -T headscale headscale preauthkeys create -u abc-io --reusable --expiration 1h 2>/dev/null" || true)
+    PREAUTH_KEY=$(ssh -o StrictHostKeyChecking=no root@$REDOT1_IP "docker compose -f /opt/redot2/compose.prod.yml exec -T headscale headscale preauthkeys create -u abc-io --reusable --expiration 1h 2>/dev/null" || true)
     if [ -z "$PREAUTH_KEY" ] || [ "$PREAUTH_KEY" = " " ]; then
         echo "[MESH] WARNING: Could not generate pre-auth key. Falling back to manual key."
         echo "[MESH] Generate one manually with: docker compose -f compose.prod.yml exec headscale headscale preauthkeys create -u abc-io"

@@ -39,7 +39,7 @@ services:
       - NODE_ENV=production
       - PORT=4000
       - DATABASE_URL=${DATABASE_URL:-postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/abc_io}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - REDIS_URL=${REDIS_URL:-redis://:${REDIS_PASSWORD}@redis:6379/0}
       - KIMI_ENDPOINTS=${KIMI_ENDPOINTS:-http://kimi:5000}
       - JWT_SECRET=${JWT_SECRET}
       - OWNER_SIGNING_KEY=${OWNER_SIGNING_KEY}
@@ -172,7 +172,7 @@ services:
       - PRIMARY_HOST=${PRIMARY_HOST:-162.254.32.142}
       - AI1_HOST=${AI1_HOST:-192.227.212.235}
       - AI2_HOST=${AI2_HOST:-192.227.212.237}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - REDIS_URL=${REDIS_URL:-redis://:${REDIS_PASSWORD}@redis:6379/0}
       - OWNER_SESSION_TOKEN=${OWNER_SESSION_TOKEN}
     ports:
       - '5051:5050'
@@ -202,7 +202,7 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL:-postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/abc_io}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - REDIS_URL=${REDIS_URL:-redis://:${REDIS_PASSWORD}@redis:6379/0}
       - PUBLIC_SIGNING_KEY=${PUBLIC_SIGNING_KEY}
       - PUBLIC_SIGNING_FINGERPRINT=${PUBLIC_SIGNING_FINGERPRINT}
       - JWT_SECRET=${JWT_SECRET}
@@ -440,8 +440,11 @@ services:
     image: redis:alpine
     ports:
       - '6380:6379'
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    command: redis-server --requirepass ${REDIS_PASSWORD}
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -461,9 +464,7 @@ services:
     build:
       context: ./services/worker
     environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_DB=0
+      - REDIS_URL=${REDIS_URL:-redis://:${REDIS_PASSWORD}@redis:6379/0}
     depends_on:
       - redis
     restart: unless-stopped
@@ -565,7 +566,7 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - DATABASE_URL=${DATABASE_URL:-postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/abc_io}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - REDIS_URL=${REDIS_URL:-redis://:${REDIS_PASSWORD}@redis:6379/0}
       - SMTP_URL=${SMTP_URL}
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_PORT=${SMTP_PORT}
@@ -595,7 +596,7 @@ services:
       context: ./services/autonomous
     environment:
       - CHECK_INTERVAL_SECONDS=30
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /opt/redot2:/opt/redot2:ro

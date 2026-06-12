@@ -5,15 +5,16 @@
 set -e
 
 API_USER="${NAMECHEAP_USER:-cporreca}"
-API_KEY="${NAMECHEAP_SHARED_HOSTING_API_KEY:-}"
+API_KEY="${NAMECHEAP_API_KEY:-${NAMECHEAP_SHARED_HOSTING_API_KEY:-}}"
 CLIENT_IP="${NAMECHEAP_CLIENT_IP:-$(curl -s https://api.ipify.org)}"
 DOMAIN="abc-io.com"
 SLD="abc-io"
 TLD="com"
 
 if [ -z "$API_KEY" ]; then
-    echo "ERROR: NAMECHEAP_SHARED_HOSTING_API_KEY not set."
-    echo "Set it in .env or export NAMECHEAP_SHARED_HOSTING_API_KEY=your_key"
+    echo "ERROR: NAMECHEAP_API_KEY not set."
+    echo "Set it in .env or export NAMECHEAP_API_KEY=your_key"
+    echo "(Legacy fallback: NAMECHEAP_SHARED_HOSTING_API_KEY is also accepted.)"
     exit 1
 fi
 

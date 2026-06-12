@@ -51,6 +51,15 @@ jobs:
       - name: Build ai-isp
         run: docker build -t abc-io-ai-isp:${{ github.ref_name }} ./services/ai-isp
 
+      - name: Build account-pwa
+        run: docker build -t abc-io-account-pwa:${{ github.ref_name }} ./services/account-pwa
+
+      - name: Build interface-pwa
+        run: docker build -t abc-io-interface-pwa:${{ github.ref_name }} ./services/interface-pwa
+
+      - name: Build redot3-portal
+        run: docker build -t abc-io-redot3-portal:${{ github.ref_name }} ./services/redot3-portal
+
       - name: Validate compose files
         run: |
           docker compose -f docker-compose.yml config

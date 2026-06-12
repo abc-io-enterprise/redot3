@@ -204,4 +204,30 @@ The resulting archive can be stored locally, uploaded to GitHub releases, or dep
 
 ---
 
+## 8. Launch artifacts and legal policies
+
+The following artifacts are maintained at the repository root and in `legal/` to support launch readiness, audit, and compliance:
+
+### System manifests and reports
+
+| File | Purpose |
+|---|---|
+| `final_system_manifest.json` | Machine-readable inventory of services, pages, workflows, docs, blockers, and verification results |
+| `project_audit_report.md` | Detailed audit of components found, created, blockers, and readiness |
+| `launch_readiness_report.md` | Executive launch readiness summary and owner action checklist |
+
+### Legal and policy documents
+
+| File | Purpose |
+|---|---|
+| `legal/TERMS_OF_SERVICE.md` | Terms governing use of the Service |
+| `legal/PRIVACY_POLICY.md` | Privacy and data handling practices |
+| `legal/SUPPORT_POLICY.md` | Support channels, hours, and response targets |
+| `legal/REFUND_POLICY.md` | Refund eligibility and process |
+| `legal/ACCEPTABLE_USE_POLICY.md` | Permitted and prohibited use of the Service |
+
+Before publishing `redot3` or going live, replace the `[EFFECTIVE_DATE]` placeholder in each legal document with the actual launch date and ensure the policies are linked from the public portal footer and signup flow.
+
+---
+
 *Last updated: 2026-06-12*
