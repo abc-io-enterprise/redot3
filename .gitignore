@@ -53,5 +53,6 @@ apk/android-project/build/
 # yarn.lock
 # pnpm-lock.yaml
 abc-io-deploy-*.tar.gz
+abc-io-cluster-deploy.tar.gz
 .tools/
 *.zip
