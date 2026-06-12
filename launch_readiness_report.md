@@ -98,9 +98,17 @@ The following external actions remain owner-gated and must be resolved before pr
 | `docker compose -f compose.dev.yml config` | PASS |
 | `docker compose -f compose.staging.yml config` | PASS |
 | `docker compose -f compose.prod.yml config` | PASS |
+| `docker compose -f compose.replica.yml config` | PASS |
+| `docker compose -f compose.replica-ai1.yml config` | PASS |
+| `docker compose -f compose.replica-ai2.yml config` | PASS |
+| `scripts/full-system-audit.py` | PASS |
+| `scripts/verify-env-safety.py` | PASS |
+| Public site `https://abc-io.com/` reachable | PASS |
+| GitHub push to `abc-io-enterprise/redot2` and `redot3` | PASS |
 | No secrets committed | PASS |
 | `.env` safe and gitignored | PASS |
 | Legal/policy docs created | PASS |
+| Master archives created in Documents | PASS |
 
 ---
 
@@ -123,10 +131,10 @@ The following external actions remain owner-gated and must be resolved before pr
 
 1. Run `scripts/health-check.sh` after `docker compose up -d` to confirm all services are healthy locally.
 2. Run `scripts/full-system-audit.py` to validate files, compose configurations, and documentation.
-3. Publish the repository to `abc-io-enterprise/redot3`.
-4. Deploy to staging and perform end-to-end testing.
-5. Promote to production after owner sign-off and DNS/VPS verification.
-6. Schedule a post-launch review to monitor uptime, support load, billing events, and security incidents.
+3. Deploy to staging and perform end-to-end testing.
+4. Promote to production after owner sign-off and DNS/VPS verification.
+5. Schedule a post-launch review to monitor uptime, support load, billing events, and security incidents.
+6. Verify archive integrity of `completed-redot1-abc-io-live.zip`, `REDOT3.ZIP`, and `REDOT5.ZIP` in Documents.
 
 ---
 
