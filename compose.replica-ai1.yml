@@ -189,7 +189,7 @@ services:
       - '8100:3000'
     environment:
       - NODE_ENV=production
-      - GATEWAY_URL=http://gateway:4000
+      - GATEWAY_URL=${PUBLIC_URL:-https://abc-io.com}
     depends_on:
       - gateway
     healthcheck:
@@ -217,7 +217,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3010
-      - GATEWAY_URL=http://gateway:4000
+      - GATEWAY_URL=${PUBLIC_URL:-https://abc-io.com}
     depends_on:
       - gateway
     healthcheck:
