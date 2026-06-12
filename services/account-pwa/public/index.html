@@ -72,6 +72,7 @@ footer a{color:var(--muted)}
     <nav>
       <button class="active" data-nav="dashboard">Home</button>
       <button data-nav="messages">Messages</button>
+      <button onclick="window.open('/interface/','_blank')">Interface</button>
       <button data-nav="account">Account</button>
       <button id="logoutBtn">Logout</button>
     </nav>
@@ -102,6 +103,7 @@ footer a{color:var(--muted)}
       <h2>Quick Actions</h2>
       <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px">
         <button class="btn btn-outline btn-sm" onclick="app.go('messages')">💬 Messages</button>
+        <button class="btn btn-outline btn-sm" onclick="window.open('/interface/','_blank')">🧩 Interface</button>
         <button class="btn btn-outline btn-sm" onclick="window.open('/beacon/','_blank')">🚨 Beacon</button>
         <button class="btn btn-outline btn-sm" onclick="window.open('/api/v1/translate','_blank')">🌐 Translate</button>
         <button class="btn btn-outline btn-sm" onclick="app.go('account')">⚙️ Account</button>

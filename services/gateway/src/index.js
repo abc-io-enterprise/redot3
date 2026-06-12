@@ -79,6 +79,103 @@ async function sendEmail(to, subject, html, text) {
 }
 
 // ============================================
+// CROSS-SENSORY TRANSLATION HELPER
+// ============================================
+const AI_ISP_URL = process.env.AI_ISP_URL || 'http://ai-isp:7000';
+
+function textToMorse(text) {
+  const MORSE = {
+    A:'.-',B:'-...',C:'-.-.',D:'-..',E:'.',F:'..-.',G:'--.',H:'....',I:'..',J:'.---',K:'-.-',L:'.-..',M:'--',N:'-.',O:'---',P:'.--.',Q:'--.-',R:'.-.',S:'...',T:'-',U:'..-',V:'...-',W:'.--',X:'-..-',Y:'-.--',Z:'--..',
+    '1':'.----','2':'..---','3':'...--','4':'....-','5':'.....','6':'-....','7':'--...','8':'---..','9':'----.','0':'-----',
+    ' ': '/'
+  };
+  return text.toUpperCase().split('').map(c => MORSE[c] || c).join(' ');
+}
+
+function morseToText(morse) {
+  const MORSE = {
+    '.-':'A','-...':'B','-.-.':'C','-..':'D','.':'E','..-.':'F','--.':'G','....':'H','..':'I','.---':'J','-.-':'K','.-..':'L','--':'M','-.':'N','---':'O','.--.':'P','--.-':'Q','.-.':'R','...':'S','-':'T','..-':'U','...-':'V','.--':'W','-..-':'X','-.--':'Y','--..':'Z',
+    '.----':'1','..---':'2','...--':'3','....-':'4','.....':'5','-....':'6','--...':'7','---..':'8','----.':'9','-----':'0',
+    '/': ' '
+  };
+  return morse.split(' ').map(c => MORSE[c] || c).join('');
+}
+
+function textToBraille(text) {
+  const BRAILLE = { ' ':'⠀','a':'⠁','b':'⠃','c':'⠉','d':'⠙','e':'⠑','f':'⠋','g':'⠛','h':'⠓','i':'⠊','j':'⠚','k':'⠅','l':'⠇','m':'⠍','n':'⠝','o':'⠕','p':'⠏','q':'⠟','r':'⠗','s':'⠎','t':'⠞','u':'⠥','v':'⠧','w':'⠺','x':'⠭','y':'⠽','z':'⠵' };
+  return text.toLowerCase().split('').map(c => BRAILLE[c] || c).join('');
+}
+
+function brailleToText(braille) {
+  const REVERSE = { '⠀':' ','⠁':'a','⠃':'b','⠉':'c','⠙':'d','⠑':'e','⠋':'f','⠛':'g','⠓':'h','⠊':'i','⠚':'j','⠅':'k','⠇':'l','⠍':'m','⠝':'n','⠕':'o','⠏':'p','⠟':'q','⠗':'r','⠎':'s','⠞':'t','⠥':'u','⠧':'v','⠺':'w','⠭':'x','⠽':'y','⠵':'z' };
+  return braille.split('').map(c => REVERSE[c] || c).join('');
+}
+
+async function translateCrossSensory({ source_mode, target_mode, payload, accountId }) {
+  const modality = `${source_mode}-to-${target_mode}`;
+  const knownModalities = [
+    'text-to-braille','text-to-morse','text-to-haptic','braille-to-text','morse-to-text','haptic-to-text',
+    'text-to-speech','text-to-sign','sign-to-text','speech-to-text'
+  ];
+  let intermediate = {};
+  let translated = payload;
+
+  if (source_mode === target_mode) {
+    return { source_mode, target_mode, translated_payload: payload, intermediate, provider: 'passthrough' };
+  }
+
+  if (knownModalities.includes(modality)) {
+    try {
+      const response = await fetch(`${AI_ISP_URL}/api/v1/translate/${modality}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: payload, account_id: accountId }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        translated = data.output || data.translated || payload;
+        intermediate.ai_isp = true;
+        return { source_mode, target_mode, translated_payload: translated, intermediate, provider: 'ai-isp' };
+      }
+    } catch (e) {
+      console.warn('ai-isp translate failed, falling back:', e.message);
+    }
+  }
+
+  if (source_mode === 'text' && target_mode === 'morse') {
+    translated = textToMorse(payload);
+  } else if (source_mode === 'morse' && target_mode === 'text') {
+    translated = morseToText(payload);
+  } else if (source_mode === 'text' && target_mode === 'braille') {
+    translated = textToBraille(payload);
+  } else if (source_mode === 'braille' && target_mode === 'text') {
+    translated = brailleToText(payload);
+  } else if (target_mode === 'haptic') {
+    translated = `[HAPTIC PATTERN] ${payload}`;
+  } else if (source_mode === 'haptic') {
+    translated = `[HAPTIC DECODED] ${payload}`;
+  } else if (target_mode === 'scent') {
+    translated = `[SCENT DISPENSER STUB] ${payload}`;
+  } else if (source_mode === 'scent') {
+    translated = `[SCENT SENSOR STUB] ${payload}`;
+  } else if (target_mode === 'taste') {
+    translated = `[TASTE DISPENSER STUB] ${payload}`;
+  } else if (source_mode === 'taste') {
+    translated = `[TASTE SENSOR STUB] ${payload}`;
+  } else if (target_mode === 'audio' || target_mode === 'speech') {
+    translated = `[AUDIO OUTPUT] ${payload}`;
+  } else if (source_mode === 'audio' || source_mode === 'speech') {
+    translated = `[AUDIO INPUT TRANSCRIBED] ${payload}`;
+  } else if (target_mode === 'visual') {
+    translated = `[VISUAL RENDER] ${payload}`;
+  } else if (source_mode === 'visual') {
+    translated = `[VISUAL DESCRIPTION] ${payload}`;
+  }
+
+  return { source_mode, target_mode, translated_payload: translated, intermediate, provider: 'gateway-fallback' };
+}
+
+// ============================================
 // SECURITY EVENT LOGGING
 // ============================================
 async function logSecurityEvent({ accountId, userId, eventType, severity = 'info', ip, userAgent, metadata = {} }) {
@@ -301,6 +398,7 @@ async function authMiddleware(req, res, next) {
     req.accountId = decoded.account_id;
     req.tier = decoded.tier || 'free';
     req.role = decoded.role || 'user';
+    req.userEmail = decoded.email || '';
     req.authType = 'jwt';
     return next();
   }
@@ -2195,6 +2293,221 @@ app.get('/api/v1/conversations/:id/participants', authMiddleware, async (req, re
   } catch (e) {
     console.error('Conversation participants error:', e);
     res.status(500).json({ error: 'Failed to load participants' });
+  }
+});
+
+// ============================================
+// CROSS-SENSORY INTERFACE SESSIONS (v5.0.0 Phase 2)
+// ============================================
+app.get('/api/v1/interface/sessions', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT s.*,
+        (SELECT COUNT(*) FROM interface_participants p WHERE p.session_id = s.id) AS participant_count
+       FROM interface_sessions s
+       WHERE s.account_id = $1 AND s.status = 'active'
+       ORDER BY s.updated_at DESC`,
+      [req.accountId]
+    );
+    res.json({ sessions: result.rows });
+  } catch (e) {
+    console.error('Interface sessions list error:', e);
+    res.status(500).json({ error: 'Failed to load interface sessions' });
+  }
+});
+
+app.post('/api/v1/interface/sessions', authMiddleware, async (req, res) => {
+  try {
+    const { title, session_type = 'shared', input_modes, output_modes } = req.body;
+    const slug = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const result = await pool.query(
+      `INSERT INTO interface_sessions (account_id, slug, title, session_type, input_modes, output_modes, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [req.accountId, slug, title || 'Untitled Session', session_type,
+       input_modes || ['text','audio','visual'], output_modes || ['text','audio','visual','haptic'], req.userId]
+    );
+    await pool.query(
+      `INSERT INTO interface_participants (session_id, user_id, display_name, input_mode, output_mode)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [result.rows[0].id, req.userId, req.userEmail, 'text', 'text']
+    );
+    res.status(201).json({ session: result.rows[0] });
+  } catch (e) {
+    console.error('Create interface session error:', e);
+    res.status(500).json({ error: 'Failed to create session' });
+  }
+});
+
+app.get('/api/v1/interface/sessions/:slug', authMiddleware, async (req, res) => {
+  try {
+    const sessionResult = await pool.query(
+      `SELECT s.* FROM interface_sessions s
+       WHERE s.account_id = $1 AND s.slug = $2 AND s.status = 'active'`,
+      [req.accountId, req.params.slug]
+    );
+    if (sessionResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    const session = sessionResult.rows[0];
+    const participantResult = await pool.query(
+      `SELECT p.*, u.email, u.first_name, u.last_name
+       FROM interface_participants p JOIN users u ON p.user_id = u.id
+       WHERE p.session_id = $1`,
+      [session.id]
+    );
+    res.json({ session, participants: participantResult.rows });
+  } catch (e) {
+    console.error('Get interface session error:', e);
+    res.status(500).json({ error: 'Failed to load session' });
+  }
+});
+
+app.get('/api/v1/interface/sessions/:slug/participants', authMiddleware, async (req, res) => {
+  try {
+    const sessionResult = await pool.query(
+      `SELECT id FROM interface_sessions WHERE account_id = $1 AND slug = $2 AND status = 'active'`,
+      [req.accountId, req.params.slug]
+    );
+    if (sessionResult.rows.length === 0) return res.status(404).json({ error: 'Session not found' });
+    const result = await pool.query(
+      `SELECT p.*, u.email, u.first_name, u.last_name
+       FROM interface_participants p JOIN users u ON p.user_id = u.id
+       WHERE p.session_id = $1`,
+      [sessionResult.rows[0].id]
+    );
+    res.json({ participants: result.rows });
+  } catch (e) {
+    console.error('Interface participants error:', e);
+    res.status(500).json({ error: 'Failed to load participants' });
+  }
+});
+
+app.post('/api/v1/interface/sessions/:slug/join', authMiddleware, async (req, res) => {
+  try {
+    const sessionResult = await pool.query(
+      `SELECT id FROM interface_sessions WHERE account_id = $1 AND slug = $2 AND status = 'active'`,
+      [req.accountId, req.params.slug]
+    );
+    if (sessionResult.rows.length === 0) return res.status(404).json({ error: 'Session not found' });
+    const sessionId = sessionResult.rows[0].id;
+    const { display_name, input_mode = 'text', output_mode = 'text' } = req.body;
+    await pool.query(
+      `INSERT INTO interface_participants (session_id, user_id, display_name, input_mode, output_mode)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (session_id, user_id) DO UPDATE SET display_name = EXCLUDED.display_name, input_mode = EXCLUDED.input_mode, output_mode = EXCLUDED.output_mode`,
+      [sessionId, req.userId, display_name || req.userEmail, input_mode, output_mode]
+    );
+    await pool.query(`UPDATE interface_sessions SET updated_at = now() WHERE id = $1`, [sessionId]);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Join interface session error:', e);
+    res.status(500).json({ error: 'Failed to join session' });
+  }
+});
+
+app.get('/api/v1/interface/sessions/:slug/messages', authMiddleware, async (req, res) => {
+  try {
+    const sessionResult = await pool.query(
+      `SELECT id FROM interface_sessions WHERE account_id = $1 AND slug = $2 AND status = 'active'`,
+      [req.accountId, req.params.slug]
+    );
+    if (sessionResult.rows.length === 0) return res.status(404).json({ error: 'Session not found' });
+    const sessionId = sessionResult.rows[0].id;
+    const after = req.query.after ? new Date(req.query.after) : null;
+    const result = await pool.query(
+      `SELECT m.*, u.email AS sender_email, u.first_name AS sender_first_name, u.last_name AS sender_last_name
+       FROM cross_sensory_messages m
+       JOIN users u ON m.sender_id = u.id
+       WHERE m.session_id = $1 ${after ? 'AND m.created_at > $2' : ''}
+       ORDER BY m.created_at ASC
+       LIMIT 200`,
+      after ? [sessionId, after] : [sessionId]
+    );
+    res.json({ messages: result.rows });
+  } catch (e) {
+    console.error('Interface messages error:', e);
+    res.status(500).json({ error: 'Failed to load messages' });
+  }
+});
+
+app.post('/api/v1/interface/sessions/:slug/messages', authMiddleware, familySafeMiddleware, async (req, res) => {
+  try {
+    const sessionResult = await pool.query(
+      `SELECT id FROM interface_sessions WHERE account_id = $1 AND slug = $2 AND status = 'active'`,
+      [req.accountId, req.params.slug]
+    );
+    if (sessionResult.rows.length === 0) return res.status(404).json({ error: 'Session not found' });
+    const sessionId = sessionResult.rows[0].id;
+    const { source_mode = 'text', target_mode = 'text', raw_payload, translated_payload, metadata = {} } = req.body;
+    if (!raw_payload || raw_payload.length > 10000) {
+      return res.status(400).json({ error: 'raw_payload required and must be <= 10000 chars' });
+    }
+    const result = await pool.query(
+      `INSERT INTO cross_sensory_messages (session_id, sender_id, source_mode, target_mode, raw_payload, translated_payload, intermediate_translations, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [sessionId, req.userId, source_mode, target_mode, raw_payload,
+       translated_payload || raw_payload, metadata.intermediate || {}, metadata]
+    );
+    await pool.query(`UPDATE interface_sessions SET updated_at = now() WHERE id = $1`, [sessionId]);
+    res.status(201).json({ message: result.rows[0] });
+  } catch (e) {
+    console.error('Post interface message error:', e);
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
+app.get('/api/v1/interface/devices', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM interface_devices WHERE account_id = $1 ORDER BY name`,
+      [req.accountId]
+    );
+    res.json({ devices: result.rows });
+  } catch (e) {
+    console.error('Interface devices list error:', e);
+    res.status(500).json({ error: 'Failed to load devices' });
+  }
+});
+
+app.post('/api/v1/interface/devices', authMiddleware, async (req, res) => {
+  try {
+    const { name, device_type, capabilities, config = {} } = req.body;
+    if (!name || !device_type) return res.status(400).json({ error: 'name and device_type required' });
+    const result = await pool.query(
+      `INSERT INTO interface_devices (account_id, user_id, name, device_type, capabilities, config)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [req.accountId, req.userId, name, device_type, capabilities || ['text'], config]
+    );
+    res.status(201).json({ device: result.rows[0] });
+  } catch (e) {
+    console.error('Create interface device error:', e);
+    res.status(500).json({ error: 'Failed to register device' });
+  }
+});
+
+app.post('/api/v1/interface/translate', authMiddleware, async (req, res) => {
+  try {
+    const { source_mode, target_mode, payload, session_id } = req.body;
+    if (!payload || !source_mode || !target_mode) {
+      return res.status(400).json({ error: 'payload, source_mode, and target_mode required' });
+    }
+    const result = await translateCrossSensory({ source_mode, target_mode, payload, accountId: req.accountId });
+    if (session_id) {
+      try {
+        await pool.query(
+          `INSERT INTO cross_sensory_messages (session_id, sender_id, source_mode, target_mode, raw_payload, translated_payload, intermediate_translations)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [session_id, req.userId, source_mode, target_mode, payload, result.translated_payload,
+           result.intermediate || {}]
+        );
+      } catch (dbErr) {
+        console.error('Failed to persist translation message:', dbErr.message);
+      }
+    }
+    res.json(result);
+  } catch (e) {
+    console.error('Interface translate error:', e);
+    res.status(500).json({ error: 'Translation failed' });
   }
 });
 

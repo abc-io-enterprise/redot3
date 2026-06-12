@@ -167,3 +167,71 @@ INSERT INTO products (slug, name, description, product_type, min_tier, price_cen
   ('ai-isp-premium', 'AI-ISP Premium Translation Pack', 'Unlock higher-rate cross-sensory translation with priority queueing and additional modalities.', 'addon', 'pro', 1999, 'month', '["priority translation queue","expanded modalities","higher rate limits"]', true, 3),
   ('enterprise-support', 'Enterprise 24/7 Support', '24/7 human escalation, dedicated operator channel, and quarterly business reviews.', 'addon', 'enterprise', 49900, 'month', '["24/7 human escalation","dedicated operator channel","quarterly review"]', true, 4)
 ON CONFLICT DO NOTHING;
+
+-- ============================================
+-- CROSS-SENSORY INTERFACE SESSIONS (v5.0.0 Phase 2)
+-- ============================================
+CREATE TABLE IF NOT EXISTS interface_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  slug VARCHAR(255) UNIQUE NOT NULL,
+  title VARCHAR(255),
+  session_type VARCHAR(50) DEFAULT 'shared' CHECK (session_type IN ('single', 'shared', 'organization')),
+  input_modes TEXT[] DEFAULT '{"text","audio","visual"}',
+  output_modes TEXT[] DEFAULT '{"text","audio","visual","haptic"}',
+  status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_interface_sessions_account ON interface_sessions(account_id);
+CREATE INDEX IF NOT EXISTS idx_interface_sessions_slug ON interface_sessions(slug);
+
+CREATE TABLE IF NOT EXISTS interface_participants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID NOT NULL REFERENCES interface_sessions(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  display_name VARCHAR(255),
+  input_mode VARCHAR(50) DEFAULT 'text',
+  output_mode VARCHAR(50) DEFAULT 'text',
+  device_profile JSONB,
+  last_seen_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(session_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_interface_participants_session ON interface_participants(session_id);
+CREATE INDEX IF NOT EXISTS idx_interface_participants_user ON interface_participants(user_id);
+
+CREATE TABLE IF NOT EXISTS interface_devices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  device_type VARCHAR(50) NOT NULL CHECK (device_type IN ('microphone','speaker','camera','haptic','display','scent','taste','generic')),
+  capabilities TEXT[],
+  config JSONB,
+  status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active','inactive','error')),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_interface_devices_account ON interface_devices(account_id);
+CREATE INDEX IF NOT EXISTS idx_interface_devices_user ON interface_devices(user_id);
+
+CREATE TABLE IF NOT EXISTS cross_sensory_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID NOT NULL REFERENCES interface_sessions(id) ON DELETE CASCADE,
+  sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  source_mode VARCHAR(50) NOT NULL,
+  target_mode VARCHAR(50) NOT NULL,
+  raw_payload TEXT,
+  translated_payload TEXT,
+  intermediate_translations JSONB,
+  metadata JSONB,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cross_sensory_messages_session ON cross_sensory_messages(session_id);
+CREATE INDEX IF NOT EXISTS idx_cross_sensory_messages_created ON cross_sensory_messages(created_at DESC);

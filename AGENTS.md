@@ -18,6 +18,7 @@ The system is designed for local development, single-primary VPS production, and
 - **`public-portal`** — Public-facing static site with signature verification, help articles, and user progress tracking.
 - **`beacon-pwa`** — Minimal location-aware beacon Progressive Web App.
 - **`account-pwa`** — Account-aware Progressive Web App for messaging, product management, billing, and quick access to AI translation and beacon services. Served at `/account/` via NGINX.
+- **`interface-pwa`** — Touchscreen-first cross-sensory interface PWA for multi-device, multi-modal communication (text, audio, visual, haptic, scent, taste). Served at `/interface/` via NGINX.
 - **`beacon`** — Public-safety beacon backend with PostgreSQL storage, 24-hour TTL, haversine region search, and responder acknowledgments.
 - **`kimi`** — Python/Flask AI adapter that proxies to Mistral or Kimi with circuit breaker, response cache, retry logic, and offline fallback. Also includes a small standalone Redis consumer (`worker.py`) for the `abc_io_tasks` list.
 - **`worker`** — Background Python worker that consumes the Redis list `redot2:jobs:queue` for `ai_inference`, `health_check`, and `security_scan` jobs, storing results with a 1-hour TTL.
@@ -36,6 +37,7 @@ The entire stack is intended to run on a single primary VPS or as a multi-host d
 
 ### Account-aware PWA
 - New service `account-pwa` (Node.js 20 Alpine + Express, port `8100` host / `3000` container).
+- New service `interface-pwa` (Node.js 20 Alpine + Express, port `8110` host / `3010` container) with cross-sensory sessions, devices, and translation.
 - Serves a single-page PWA at `/account/` via NGINX with Web App Manifest and service worker.
 - Supports JWT login against the gateway, account dashboard, conversation list, messaging, product catalog, and Stripe checkout.
 
@@ -88,10 +90,13 @@ All Node.js frontends are vanilla HTML/CSS/JS. There is no React, Vue, TypeScrip
 ```
 .
 ├── package.json                # Root npm workspace metadata + npm scripts
-├── docker-compose.yml          # Local 19-service full-stack orchestration
+├── docker-compose.yml          # Local 21-service full-stack orchestration
 ├── compose.dev.yml             # Dev environment with live-reload mounts
+├── compose.staging.yml         # Staging orchestration (alternate host ports)
 ├── compose.prod.yml            # Production orchestration (ports 80/443, limits, healthchecks)
-├── compose.replica.yml         # v5.0.0 replica-node compose for ai1/ai2
+├── compose.replica.yml         # v5.0.0 replica-node compose template
+├── compose.replica-ai1.yml     # Replica-node compose for ai1 (192.227.212.235)
+├── compose.replica-ai2.yml     # Replica-node compose for ai2 (192.227.212.237)
 ├── .env.example                # Template for required secrets
 ├── .env                        # Populated secrets (gitignored; never commit)
 ├── .gitignore / .dockerignore
@@ -104,6 +109,7 @@ All Node.js frontends are vanilla HTML/CSS/JS. There is no React, Vue, TypeScrip
 │   ├── public-portal/src/index.js (+ src/public/)
 │   ├── beacon-pwa/server.js (+ public/)
 │   ├── account-pwa/server.js (+ public/)
+  ├── interface-pwa/server.js (+ public/)
 │   ├── beacon/src/index.js
 │   ├── kimi/app.py, worker.py, requirements.txt
 │   ├── worker/worker.py, requirements.txt
@@ -166,7 +172,7 @@ docker compose -f compose.prod.yml up -d
 docker compose -f compose.replica.yml up -d
 ```
 
-`compose.replica.yml` runs `nginx`, `gateway`, `public-portal`, `mobile-gateway`, `beacon-pwa`, `kimi`, `ai-isp`, `beacon`, and `worker`. It expects the primary node's Postgres and Redis to be reachable via `DATABASE_URL` and `REDIS_URL`.
+`compose.replica.yml` (and per-node files `compose.replica-ai1.yml`, `compose.replica-ai2.yml`) runs `nginx`, `gateway`, `public-portal`, `mobile-gateway`, `beacon-pwa`, `account-pwa`, `interface-pwa`, `kimi`, `ai-isp`, `beacon`, and `worker`. It expects the primary node's Postgres and Redis to be reachable via `DATABASE_URL` and `REDIS_URL`.
 
 ### Root npm Scripts
 
@@ -178,6 +184,10 @@ The root `package.json` exposes:
 | `npm run dev:logs` | `docker compose -f docker-compose.yml up` |
 | `npm run prod` | `docker compose -f compose.prod.yml up -d` |
 | `npm run prod:logs` | `docker compose -f compose.prod.yml up` |
+| `npm run staging` | `docker compose -f compose.staging.yml up -d` |
+| `npm run staging:logs` | `docker compose -f compose.staging.yml up` |
+| `npm run replica:ai1` | `docker compose -f compose.replica-ai1.yml up -d` |
+| `npm run replica:ai2` | `docker compose -f compose.replica-ai2.yml up -d` |
 | `npm run build` | `docker compose build` |
 | `npm run stop` | `docker compose down` |
 | `npm run health` | `bash scripts/health-check.sh` |
@@ -191,6 +201,11 @@ The root `package.json` exposes:
 | `npm run desktop:admin` | `python admin-desktop/server.py` |
 | `npm run deploy:vps` | `bash scripts/deploy-vps-cluster.sh` |
 | `npm run lint` / `npm run format` | Echo that linting/formatting are not configured |
+
+### Staging
+```bash
+docker compose -f compose.staging.yml up -d
+```
 
 ### Release Packaging
 
@@ -211,7 +226,7 @@ The root `package.json` exposes:
 
 ### Compose Service Map
 
-`docker-compose.yml` defines **20 services**: `nginx`, `gateway`, `operator-station`, `owner-dashboard`, `mobile-gateway`, `public-portal`, `beacon-pwa`, `account-pwa`, `kimi`, `postgres`, `prometheus`, `grafana`, `redis`, `worker`, `logger`, `tracer`, `headscale`, `ai-isp`, `beacon`, `autonomous`.
+`docker-compose.yml` defines **21 services**: `nginx`, `gateway`, `operator-station`, `owner-dashboard`, `mobile-gateway`, `public-portal`, `beacon-pwa`, `account-pwa`, `interface-pwa`, `kimi`, `postgres`, `prometheus`, `grafana`, `redis`, `worker`, `logger`, `tracer`, `headscale`, `ai-isp`, `beacon`, `autonomous`.
 
 | Service | Runtime | Framework | Entry File | Exposed Port (host) | Role |
 |---|---|---|---|---|---|
@@ -222,6 +237,7 @@ The root `package.json` exposes:
 | `public-portal` | Node.js 20 Alpine | Express + `pg` + `helmet` | `services/public-portal/src/index.js` | via nginx (`8090` in prod/replica) | Public marketing/help site |
 | `beacon-pwa` | Node.js 20 Alpine | Express + `helmet` + `cors` | `services/beacon-pwa/server.js` | `3005` | Beacon PWA frontend |
 | `account-pwa` | Node.js 20 Alpine | Express + `helmet` + `cors` | `services/account-pwa/server.js` | `8100` | Account-aware PWA frontend |
+| `interface-pwa` | Node.js 20 Alpine | Express + `helmet` + `cors` | `services/interface-pwa/server.js` | `8110` | Cross-sensory interface PWA |
 | `beacon` | Node.js 20 Alpine | Express + `pg` + `nodemailer` | `services/beacon/src/index.js` | `3006` | Public-safety beacon backend |
 | `kimi` | Python 3.12 slim | Flask | `services/kimi/app.py` | `5000` | Mistral/Kimi AI adapter |
 | `ai-isp` | Python 3.11 slim | Flask + Gunicorn | `services/ai-isp/src/app.py` | `7000` | Cross-sensory translation engine |
@@ -274,7 +290,7 @@ The root `package.json` exposes:
 - Prefer `async/await` over raw callbacks.
 - Read the port from `process.env.PORT` with a numeric fallback, e.g. `Number(process.env.PORT || 4000)`.
 - Express apps should use `express.json()` middleware for JSON bodies.
-- Use `helmet` in production-facing services where it is already present (`gateway`, `owner-dashboard`, `mobile-gateway`, `public-portal`, `beacon-pwa`, `account-pwa`, `beacon`). `operator-station` does not currently use helmet.
+- Use `helmet` in production-facing services where it is already present (`gateway`, `owner-dashboard`, `mobile-gateway`, `public-portal`, `beacon-pwa`, `account-pwa`, `interface-pwa`, `beacon`). `operator-station` does not currently use helmet.
 - Frontends are served as static files from `src/public/` (or `public/` in `beacon-pwa`) using `express.static`.
 - Inline HTML/CSS/JS in server-rendered responses is acceptable and matches existing patterns.
 
@@ -288,7 +304,7 @@ The root `package.json` exposes:
 ### Docker
 
 - Dockerfiles for Node.js services follow a uniform pattern: `FROM node:20-alpine`, `WORKDIR /app`, copy `package.json` + `package-lock.json*`, `npm install --production`, copy `src/`, `CMD ["node", "src/index.js"]`.
-- `beacon-pwa` and `account-pwa` are exceptions: flat layout, `server.js` entrypoint, `EXPOSE 3000`, Dockerfile runs `npm run build`.
+- `beacon-pwa`, `account-pwa`, and `interface-pwa` are exceptions: flat layout, `server.js` entrypoint. `beacon-pwa` and `account-pwa` expose `3000`; `interface-pwa` exposes `3010`.
 - `beacon` Dockerfile additionally drops to `USER node`.
 - Python service Dockerfiles generally follow: `FROM python:3.12-alpine` (or `slim`), install dependencies, copy source, `CMD ["python", "app.py"]` or `CMD ["python", "-u", "worker.py"]`.
 - `ai-isp` uses `python:3.11-slim`, installs `gcc`, sets `PYTHONPATH=/app/src`, and runs under **Gunicorn** (`gunicorn --bind 0.0.0.0:7000 --workers 2 --timeout 60 app:app`).
@@ -314,7 +330,7 @@ The root `package.json` exposes:
    ```bash
    ./scripts/health-check.sh
    ```
-   Curls `/health` on gateway, operator-station, public-portal, mobile-gateway, owner-dashboard, kimi, beacon, beacon-pwa, account-pwa, ai-isp, nginx, prometheus, grafana, tracer, and headscale; TCP-checks postgres and redis.
+   Curls `/health` on gateway, operator-station, public-portal, mobile-gateway, owner-dashboard, kimi, beacon, beacon-pwa, account-pwa, interface-pwa, ai-isp, nginx, prometheus, grafana, tracer, and headscale; TCP-checks postgres and redis.
 
 2. **Cluster health check:**
    ```bash
@@ -347,7 +363,7 @@ The root `package.json` exposes:
    Validates required files, compose files, git status/tags, APK artifacts, public endpoints, autonomous wiring, and documentation presence.
 
 7. **CI build validation:**
-   The `ci.yml` workflow builds Docker images for all services and validates `docker-compose.yml`, `compose.dev.yml`, `compose.prod.yml`, and `compose.replica.yml` with `docker compose config`.
+   The `ci.yml` workflow builds Docker images for all services and validates `docker-compose.yml`, `compose.dev.yml`, `compose.staging.yml`, `compose.prod.yml`, `compose.replica.yml`, `compose.replica-ai1.yml`, and `compose.replica-ai2.yml` with `docker compose config`.
 
 ---
 
@@ -422,10 +438,10 @@ Severity-based SLAs (from `docs/SECURITY_RUNBOOK.md`):
 
 ## Deployment Architecture
 
-- **Single-primary VPS mode:** run `compose.prod.yml` with all 19 services; NGINX listens on `80`/`443` and terminates/proxies traffic.
-- **Local dev mode:** `docker compose up -d` uses `docker-compose.yml` with local ports (`4000`, `8080`, `8500`, `5050`, `3005`, `8100`, `5000`, `7000`, `3006`, `8088`, `9091`, `14000`, `16686`, `8085`, etc.). Note: `public-portal` host port `8090` is intentionally removed in local compose; access it via NGINX.
+- **Single-primary VPS mode:** run `compose.prod.yml` with all 21 services; NGINX listens on `80`/`443` and terminates/proxies traffic.
+- **Local dev mode:** `docker compose up -d` uses `docker-compose.yml` with local ports (`4000`, `8080`, `8500`, `5050`, `3005`, `8100`, `8110`, `5000`, `7000`, `3006`, `8088`, `9091`, `14000`, `16686`, `8085`, etc.). Note: `public-portal` host port `8090` is intentionally removed in local compose; access it via NGINX.
 - **Live-reload dev mode:** `compose.dev.yml` only starts `gateway`, `operator-station`, and `postgres` with volume mounts.
-- **Replica / multi-node mode:** `compose.replica.yml` runs gateway, public-portal, mobile-gateway, beacon-pwa, account-pwa, kimi, ai-isp, beacon, worker, and nginx on `ai1`/`ai2`, sharing the primary DB/Redis.
+- **Replica / multi-node mode:** `compose.replica-ai1.yml` and `compose.replica-ai2.yml` run gateway, public-portal, mobile-gateway, beacon-pwa, account-pwa, interface-pwa, kimi, ai-isp, beacon, worker, and nginx on `ai1`/`ai2`, sharing the primary DB/Redis.
 - **Headscale mesh:** `scripts/deploy-vps-cluster.sh` and `scripts/deploy-triple-node.py` deploy a 3-node topology (redot1 full stack + ai1/ai2 replicas) and join them into a Headscale WireGuard mesh.
 - **Staged deployment:** `scripts/deploy-staged-redot1.py` deploys the stack in **7 ordered waves** (infra → gateway → dashboards → AI → beacon → monitoring/autonomous → nginx) to avoid OOM on a 4GB VPS.
 - **GCP:** `infrastructure/gcp/terraform/` and `infrastructure/gcp/k8s/` contain Terraform and Kubernetes manifests. `.github/workflows/gcp-deploy.yml` is currently a placeholder with commented-out build/push/apply steps.
@@ -446,7 +462,7 @@ All workflows live in `.github/workflows/`:
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| `ci.yml` | Push/PR to `main`/`master` (ignores `**.md`, `docs/**`, `.security/**`) | Build all service Docker images; validate `docker-compose.yml`, `compose.dev.yml`, `compose.prod.yml`, and `compose.replica.yml`. |
+| `ci.yml` | Push/PR to `main`/`master` (ignores `**.md`, `docs/**`, `.security/**`) | Build all service Docker images; validate `docker-compose.yml`, `compose.dev.yml`, `compose.staging.yml`, `compose.prod.yml`, `compose.replica.yml`, `compose.replica-ai1.yml`, and `compose.replica-ai2.yml`. |
 | `branch-protection.yml` | PR to `main`/`master` | Enforce PR descriptions, semantic commits, no WIP/Draft markers, and linked-issue hint. |
 | `codeql-analysis.yml` | Push/PR to `main`/`master`, weekly (`0 3 * * 0`) | GitHub CodeQL static security analysis for JavaScript and Python. |
 | `dependency-review.yml` | PR to `main`/`master` | Scan dependency changes, fail on `moderate` severity, enforce license compliance. **Allows:** MIT, Apache-2.0, BSD, ISC, Python-2.0, Unlicense, CC0-1.0, 0BSD, BlueOak-1.0.0. **Denies:** GPL, AGPL, and LGPL variants. |
@@ -507,7 +523,7 @@ All remotes are pre-configured. Run `git remote -v` to view them. Private repos 
 
 ## Notes for Agents
 
-- Do not assume the presence of npm build steps, bundlers, or frontend frameworks. Most Node.js services are run directly with `node src/index.js` (or `server.js` for `beacon-pwa` and `account-pwa`).
+- Do not assume the presence of npm build steps, bundlers, or frontend frameworks. Most Node.js services are run directly with `node src/index.js` (or `server.js` for `beacon-pwa`, `account-pwa`, and `interface-pwa`).
 - The `autonomous` service and the `owner-dashboard` require Docker socket access (`/var/run/docker.sock`) to restart failed containers or execute compose commands.
 - The desktop orchestrator expects SSH passwords in environment variables (`VPS_REDOT1_PASSWORD`, `VPS_AI1_PASSWORD`, `VPS_AI2_PASSWORD`).
 - The autonomous APK uses `androidx.biometric` and NanoHTTPD; build via `scripts/build-autonomous-apk.sh` or Android Studio.
