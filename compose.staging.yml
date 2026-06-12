@@ -1,20 +1,13 @@
-# ABC-IO v5.0.0 Replica Node Compose
-# Runs on ai1/ai2 as redundant public-facing nodes.
-# DB and Redis are shared from the primary node (redot1) via REDIS_URL/DATABASE_URL.
 services:
   nginx:
     image: nginx:stable-alpine
     ports:
-      - '80:80'
-      - '443:443'
+      - '8080:80'
+      - '8443:443'
     depends_on:
       - gateway
-      - public-portal
-      - beacon-pwa
-      - account-pwa
-      - interface-pwa
     environment:
-      - NGINX_ENV=production
+      - NGINX_ENV=staging
     volumes:
       - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./config/locations.conf:/etc/nginx/conf.d/locations.conf:ro
@@ -41,13 +34,13 @@ services:
     build:
       context: ./services/gateway
     ports:
-      - '4000:4000'
+      - '4001:4000'
     environment:
       - NODE_ENV=production
       - PORT=4000
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
-      - KIMI_ENDPOINTS=${KIMI_ENDPOINTS:-http://kimi:5000,http://192.227.212.235:5000,http://192.227.212.237:5000}
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/abc_io}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - KIMI_ENDPOINTS=${KIMI_ENDPOINTS:-http://kimi:5000}
       - JWT_SECRET=${JWT_SECRET}
       - OWNER_SIGNING_KEY=${OWNER_SIGNING_KEY}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
@@ -65,7 +58,7 @@ services:
       - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID}
       - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET}
       - PAYPAL_WEBHOOK_ID=${PAYPAL_WEBHOOK_ID}
-      - PUBLIC_URL=${PUBLIC_URL:-https://abc-io.com}
+      - PUBLIC_URL=${PUBLIC_URL:-https://staging.abc-io.com}
       - CORS_ORIGIN=${CORS_ORIGIN}
       - SMTP_URL=${SMTP_URL}
       - SMTP_HOST=${SMTP_HOST}
@@ -78,10 +71,116 @@ services:
       - SELF_HEAL_TOKEN=${SELF_HEAL_TOKEN}
       - REDOT1_API_KEY=${REDOT1_API_KEY}
     depends_on:
-      - kimi
-      - ai-isp
+      postgres:
+        condition: service_healthy
+      kimi:
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  operator-station:
+    build:
+      context: ./services/operator-station
+    environment:
+      - NODE_ENV=production
+    ports:
+      - '8082:8080'
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  owner-dashboard:
+    build:
+      context: ./services/owner-dashboard
+    environment:
+      - NODE_ENV=production
+      - OWNER_SIGNING_KEY=${OWNER_SIGNING_KEY}
+      - OWNER_SIGNING_FINGERPRINT=${OWNER_SIGNING_FINGERPRINT}
+      - OWNER_ACCOUNT_EMAIL=${OWNER_ACCOUNT_EMAIL}
+      - OWNER_ACCOUNT_PASSWORD=${OWNER_ACCOUNT_PASSWORD}
+      - OWNER_SESSION_TOKEN=${OWNER_SESSION_TOKEN}
+      - OWNER_BIOMETRIC_SECRET=${OWNER_BIOMETRIC_SECRET:-}
+      - MOBILE_GATEWAY_URL=http://mobile-gateway:5050
+      - APK_PATH=/apk/redot2-latest.apk
+      - GIT_DEFAULT_BRANCH=${GIT_DEFAULT_BRANCH:-main}
+    ports:
+      - '8501:8500'
+    volumes:
+      - ./apk:/apk:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    depends_on:
+      gateway:
+        condition: service_healthy
+      mobile-gateway:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8500/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  mobile-gateway:
+    build:
+      context: ./services/mobile-gateway
+    environment:
+      - NODE_ENV=production
+      - MOBILE_SIGNING_KEY=${MOBILE_SIGNING_KEY}
+      - MOBILE_SIGNING_FINGERPRINT=${MOBILE_SIGNING_FINGERPRINT}
+      - PRIMARY_HOST=${PRIMARY_HOST:-162.254.32.142}
+      - AI1_HOST=${AI1_HOST:-192.227.212.235}
+      - AI2_HOST=${AI2_HOST:-192.227.212.237}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - OWNER_SESSION_TOKEN=${OWNER_SESSION_TOKEN}
+    ports:
+      - '5051:5050'
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5050/health"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -102,47 +201,18 @@ services:
       context: ./services/public-portal
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/abc_io}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
       - PUBLIC_SIGNING_KEY=${PUBLIC_SIGNING_KEY}
       - PUBLIC_SIGNING_FINGERPRINT=${PUBLIC_SIGNING_FINGERPRINT}
+      - JWT_SECRET=${JWT_SECRET}
     ports:
-      - '8090:8090'
+      - '8091:8090'
     depends_on:
-      - gateway
+      gateway:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8090/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    restart: unless-stopped
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '10m'
-        max-file: '3'
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-
-  mobile-gateway:
-    build:
-      context: ./services/mobile-gateway
-    environment:
-      - NODE_ENV=production
-      - MOBILE_SIGNING_KEY=${MOBILE_SIGNING_KEY}
-      - MOBILE_SIGNING_FINGERPRINT=${MOBILE_SIGNING_FINGERPRINT}
-      - PRIMARY_HOST=${PRIMARY_HOST:-162.254.32.142}
-      - AI1_HOST=${AI1_HOST:-192.227.212.235}
-      - AI2_HOST=${AI2_HOST:-192.227.212.237}
-      - REDIS_URL=${REDIS_URL}
-      - OWNER_SESSION_TOKEN=${OWNER_SESSION_TOKEN}
-    ports:
-      - '5050:5050'
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:5050/health"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -162,7 +232,7 @@ services:
     build:
       context: ./services/beacon-pwa
     ports:
-      - '3005:3000'
+      - '3007:3000'
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
       interval: 15s
@@ -186,12 +256,13 @@ services:
     build:
       context: ./services/account-pwa
     ports:
-      - '8100:3000'
+      - '8101:3000'
     environment:
       - NODE_ENV=production
       - GATEWAY_URL=http://gateway:4000
     depends_on:
-      - gateway
+      gateway:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
       interval: 15s
@@ -213,13 +284,14 @@ services:
     build:
       context: ./services/interface-pwa
     ports:
-      - '8110:3010'
+      - '8111:3010'
     environment:
       - NODE_ENV=production
       - PORT=3010
       - GATEWAY_URL=http://gateway:4000
     depends_on:
-      - gateway
+      gateway:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3010/health"]
       interval: 15s
@@ -241,7 +313,7 @@ services:
     build:
       context: ./services/kimi
     ports:
-      - '5000:5000'
+      - '5001:5000'
     environment:
       - AI_PROVIDER=${AI_PROVIDER:-mistral}
       - MISTRAL_API_KEY=${MISTRAL_API_KEY}
@@ -267,11 +339,176 @@ services:
         limits:
           memory: 512M
 
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: abc_io
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./services/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d abc_io"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - '9092:9090'
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - '14001:3000'
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  redis:
+    image: redis:alpine
+    ports:
+      - '6380:6379'
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  worker:
+    build:
+      context: ./services/worker
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    depends_on:
+      - redis
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  logger:
+    image: busybox
+    command: sh -c 'while true; do sleep 3600; done'
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+
+  tracer:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - '16687:16686'
+      - '6832:6831/udp'
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  headscale:
+    image: headscale/headscale:latest
+    container_name: redot2-headscale
+    ports:
+      - '8086:8080'
+      - '9096:9090'
+      - '41642:41641/udp'
+    volumes:
+      - ./config/headscale:/etc/headscale:ro
+      - headscale-data:/var/lib/headscale
+    command: serve
+    # Note: headscale image is distroless — no shell/wget/curl available.
+    # Healthcheck disabled; container health inferred from process state.
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
   ai-isp:
     build:
       context: ./services/ai-isp
     ports:
-      - '7000:7000'
+      - '7001:7000'
     environment:
       - PORT=7000
       - PYTHONUNBUFFERED=1
@@ -296,12 +533,12 @@ services:
     build:
       context: ./services/beacon
     ports:
-      - '3006:3000'
+      - '3008:3000'
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/abc_io}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
       - SMTP_URL=${SMTP_URL}
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_PORT=${SMTP_PORT}
@@ -326,12 +563,17 @@ services:
         limits:
           memory: 256M
 
-  worker:
+  autonomous:
     build:
-      context: ./services/worker
+      context: ./services/autonomous
     environment:
-      - REDIS_URL=${REDIS_URL}
-      - KIMI_ENDPOINTS=${KIMI_ENDPOINTS:-http://kimi:5000,http://192.227.212.235:5000,http://192.227.212.237:5000}
+      - CHECK_INTERVAL_SECONDS=30
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /opt/redot2:/opt/redot2:ro
+    depends_on:
+      - redis
     restart: unless-stopped
     logging:
       driver: 'json-file'
@@ -341,4 +583,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 128M
+
+volumes:
+  postgres-data:
+  headscale-data:

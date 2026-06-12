@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ABC-IO Interface</title>
+<meta name="description" content="ABC-IO cross-sensory interface — communicate across touch, audio, visual, haptic, scent and taste.">
+<meta name="theme-color" content="#00ff88">
+<link rel="manifest" href="/interface/manifest.json">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/abc-io_logo.png">
+<style>
+:root{--bg:#050817;--panel:#0b1026;--border:#1e293b;--text:#e2e8f0;--muted:#94a3b8;--accent:#00ff88;--accent-dark:#00cc6a;--danger:#ef4444;--warning:#f59e0b;--info:#38bdf8}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:Inter,Segoe UI,system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+#app{min-height:100%;display:flex;flex-direction:column}
+.screen{display:none;flex:1;flex-direction:column;padding:14px;max-width:900px;margin:0 auto;width:100%}
+.screen.active{display:flex}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:14px 18px;border-radius:12px;border:none;font-size:16px;font-weight:600;cursor:pointer;transition:.2s;touch-action:manipulation}
+.btn-primary{background:var(--accent);color:#052e1a}
+.btn-primary:hover{background:var(--accent-dark)}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+.btn-sm{padding:10px 12px;font-size:14px}
+.btn-block{width:100%}
+.btn-pad{min-height:56px}
+input,textarea,select{width:100%;padding:14px;border-radius:12px;border:1px solid var(--border);background:#050a18;color:var(--text);font-size:16px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+.form-group{margin-bottom:16px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:500}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:14px}
+.card h2{font-size:18px;margin-bottom:10px}
+.card p{color:var(--muted);font-size:14px}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+header .logo{font-size:18px;font-weight:700;color:#fff}header .logo span{color:var(--accent)}
+header nav{display:flex;gap:10px;align-items:center}
+header nav button{background:transparent;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:8px 6px}
+header nav button.active{color:var(--accent);font-weight:600}
+.badge{display:inline-block;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;background:rgba(0,255,136,.12);color:var(--accent);border:1px solid rgba(0,255,136,.3)}
+.session-item{padding:16px;border:1px solid var(--border);border-radius:14px;margin-bottom:10px;background:#080c1f;cursor:pointer}
+.session-item:hover{border-color:var(--accent)}
+.session-item .title{font-weight:600;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center}
+.session-item .meta{font-size:13px;color:var(--muted)}
+.device-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:20px;font-size:12px;background:#0f1633;border:1px solid var(--border);margin:0 6px 6px 0}
+.mode-btn{flex:1;padding:14px;border-radius:12px;border:1px solid var(--border);background:#080c1f;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer}
+.mode-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,255,136,.08)}
+.message-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin:12px 0;max-height:55vh;padding-right:4px}
+.message-bubble{max-width:85%;padding:12px 14px;border-radius:18px;font-size:15px;word-break:break-word}
+.message-bubble.me{align-self:flex-end;background:var(--accent);color:#052e1a;border-bottom-right-radius:4px}
+.message-bubble.them{align-self:flex-start;background:#1e293b;color:var(--text);border-bottom-left-radius:4px}
+.message-bubble .meta{font-size:11px;opacity:.85;margin-top:4px}
+.chat-input{display:flex;gap:10px;align-items:flex-end;margin-top:8px}
+.chat-input textarea{flex:1;resize:none;min-height:56px;max-height:120px;border-radius:14px}
+.empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px}
+.tabs{display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:8px;overflow-x:auto}
+.tab{padding:10px 14px;border-radius:10px;background:transparent;border:none;color:var(--muted);font-size:14px;cursor:pointer;white-space:nowrap}
+.tab.active{background:rgba(0,255,136,.12);color:var(--accent);font-weight:600}
+.error{color:var(--danger);font-size:13px;margin-top:6px}
+.success{color:var(--accent);font-size:13px;margin-top:6px}
+.loading{opacity:.7;pointer-events:none}
+.hide{display:none}
+.touch-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+footer{text-align:center;padding:16px;font-size:12px;color:var(--muted);border-top:1px solid var(--border)}
+footer a{color:var(--muted)}
+@media(min-width:900px){.screen{max-width:1000px}header{padding:14px 32px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="mainHeader" class="hide">
+    <div class="logo">ABC-IO <span>Interface</span></div>
+    <nav>
+      <button class="active" data-nav="sessions">Sessions</button>
+      <button data-nav="devices">Devices</button>
+      <button data-nav="translate">Translate</button>
+      <button id="logoutBtn">Logout</button>
+    </nav>
+  </header>
+
+  <!-- Login Screen -->
+  <section id="loginScreen" class="screen active" style="justify-content:center">
+    <div class="card" style="text-align:center">
+      <img src="/abc-io_logo.png" alt="ABC-IO" style="width:80px;margin-bottom:16px">
+      <h2 style="font-size:24px">ABC-IO Interface</h2>
+      <p style="margin-bottom:20px">Global cross-sensory communications across touch, audio, visual, haptic, scent & taste.</p>
+      <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="you@abc-io.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••"></div>
+      <button class="btn btn-primary btn-block btn-pad" id="loginBtn">Sign In</button>
+      <div class="error" id="loginError"></div>
+      <p style="margin-top:16px;font-size:13px;color:var(--muted)">Need an account? <a href="/signup.html" style="color:var(--accent)">Sign up</a></p>
+    </div>
+  </section>
+
+  <!-- Sessions Screen -->
+  <section id="sessionsScreen" class="screen">
+    <div class="tabs">
+      <button class="tab active" data-tab="sessionList">My Sessions</button>
+      <button class="tab" data-tab="newSession">Create</button>
+    </div>
+    <div id="sessionListPanel">
+      <div id="sessionsList"><p class="empty">Loading sessions...</p></div>
+    </div>
+    <div id="newSessionPanel" class="hide">
+      <div class="card">
+        <h2>New Interface Session</h2>
+        <div class="form-group"><label>Session Title</label><input type="text" id="newSessionTitle" placeholder="e.g. Team Standup"></div>
+        <div class="form-group">
+          <label>Session Type</label>
+          <select id="newSessionType"><option value="shared">Shared</option><option value="organization">Organization</option><option value="single">Single</option></select>
+        </div>
+        <div class="form-group">
+          <label>Input Modes</label>
+          <div id="inputModes" class="touch-grid">
+            <button class="mode-btn active" data-mode="text">Text</button>
+            <button class="mode-btn" data-mode="audio">Audio</button>
+            <button class="mode-btn" data-mode="visual">Visual</button>
+            <button class="mode-btn" data-mode="haptic">Haptic</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Output Modes</label>
+          <div id="outputModes" class="touch-grid">
+            <button class="mode-btn active" data-mode="text">Text</button>
+            <button class="mode-btn active" data-mode="audio">Audio</button>
+            <button class="mode-btn active" data-mode="visual">Visual</button>
+            <button class="mode-btn active" data-mode="haptic">Haptic</button>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block btn-pad" id="createSessionBtn">Create Session</button>
+        <div class="error" id="newSessionError"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live Session Screen -->
+  <section id="liveSessionScreen" class="screen">
+    <div class="card" style="padding:12px 18px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <h2 id="liveSessionTitle" style="margin:0;font-size:18px">—</h2>
+        <p id="liveSessionMeta" style="margin:0;font-size:12px;color:var(--muted)">—</p>
+      </div>
+      <button class="btn btn-outline btn-sm" id="leaveSessionBtn">Back</button>
+    </div>
+    <div class="card" style="flex:1;display:flex;flex-direction:column;padding:12px">
+      <div id="messageList" class="message-list"><p class="empty">No messages yet</p></div>
+      <div class="chat-input">
+        <textarea id="chatInput" placeholder="Type or speak..."></textarea>
+        <select id="targetMode" style="width:110px">
+          <option value="text">Text</option>
+          <option value="audio">Audio</option>
+          <option value="visual">Visual</option>
+          <option value="haptic">Haptic</option>
+          <option value="braille">Braille</option>
+          <option value="morse">Morse</option>
+          <option value="scent">Scent</option>
+          <option value="taste">Taste</option>
+        </select>
+        <button class="btn btn-primary btn-pad" id="sendBtn" style="width:80px">Send</button>
+      </div>
+      <div class="error" id="chatError"></div>
+    </div>
+  </section>
+
+  <!-- Devices Screen -->
+  <section id="devicesScreen" class="screen">
+    <div class="tabs">
+      <button class="tab active" data-tab="deviceList">My Devices</button>
+      <button class="tab" data-tab="addDevice">Add</button>
+    </div>
+    <div id="deviceListPanel">
+      <div id="devicesList"><p class="empty">Loading devices...</p></div>
+    </div>
+    <div id="addDevicePanel" class="hide">
+      <div class="card">
+        <h2>Register Interface Device</h2>
+        <div class="form-group"><label>Device Name</label><input type="text" id="deviceName" placeholder="e.g. Living Room Display"></div>
+        <div class="form-group">
+          <label>Device Type</label>
+          <select id="deviceType">
+            <option value="display">Display / Touchscreen</option>
+            <option value="speaker">Speaker / Audio</option>
+            <option value="microphone">Microphone</option>
+            <option value="camera">Camera / Visual</option>
+            <option value="haptic">Haptic Pad / Vest</option>
+            <option value="scent">Scent Diffuser</option>
+            <option value="taste">Taste Dispenser</option>
+            <option value="generic">Generic</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Capabilities</label>
+          <div id="deviceCapabilities" class="touch-grid">
+            <button class="mode-btn active" data-cap="text">Text</button>
+            <button class="mode-btn" data-cap="audio">Audio</button>
+            <button class="mode-btn" data-cap="visual">Visual</button>
+            <button class="mode-btn" data-cap="haptic">Haptic</button>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block btn-pad" id="registerDeviceBtn">Register Device</button>
+        <div class="error" id="deviceError"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Translate Screen -->
+  <section id="translateScreen" class="screen">
+    <div class="card">
+      <h2>Cross-Sensory Translate</h2>
+      <div class="form-group"><label>Source Mode</label>
+        <select id="translateSource"><option value="text">Text</option><option value="audio">Audio</option><option value="visual">Visual</option><option value="braille">Braille</option><option value="morse">Morse</option><option value="haptic">Haptic</option><option value="scent">Scent</option><option value="taste">Taste</option></select>
+      </div>
+      <div class="form-group"><label>Target Mode</label>
+        <select id="translateTarget"><option value="text">Text</option><option value="audio">Audio</option><option value="visual">Visual</option><option value="braille">Braille</option><option value="morse">Morse</option><option value="haptic">Haptic</option><option value="scent">Scent</option><option value="taste">Taste</option></select>
+      </div>
+      <div class="form-group"><label>Input</label><textarea id="translateInput" placeholder="Enter content to translate..." rows="4"></textarea></div>
+      <button class="btn btn-primary btn-block btn-pad" id="translateBtn">Translate</button>
+      <div class="form-group" style="margin-top:16px"><label>Output</label><textarea id="translateOutput" rows="4" readonly></textarea></div>
+    </div>
+  </section>
+
+  <footer>
+    ABC-IO Global Interfacing Communications Provider · <a href="/">Public Portal</a> · <a href="/account/">Account</a>
+  </footer>
+</div>
+
+<script>
+const app = {
+  gatewayUrl: '',
+  token: localStorage.getItem('abc_io_token'),
+  user: null,
+  account: null,
+  sessions: [],
+  devices: [],
+  currentSession: null,
+  currentTab: 'sessionList',
+  pollTimer: null,
+
+  async init() {
+    try {
+      const r = await fetch('/interface/api/config');
+      const cfg = await r.json();
+      this.gatewayUrl = cfg.gatewayUrl || 'https://abc-io.com';
+    } catch (e) {
+      this.gatewayUrl = 'https://abc-io.com';
+    }
+    if (this.token) {
+      await this.loadMe();
+    } else {
+      this.show('login');
+    }
+    this.bindGlobal();
+  },
+
+  async api(path, opts = {}) {
+    const url = `${this.gatewayUrl}${path}`;
+    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+    if (this.token) headers.Authorization = `Bearer ${this.token}`;
+    const res = await fetch(url, { ...opts, headers });
+    if (res.status === 401) {
+      localStorage.removeItem('abc_io_token');
+      this.token = null;
+      this.show('login');
+      throw new Error('Session expired');
+    }
+    return res;
+  },
+
+  async loadMe() {
+    try {
+      const res = await this.api('/api/v1/auth/me');
+      if (!res.ok) throw new Error('Not authenticated');
+      const data = await res.json();
+      this.user = data.user;
+      this.account = data.account;
+      document.getElementById('mainHeader').classList.remove('hide');
+      this.show('sessions');
+      this.loadSessions();
+    } catch (e) {
+      this.show('login');
+    }
+  },
+
+  show(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const el = document.getElementById(screenId + 'Screen');
+    if (el) el.classList.add('active');
+    if (screenId !== 'login') document.getElementById('mainHeader').classList.remove('hide');
+  },
+
+  bindGlobal() {
+    document.getElementById('loginBtn').addEventListener('click', () => this.login());
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('abc_io_token'); location.reload();
+    });
+    document.querySelectorAll('header nav button[data-nav]').forEach(b => {
+      b.addEventListener('click', () => {
+        const nav = b.dataset.nav;
+        document.querySelectorAll('header nav button').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        if (nav === 'sessions') { this.show('sessions'); this.loadSessions(); }
+        if (nav === 'devices') { this.show('devices'); this.loadDevices(); }
+        if (nav === 'translate') { this.show('translate'); }
+      });
+    });
+
+    document.querySelectorAll('#sessionsScreen .tab').forEach(t => {
+      t.addEventListener('click', () => {
+        document.querySelectorAll('#sessionsScreen .tab').forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+        document.getElementById('sessionListPanel').classList.toggle('hide', t.dataset.tab !== 'sessionList');
+        document.getElementById('newSessionPanel').classList.toggle('hide', t.dataset.tab !== 'newSession');
+      });
+    });
+    document.querySelectorAll('#devicesScreen .tab').forEach(t => {
+      t.addEventListener('click', () => {
+        document.querySelectorAll('#devicesScreen .tab').forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+        document.getElementById('deviceListPanel').classList.toggle('hide', t.dataset.tab !== 'deviceList');
+        document.getElementById('addDevicePanel').classList.toggle('hide', t.dataset.tab !== 'addDevice');
+      });
+    });
+
+    this.bindModeToggles('#inputModes');
+    this.bindModeToggles('#outputModes', true);
+    this.bindCapabilityToggles('#deviceCapabilities');
+
+    document.getElementById('createSessionBtn').addEventListener('click', () => this.createSession());
+    document.getElementById('registerDeviceBtn').addEventListener('click', () => this.registerDevice());
+    document.getElementById('translateBtn').addEventListener('click', () => this.translate());
+    document.getElementById('sendBtn').addEventListener('click', () => this.sendMessage());
+    document.getElementById('leaveSessionBtn').addEventListener('click', () => {
+      this.currentSession = null;
+      clearInterval(this.pollTimer);
+      this.show('sessions');
+      this.loadSessions();
+    });
+  },
+
+  bindModeToggles(selector, multi = true) {
+    document.querySelectorAll(`${selector} .mode-btn`).forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!multi) {
+          document.querySelectorAll(`${selector} .mode-btn`).forEach(b => b.classList.remove('active'));
+        }
+        btn.classList.toggle('active');
+      });
+    });
+  },
+  bindCapabilityToggles(selector) {
+    document.querySelectorAll(`${selector} .mode-btn`).forEach(btn => {
+      btn.addEventListener('click', () => btn.classList.toggle('active'));
+    });
+  },
+
+  async login() {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    try {
+      const res = await fetch(`${this.gatewayUrl}/api/v1/auth/login`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Login failed');
+      this.token = data.token;
+      localStorage.setItem('abc_io_token', this.token);
+      await this.loadMe();
+    } catch (e) {
+      document.getElementById('loginError').textContent = e.message;
+    }
+  },
+
+  async loadSessions() {
+    try {
+      const res = await this.api('/api/v1/interface/sessions');
+      const data = await res.json();
+      this.sessions = data.sessions || [];
+      const list = document.getElementById('sessionsList');
+      if (this.sessions.length === 0) {
+        list.innerHTML = '<p class="empty">No active sessions. Create one to start communicating.</p>';
+        return;
+      }
+      list.innerHTML = this.sessions.map(s => `
+        <div class="session-item" data-slug="${s.slug}">
+          <div class="title">${this.esc(s.title)} <span class="badge">${s.participant_count || 1}</span></div>
+          <div class="meta">${s.session_type} · ${(s.input_modes || []).join(', ')} → ${(s.output_modes || []).join(', ')}</div>
+        </div>
+      `).join('');
+      list.querySelectorAll('.session-item').forEach(el => {
+        el.addEventListener('click', () => this.openSession(el.dataset.slug));
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  },
+
+  async createSession() {
+    const title = document.getElementById('newSessionTitle').value;
+    const type = document.getElementById('newSessionType').value;
+    const inputs = Array.from(document.querySelectorAll('#inputModes .mode-btn.active')).map(b => b.dataset.mode);
+    const outputs = Array.from(document.querySelectorAll('#outputModes .mode-btn.active')).map(b => b.dataset.mode);
+    try {
+      const res = await this.api('/api/v1/interface/sessions', {
+        method: 'POST',
+        body: JSON.stringify({ title, session_type: type, input_modes: inputs, output_modes: outputs })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create session');
+      document.getElementById('newSessionTitle').value = '';
+      this.showTab('sessionList');
+      this.loadSessions();
+      this.openSession(data.session.slug);
+    } catch (e) {
+      document.getElementById('newSessionError').textContent = e.message;
+    }
+  },
+
+  showTab(name) {
+    document.querySelectorAll('#sessionsScreen .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    document.getElementById('sessionListPanel').classList.toggle('hide', name !== 'sessionList');
+    document.getElementById('newSessionPanel').classList.toggle('hide', name !== 'newSession');
+  },
+
+  async openSession(slug) {
+    try {
+      const res = await this.api(`/api/v1/interface/sessions/${slug}`);
+      if (!res.ok) throw new Error('Session not found');
+      const data = await res.json();
+      this.currentSession = data.session;
+      document.getElementById('liveSessionTitle').textContent = data.session.title;
+      document.getElementById('liveSessionMeta').textContent = `${data.session.session_type} · ${data.participants.length} participant(s)`;
+      document.getElementById('messageList').innerHTML = '<p class="empty">Loading...</p>';
+      this.show('liveSession');
+      await this.loadMessages(slug);
+      this.pollTimer = setInterval(() => this.loadMessages(slug), 3000);
+    } catch (e) {
+      alert(e.message);
+    }
+  },
+
+  async loadMessages(slug) {
+    if (!this.currentSession) return;
+    try {
+      const res = await this.api(`/api/v1/interface/sessions/${slug}/messages`);
+      const data = await res.json();
+      const list = document.getElementById('messageList');
+      if (data.messages.length === 0) {
+        list.innerHTML = '<p class="empty">No messages yet</p>';
+        return;
+      }
+      list.innerHTML = data.messages.map(m => {
+        const isMe = m.sender_id === this.user.id;
+        const name = (m.sender_first_name || m.sender_email).split('@')[0];
+        return `
+          <div class="message-bubble ${isMe ? 'me' : 'them'}">
+            <div>${this.esc(m.translated_payload || m.raw_payload)}</div>
+            <div class="meta">${this.esc(name)} · ${m.source_mode}→${m.target_mode} · ${new Date(m.created_at).toLocaleTimeString()}</div>
+          </div>`;
+      }).join('');
+      list.scrollTop = list.scrollHeight;
+    } catch (e) {
+      console.error(e);
+    }
+  },
+
+  async sendMessage() {
+    const input = document.getElementById('chatInput');
+    const target = document.getElementById('targetMode').value;
+    const raw = input.value.trim();
+    if (!raw || !this.currentSession) return;
+    try {
+      // First translate locally/gateway
+      const tr = await this.api('/api/v1/interface/translate', {
+        method: 'POST',
+        body: JSON.stringify({ source_mode: 'text', target_mode: target, payload: raw, session_id: this.currentSession.id })
+      });
+      const tdata = await tr.json();
+      // Then post message to session with translated payload
+      const res = await this.api(`/api/v1/interface/sessions/${this.currentSession.slug}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ source_mode: 'text', target_mode: target, raw_payload: raw, translated_payload: tdata.translated_payload, metadata: { intermediate: tdata.intermediate || {} } })
+      });
+      if (!res.ok) throw new Error('Failed to send');
+      input.value = '';
+      await this.loadMessages(this.currentSession.slug);
+    } catch (e) {
+      document.getElementById('chatError').textContent = e.message;
+    }
+  },
+
+  async loadDevices() {
+    try {
+      const res = await this.api('/api/v1/interface/devices');
+      const data = await res.json();
+      this.devices = data.devices || [];
+      const list = document.getElementById('devicesList');
+      if (this.devices.length === 0) {
+        list.innerHTML = '<p class="empty">No devices registered. Add a touchscreen, speaker, haptic vest, scent diffuser, or taste dispenser.</p>';
+        return;
+      }
+      list.innerHTML = this.devices.map(d => `
+        <div class="card" style="padding:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <strong>${this.esc(d.name)}</strong>
+              <div class="meta">${d.device_type} · ${(d.capabilities || []).join(', ')} · <span class="badge">${d.status}</span></div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    } catch (e) {
+      console.error(e);
+    }
+  },
+
+  async registerDevice() {
+    const name = document.getElementById('deviceName').value;
+    const type = document.getElementById('deviceType').value;
+    const caps = Array.from(document.querySelectorAll('#deviceCapabilities .mode-btn.active')).map(b => b.dataset.cap);
+    try {
+      const res = await this.api('/api/v1/interface/devices', {
+        method: 'POST',
+        body: JSON.stringify({ name, device_type: type, capabilities: caps })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to register');
+      document.getElementById('deviceName').value = '';
+      this.showDeviceTab('deviceList');
+      this.loadDevices();
+    } catch (e) {
+      document.getElementById('deviceError').textContent = e.message;
+    }
+  },
+
+  showDeviceTab(name) {
+    document.querySelectorAll('#devicesScreen .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    document.getElementById('deviceListPanel').classList.toggle('hide', name !== 'deviceList');
+    document.getElementById('addDevicePanel').classList.toggle('hide', name !== 'addDevice');
+  },
+
+  async translate() {
+    const source = document.getElementById('translateSource').value;
+    const target = document.getElementById('translateTarget').value;
+    const payload = document.getElementById('translateInput').value;
+    if (!payload) return;
+    try {
+      const res = await this.api('/api/v1/interface/translate', {
+        method: 'POST',
+        body: JSON.stringify({ source_mode: source, target_mode: target, payload })
+      });
+      const data = await res.json();
+      document.getElementById('translateOutput').value = data.translated_payload || '';
+    } catch (e) {
+      document.getElementById('translateOutput').value = 'Error: ' + e.message;
+    }
+  },
+
+  esc(s) {
+    const div = document.createElement('div');
+    div.textContent = s || '';
+    return div.innerHTML;
+  }
+};
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/interface/sw.js', { scope: '/interface/' }).catch(console.error);
+}
+app.init();
+</script>
+</body>
+</html>

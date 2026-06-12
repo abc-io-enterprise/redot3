@@ -37,8 +37,8 @@ REMOTE_DIR = "/opt/redot2"
 
 NODES = {
     "redot1": {"ip": REDOT1, "password": REDOT1_PASSWORD, "compose": "compose.prod.yml"},
-    "ai1": {"ip": AI1, "password": AI1_PASSWORD, "compose": "compose.replica.yml"},
-    "ai2": {"ip": AI2, "password": AI2_PASSWORD, "compose": "compose.replica.yml"},
+    "ai1": {"ip": AI1, "password": AI1_PASSWORD, "compose": "compose.replica-ai1.yml"},
+    "ai2": {"ip": AI2, "password": AI2_PASSWORD, "compose": "compose.replica-ai2.yml"},
 }
 
 SHARED_DB_URL = f"postgres://postgres:${{POSTGRES_PASSWORD}}@{REDOT1}:5432/abc_io"
@@ -111,7 +111,7 @@ def deploy_node(name, info, bundle_path, env_path):
 
         # For replica nodes, override DB/Redis URLs to point to redot1
         env_extra = ""
-        if compose == "compose.replica.yml":
+        if compose.startswith("compose.replica"):
             env_extra = (
                 f"echo 'DATABASE_URL={SHARED_DB_URL}' >> {REMOTE_DIR}/.env"
                 f" && echo 'REDIS_URL={SHARED_REDIS_URL}' >> {REMOTE_DIR}/.env"

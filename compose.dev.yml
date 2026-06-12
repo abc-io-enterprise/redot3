@@ -20,6 +20,18 @@ services:
     ports:
       - '8080:8080'
 
+  interface-pwa:
+    build:
+      context: ./services/interface-pwa
+    volumes:
+      - ./services/interface-pwa:/app
+    environment:
+      - NODE_ENV=development
+      - PORT=3010
+      - GATEWAY_URL=http://gateway:4000
+    ports:
+      - '8110:3010'
+
   postgres:
     image: postgres:15-alpine
     environment:

@@ -45,6 +45,12 @@ jobs:
       - name: Build beacon-pwa
         run: docker build -t abc-io-beacon-pwa ./services/beacon-pwa
 
+      - name: Build account-pwa
+        run: docker build -t abc-io-account-pwa ./services/account-pwa
+
+      - name: Build interface-pwa
+        run: docker build -t abc-io-interface-pwa ./services/interface-pwa
+
       - name: Build beacon
         run: docker build -t abc-io-beacon ./services/beacon
 
@@ -61,4 +67,8 @@ jobs:
         run: |
           docker compose -f docker-compose.yml config
           docker compose -f compose.dev.yml config
+          docker compose -f compose.staging.yml config
           docker compose -f compose.prod.yml config
+          docker compose -f compose.replica.yml config
+          docker compose -f compose.replica-ai1.yml config
+          docker compose -f compose.replica-ai2.yml config

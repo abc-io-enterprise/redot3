@@ -10,13 +10,18 @@
     "services/mobile-gateway",
     "services/public-portal",
     "services/beacon-pwa",
-    "services/account-pwa"
+    "services/account-pwa",
+    "services/interface-pwa"
   ],
   "scripts": {
     "dev": "docker compose -f docker-compose.yml up -d",
     "dev:logs": "docker compose -f docker-compose.yml up",
     "prod": "docker compose -f compose.prod.yml up -d",
     "prod:logs": "docker compose -f compose.prod.yml up",
+    "staging": "docker compose -f compose.staging.yml up -d",
+    "staging:logs": "docker compose -f compose.staging.yml up",
+    "replica:ai1": "docker compose -f compose.replica-ai1.yml up -d",
+    "replica:ai2": "docker compose -f compose.replica-ai2.yml up -d",
     "build": "docker compose build",
     "stop": "docker compose down",
     "health": "bash scripts/health-check.sh",

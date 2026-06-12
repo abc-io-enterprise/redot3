@@ -11,6 +11,7 @@ kimi|http://localhost:5000/health
 beacon|http://localhost:3006/health
 beacon-pwa|http://localhost:3005/health
 account-pwa|http://localhost:8100/health
+interface-pwa|http://localhost:8110/health
 ai-isp|http://localhost:7000/health
 nginx|http://localhost:8088/health
 prometheus|http://localhost:9091/-/healthy

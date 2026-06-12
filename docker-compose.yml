@@ -129,6 +129,19 @@ services:
     depends_on:
       - gateway
 
+  interface-pwa:
+    build:
+      context: ./services/interface-pwa
+    ports:
+      - '8110:3010'
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3010
+      - GATEWAY_URL=http://gateway:4000
+    depends_on:
+      - gateway
+
   kimi:
     build:
       context: ./services/kimi
