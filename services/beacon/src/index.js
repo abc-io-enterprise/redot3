@@ -593,8 +593,8 @@ app.get('/api/v1/beacon/stats', async (req, res) => {
 
 // ─── Free Locational Awareness Endpoint ───────────────────────────────────────
 // No account required. Location is used only to generate the response and is
-// not stored or linked to any identity. All suggestions are deterministic
-// pseudo-public data derived from the coordinates for demo/utility purposes.
+// not stored or linked to any identity. Nearby suggestions are fetched from
+// public OpenStreetMap data when possible, with a deterministic fallback.
 
 async function fetchOpenMeteoWeather(lat, lng) {
   try {
@@ -635,7 +635,30 @@ function mockWeather(lat, lng) {
   };
 }
 
-function publicSuggestions(lat, lng) {
+async function fetchLocationName(lat, lng) {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`;
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'ABC-IO-Beacon/1.0' },
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!response.ok) return null;
+    const data = await response.json();
+    const parts = [];
+    if (data.locality && data.locality !== data.city) parts.push(data.locality);
+    if (data.city) parts.push(data.city);
+    if (parts.length === 0 && data.principalSubdivision) parts.push(data.principalSubdivision);
+    return parts.length ? parts.join(', ') : null;
+  } catch (e) {
+    console.log('[AWARENESS] Reverse geocode fetch failed:', e.message);
+    return null;
+  }
+}
+
+function deterministicSuggestions(lat, lng) {
   const hash = Math.abs(Math.sin(lat * 45.123 + lng * 12.789) * 43758.5453) % 1;
   const categories = [
     'Public park or recreation area nearby',
@@ -658,28 +681,105 @@ function publicSuggestions(lat, lng) {
   const start = Math.floor(hash * categories.length);
   const start2 = Math.floor(hash * events.length);
   return {
-    nearbySuggestions: [
-      categories[start % categories.length],
-      categories[(start + 1) % categories.length],
-      categories[(start + 2) % categories.length],
-    ],
-    publicEvents: [
-      events[start2 % events.length],
-      events[(start2 + 1) % events.length],
-    ],
+    nearbySuggestions: Array.from({ length: 5 }, (_, i) => categories[(start + i) % categories.length]),
+    publicEvents: Array.from({ length: 3 }, (_, i) => events[(start2 + i) % events.length]),
   };
+}
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function capitalizeCategory(str) {
+  return String(str).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+async function fetchOsmPois(lat, lng, radiusKm) {
+  const radiusM = Math.min(Math.max(radiusKm, 0.5), 50) * 1000;
+  const query = `
+[out:json][timeout:10];
+(
+  node["amenity"~"hospital|clinic|doctors|pharmacy|police|fire_station|library|community_centre|school|university|townhall"]["name"](around:${radiusM},${lat},${lng});
+  way["leisure"="park"]["name"](around:${radiusM},${lat},${lng});
+  way["amenity"~"hospital|clinic|doctors|pharmacy|police|fire_station|library|community_centre|school|university|townhall"]["name"](around:${radiusM},${lat},${lng});
+);
+out center tags 15;
+`;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    const response = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+        'User-Agent': 'ABC-IO-Beacon/1.0',
+      },
+      body: 'data=' + encodeURIComponent(query),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (!Array.isArray(data.elements)) return null;
+
+    const iconMap = {
+      hospital: '🏥', clinic: '🏥', doctors: '🩺', pharmacy: '💊',
+      police: '👮', fire_station: '🚒', library: '📚', community_centre: '🏛️',
+      school: '🏫', university: '🎓', townhall: '🏛️', park: '🌳',
+    };
+
+    const pois = data.elements
+      .map((el) => {
+        const tags = el.tags || {};
+        const name = tags.name || tags['name:en'];
+        if (!name) return null;
+        const elLat = el.lat != null ? el.lat : el.center && el.center.lat;
+        const elLon = el.lon != null ? el.lon : el.center && el.center.lon;
+        if (elLat == null || elLon == null) return null;
+        const category = tags.amenity || tags.leisure || 'place';
+        const distance = haversineKm(lat, lng, elLat, elLon);
+        if (distance > radiusKm) return null;
+        return {
+          name,
+          category,
+          icon: iconMap[category] || '📍',
+          distance,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 5);
+
+    if (pois.length === 0) return null;
+    return pois.map((p) => `${p.icon} ${capitalizeCategory(p.category)}: ${p.name} (${p.distance.toFixed(1)} km)`);
+  } catch (e) {
+    console.log('[AWARENESS] OSM POI fetch failed:', e.message);
+    return null;
+  }
 }
 
 app.get('/api/v1/beacon/awareness', async (req, res) => {
   const lat = parseFloat(req.query.lat);
   const lng = parseFloat(req.query.lng);
-  const radiusKm = parseFloat(req.query.radiusKm) || 10;
+  let radiusKm = parseFloat(req.query.radiusKm);
 
   if (Number.isNaN(lat) || Number.isNaN(lng)) {
     return res.status(400).json({ error: 'Bad Request', message: 'lat and lng are required numbers.' });
   }
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
     return res.status(400).json({ error: 'Bad Request', message: 'Invalid coordinates.' });
+  }
+  if (Number.isNaN(radiusKm)) radiusKm = 10;
+  if (radiusKm <= 0 || radiusKm > 50) {
+    return res.status(400).json({ error: 'Bad Request', message: 'radiusKm must be greater than 0 and at most 50.' });
   }
 
   try {
@@ -692,22 +792,33 @@ app.get('/api/v1/beacon/awareness', async (req, res) => {
       status: b.status,
     }));
 
-    // Weather (free Open-Meteo, fallback to deterministic mock)
-    let weather = await fetchOpenMeteoWeather(lat, lng);
-    if (!weather) {
-      weather = mockWeather(lat, lng);
+    // Gather public data in parallel (each call has its own fallback)
+    const [weather, nearbyResult, locationName] = await Promise.all([
+      (async () => {
+        const w = await fetchOpenMeteoWeather(lat, lng);
+        return w || mockWeather(lat, lng);
+      })(),
+      fetchOsmPois(lat, lng, radiusKm),
+      fetchLocationName(lat, lng),
+    ]);
+
+    // Nearby suggestions from public OpenStreetMap data, fallback to deterministic generic list
+    const fallback = deterministicSuggestions(lat, lng);
+    let nearbySuggestions = nearbyResult;
+    let suggestionsSource = 'openstreetmap';
+    if (!nearbySuggestions || nearbySuggestions.length === 0) {
+      nearbySuggestions = fallback.nearbySuggestions;
+      suggestionsSource = 'fallback';
     }
 
-    // Nearby suggestions and public events
-    const { nearbySuggestions, publicEvents } = publicSuggestions(lat, lng);
-
     return res.status(200).json({
-      location: { latitude: lat, longitude: lng, radiusKm },
+      location: { latitude: lat, longitude: lng, radiusKm, name: locationName },
       privacyNote: 'Location is used only to generate this response. No PII is stored.',
       weather,
       safetyAlerts,
       nearbySuggestions,
-      publicEvents,
+      publicEvents: fallback.publicEvents,
+      suggestionsSource,
       timestamp: new Date().toISOString(),
     });
   } catch (e) {

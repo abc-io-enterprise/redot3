@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ABC-IO Account</title>
+<meta name="description" content="ABC-IO private account interface — messaging, services, and account management.">
+<meta name="theme-color" content="#00ff88">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/abc-io_logo.png">
+<style>
+:root{--bg:#0a0a2e;--panel:#0f1633;--border:#1e293b;--text:#e2e8f0;--muted:#94a3b8;--accent:#00ff88;--accent-dark:#00cc6a;--danger:#ef4444;--warning:#f59e0b}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:Inter,Segoe UI,system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;-webkit-tap-highlight-color:transparent}
+#app{min-height:100%;display:flex;flex-direction:column}
+.screen{display:none;flex:1;flex-direction:column;padding:16px;max-width:600px;margin:0 auto;width:100%}
+.screen.active{display:flex}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 18px;border-radius:10px;border:none;font-size:15px;font-weight:600;cursor:pointer;transition:.2s}
+.btn-primary{background:var(--accent);color:#052e1a}
+.btn-primary:hover{background:var(--accent-dark)}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+.btn-sm{padding:8px 12px;font-size:13px}
+.btn-block{width:100%}
+input,textarea,select{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:#070a1a;color:var(--text);font-size:15px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+.form-group{margin-bottom:16px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:500}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:16px}
+.card h2{font-size:18px;margin-bottom:10px}
+.card p{color:var(--muted);font-size:14px}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+header .logo{font-size:18px;font-weight:700;color:#fff}header .logo span{color:var(--accent)}
+header nav{display:flex;gap:12px;align-items:center}
+header nav button{background:transparent;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:6px}
+header nav button.active{color:var(--accent);font-weight:600}
+.badge{display:inline-block;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;background:rgba(0,255,136,.12);color:var(--accent);border:1px solid rgba(0,255,136,.3)}
+.product-card{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px;background:#0a1026}
+.product-card h4{font-size:15px;margin-bottom:4px}
+.product-card p{font-size:13px;color:var(--muted)}
+.product-card .price{font-size:18px;font-weight:700;color:var(--accent)}
+.conversation-item{padding:14px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px;background:#0a1026;cursor:pointer}
+.conversation-item:hover{border-color:var(--accent)}
+.conversation-item .title{font-weight:600;margin-bottom:4px;display:flex;justify-content:space-between}
+.conversation-item .meta{font-size:13px;color:var(--muted)}
+.unread{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block;margin-left:6px}
+.message-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin:12px 0;max-height:60vh}
+.message-bubble{max-width:80%;padding:12px 14px;border-radius:16px;font-size:14px;word-break:break-word}
+.message-bubble.me{align-self:flex-end;background:var(--accent);color:#052e1a;border-bottom-right-radius:4px}
+.message-bubble.them{align-self:flex-start;background:#1e293b;color:var(--text);border-bottom-left-radius:4px}
+.message-bubble .meta{font-size:11px;opacity:.8;margin-top:4px}
+.chat-input{display:flex;gap:10px;align-items:flex-end}
+.chat-input textarea{flex:1;resize:none;min-height:48px;max-height:120px}
+.empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px}
+.tabs{display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:8px}
+.tab{padding:8px 14px;border-radius:8px;background:transparent;border:none;color:var(--muted);font-size:14px;cursor:pointer}
+.tab.active{background:rgba(0,255,136,.12);color:var(--accent);font-weight:600}
+.error{color:var(--danger);font-size:13px;margin-top:6px}
+.success{color:var(--accent);font-size:13px;margin-top:6px}
+.loading{opacity:.7;pointer-events:none}
+.hide{display:none}
+footer{text-align:center;padding:16px;font-size:12px;color:var(--muted);border-top:1px solid var(--border)}
+footer a{color:var(--muted)}
+@media(min-width:900px){.screen{max-width:900px}header{padding:14px 32px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="mainHeader" class="hide">
+    <div class="logo">ABC-IO <span>Account</span></div>
+    <nav>
+      <button class="active" data-nav="dashboard">Home</button>
+      <button data-nav="messages">Messages</button>
+      <button data-nav="account">Account</button>
+      <button id="logoutBtn">Logout</button>
+    </nav>
+  </header>
+
+  <!-- Login Screen -->
+  <section id="loginScreen" class="screen active" style="justify-content:center">
+    <div class="card" style="text-align:center">
+      <img src="/abc-io_logo.png" alt="ABC-IO" style="width:72px;margin-bottom:16px">
+      <h2 style="font-size:22px">Sign in to ABC-IO</h2>
+      <p style="margin-bottom:20px">Private account interface for the Universal AI Interface Platform.</p>
+      <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="you@abc-io.com" value=""></div>
+      <div class="form-group"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••"></div>
+      <button class="btn btn-primary btn-block" id="loginBtn">Sign In</button>
+      <div class="error" id="loginError"></div>
+      <p style="margin-top:16px;font-size:13px;color:var(--muted)">Need an account? <a href="/signup.html" style="color:var(--accent)">Sign up on the public portal</a></p>
+    </div>
+  </section>
+
+  <!-- Dashboard Screen -->
+  <section id="dashboardScreen" class="screen">
+    <div id="dashboardWelcome" class="card">
+      <h2>Welcome, <span id="userName">—</span></h2>
+      <p>Account: <strong id="accountName">—</strong> <span class="badge" id="accountTier">—</span></p>
+      <p style="margin-top:8px">Access AI translation, beacon services, account messaging, and billing from this interface.</p>
+    </div>
+    <div class="card">
+      <h2>Quick Actions</h2>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px">
+        <button class="btn btn-outline btn-sm" onclick="app.go('messages')">💬 Messages</button>
+        <button class="btn btn-outline btn-sm" onclick="window.open('/beacon/','_blank')">🚨 Beacon</button>
+        <button class="btn btn-outline btn-sm" onclick="window.open('/api/v1/translate','_blank')">🌐 Translate</button>
+        <button class="btn btn-outline btn-sm" onclick="app.go('account')">⚙️ Account</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Your Products</h2>
+      <div id="purchasedProducts"><p class="empty">Loading...</p></div>
+    </div>
+  </section>
+
+  <!-- Messages Screen -->
+  <section id="messagesScreen" class="screen">
+    <div class="tabs">
+      <button class="tab active" data-tab="conversationList">Conversations</button>
+      <button class="tab" data-tab="newConversation">New</button>
+    </div>
+    <div id="conversationList">
+      <div id="conversationsContainer"><p class="empty">Loading conversations...</p></div>
+    </div>
+    <div id="newConversation" class="hide">
+      <div class="card">
+        <h2>New Conversation</h2>
+        <div class="form-group"><label>Title</label><input type="text" id="convTitle" placeholder="e.g. Family Check-in"></div>
+        <div class="form-group"><label>Participant Emails (comma separated)</label><input type="text" id="convEmails" placeholder="member@abc-io.com, operator@abc-io.com"></div>
+        <button class="btn btn-primary btn-block" id="createConvBtn">Create</button>
+        <div class="error" id="convError"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chat Screen -->
+  <section id="chatScreen" class="screen">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <button class="btn btn-outline btn-sm" onclick="app.go('messages')">← Back</button>
+      <h2 id="chatTitle" style="font-size:18px">Conversation</h2>
+    </div>
+    <div class="card" style="flex:1;display:flex;flex-direction:column;padding:12px">
+      <div id="messageList" class="message-list"><p class="empty">Loading messages...</p></div>
+      <div class="chat-input">
+        <textarea id="messageInput" rows="1" placeholder="Type a message..."></textarea>
+        <button class="btn btn-primary" id="sendBtn">Send</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Account Screen -->
+  <section id="accountScreen" class="screen">
+    <div class="card">
+      <h2>Account & Billing</h2>
+      <p>Email: <strong id="acctEmail">—</strong></p>
+      <p>Tier: <span class="badge" id="acctTier">—</span></p>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="window.open('/pricing.html','_blank')">View Pricing</button>
+        <button class="btn btn-outline btn-sm" id="billingPortalBtn">Billing Portal</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Available Add-ons</h2>
+      <div id="availableProducts"><p class="empty">Loading...</p></div>
+    </div>
+    <div class="card">
+      <h2>Support</h2>
+      <p>Need help? Contact support or open an intervention ticket.</p>
+      <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+        <a href="/contact.html" target="_blank" class="btn btn-outline btn-sm">Contact Support</a>
+        <a href="/help.html" target="_blank" class="btn btn-outline btn-sm">Help Center</a>
+      </div>
+    </div>
+  </section>
+
+  <footer id="mainFooter" class="hide">
+    <p><a href="/privacy.html">Privacy</a> • <a href="/terms.html">Terms</a> • <a href="/contact.html">Contact</a></p>
+    <p>&copy; 2026 ABC-IO. All rights reserved.</p>
+  </footer>
+</div>
+
+<script>
+const app = {
+  gatewayUrl: '',
+  token: localStorage.getItem('abc_io_token') || '',
+  user: null,
+  conversations: [],
+  currentConversation: null,
+  pollInterval: null,
+
+  async init() {
+    try {
+      const r = await fetch('/api/config');
+      const cfg = await r.json();
+      this.gatewayUrl = cfg.gatewayUrl || (location.hostname === 'localhost' ? 'http://localhost:4000' : 'https://abc-io.com');
+    } catch (e) {
+      this.gatewayUrl = location.hostname === 'localhost' ? 'http://localhost:4000' : 'https://abc-io.com';
+    }
+    if (this.token) {
+      const ok = await this.loadMe();
+      if (ok) this.showDashboard(); else this.showLogin();
+    } else {
+      this.showLogin();
+    }
+    this.bindEvents();
+  },
+
+  bindEvents() {
+    document.getElementById('loginBtn').addEventListener('click', () => this.login());
+    document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
+    document.getElementById('createConvBtn').addEventListener('click', () => this.createConversation());
+    document.getElementById('sendBtn').addEventListener('click', () => this.sendMessage());
+    document.getElementById('billingPortalBtn').addEventListener('click', () => this.openBillingPortal());
+    document.getElementById('messageInput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.sendMessage(); } });
+
+    document.querySelectorAll('header nav button[data-nav]').forEach(btn => {
+      btn.addEventListener('click', () => this.go(btn.dataset.nav));
+    });
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('conversationList').classList.toggle('hide', tab.dataset.tab !== 'conversationList');
+        document.getElementById('newConversation').classList.toggle('hide', tab.dataset.tab !== 'newConversation');
+      });
+    });
+  },
+
+  async api(method, path, body) {
+    const opts = { method, headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(`${this.gatewayUrl}${path}`, opts);
+    if (r.status === 401) { this.logout(); throw new Error('Session expired'); }
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    return data;
+  },
+
+  async loadMe() {
+    try {
+      this.user = await this.api('GET', '/api/v1/auth/me');
+      return true;
+    } catch (e) {
+      console.error('loadMe failed', e);
+      return false;
+    }
+  },
+
+  async login() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const err = document.getElementById('loginError');
+    err.textContent = '';
+    try {
+      const data = await fetch(`${this.gatewayUrl}/api/v1/auth/login`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      }).then(r => r.json());
+      if (data.token) {
+        this.token = data.token;
+        localStorage.setItem('abc_io_token', data.token);
+        await this.loadMe();
+        this.showDashboard();
+      } else {
+        err.textContent = data.error || 'Login failed';
+      }
+    } catch (e) {
+      err.textContent = e.message;
+    }
+  },
+
+  logout() {
+    this.token = ''; this.user = null; this.conversations = []; this.currentConversation = null;
+    localStorage.removeItem('abc_io_token');
+    clearInterval(this.pollInterval);
+    this.showLogin();
+  },
+
+  showLogin() {
+    this.setScreen('loginScreen');
+    document.getElementById('mainHeader').classList.add('hide');
+    document.getElementById('mainFooter').classList.add('hide');
+  },
+
+  showDashboard() {
+    document.getElementById('mainHeader').classList.remove('hide');
+    document.getElementById('mainFooter').classList.remove('hide');
+    this.setScreen('dashboardScreen');
+    this.setNav('dashboard');
+    document.getElementById('userName').textContent = this.user.first_name || this.user.email.split('@')[0];
+    document.getElementById('accountName').textContent = this.user.account_name;
+    document.getElementById('accountTier').textContent = this.user.tier;
+    this.loadProducts();
+  },
+
+  go(screen) {
+    document.getElementById('mainHeader').classList.remove('hide');
+    document.getElementById('mainFooter').classList.remove('hide');
+    clearInterval(this.pollInterval);
+    if (screen === 'dashboard') { this.showDashboard(); return; }
+    if (screen === 'messages') { this.showMessages(); return; }
+    if (screen === 'account') { this.showAccount(); return; }
+    this.setScreen(screen + 'Screen');
+    this.setNav(screen);
+  },
+
+  async showMessages() {
+    this.setScreen('messagesScreen');
+    this.setNav('messages');
+    await this.loadConversations();
+    // Switch to list tab
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('.tab[data-tab="conversationList"]').classList.add('active');
+    document.getElementById('conversationList').classList.remove('hide');
+    document.getElementById('newConversation').classList.add('hide');
+  },
+
+  async showAccount() {
+    this.setScreen('accountScreen');
+    this.setNav('account');
+    document.getElementById('acctEmail').textContent = this.user.email;
+    document.getElementById('acctTier').textContent = this.user.tier;
+    this.loadProducts();
+  },
+
+  setScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  },
+
+  setNav(name) {
+    document.querySelectorAll('header nav button[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === name));
+  },
+
+  async loadProducts() {
+    try {
+      const data = await this.api('GET', '/api/v1/account/products');
+      const purchasedEl = document.getElementById('purchasedProducts');
+      if (data.purchased && data.purchased.length) {
+        purchasedEl.innerHTML = data.purchased.map(p => `<div class="product-card"><div><h4>${p.name}</h4><p>${p.slug}</p></div><span class="badge">Active</span></div>`).join('');
+      } else {
+        purchasedEl.innerHTML = '<p class="empty">No add-ons yet. Visit the Account tab to explore products.</p>';
+      }
+      const availEl = document.getElementById('availableProducts');
+      if (data.available && data.available.length) {
+        availEl.innerHTML = data.available.map(p => {
+          const price = p.price_cents ? `$${(p.price_cents/100).toFixed(2)}/${p.billing_interval}` : 'Free';
+          const owned = data.purchased.find(x => x.slug === p.slug);
+          return `<div class="product-card"><div><h4>${p.name}</h4><p>${p.description}</p></div><div style="text-align:right"><div class="price">${price}</div>${owned ? '<span class="badge">Owned</span>' : `<button class="btn btn-primary btn-sm" onclick="app.checkoutProduct('${p.id}', ${p.price_cents})">Get</button>`}</div></div>`;
+        }).join('');
+      }
+    } catch (e) { console.error('loadProducts', e); }
+  },
+
+  async loadConversations() {
+    try {
+      const data = await this.api('GET', '/api/v1/conversations');
+      this.conversations = data.conversations || [];
+      const el = document.getElementById('conversationsContainer');
+      if (!this.conversations.length) {
+        el.innerHTML = '<p class="empty">No conversations yet. Start one from the New tab.</p>';
+        return;
+      }
+      el.innerHTML = this.conversations.map(c => `
+        <div class="conversation-item" onclick="app.openChat('${c.id}')">
+          <div class="title">${c.title || 'Untitled'} ${c.unread_count ? '<span class="unread"></span>' : ''}</div>
+          <div class="meta">${c.conversation_type} • ${new Date(c.updated_at).toLocaleString()}</div>
+        </div>`).join('');
+    } catch (e) { console.error('loadConversations', e); }
+  },
+
+  async createConversation() {
+    const title = document.getElementById('convTitle').value.trim();
+    const emails = document.getElementById('convEmails').value.split(',').map(s => s.trim()).filter(Boolean);
+    const err = document.getElementById('convError');
+    err.textContent = '';
+    if (!title) { err.textContent = 'Title required'; return; }
+    try {
+      // Resolve emails to user ids via /api/v1/auth/me does not support lookup; gateway has no user lookup endpoint.
+      // For this PWA we create a group conversation with current user only and allow server-side invitation later.
+      await this.api('POST', '/api/v1/conversations', { title, participantUserIds: [], conversationType: 'group' });
+      document.getElementById('convTitle').value = '';
+      document.getElementById('convEmails').value = '';
+      this.showMessages();
+    } catch (e) { err.textContent = e.message; }
+  },
+
+  async openChat(id) {
+    this.currentConversation = this.conversations.find(c => c.id === id);
+    if (!this.currentConversation) return;
+    this.setScreen('chatScreen');
+    document.getElementById('chatTitle').textContent = this.currentConversation.title || 'Conversation';
+    await this.loadMessages(id);
+    this.pollInterval = setInterval(() => this.loadMessages(id), 5000);
+  },
+
+  async loadMessages(convId) {
+    try {
+      const data = await this.api('GET', `/api/v1/conversations/${convId}/messages`);
+      const el = document.getElementById('messageList');
+      if (!data.messages.length) { el.innerHTML = '<p class="empty">No messages yet.</p>'; return; }
+      el.innerHTML = data.messages.map(m => `
+        <div class="message-bubble ${m.sender_id === this.user.user_id ? 'me' : 'them'}">
+          <div>${this.escapeHtml(m.message)}</div>
+          <div class="meta">${m.sender_first_name || m.sender_email} • ${new Date(m.created_at).toLocaleTimeString()}</div>
+        </div>`).join('');
+      el.scrollTop = el.scrollHeight;
+    } catch (e) { console.error('loadMessages', e); }
+  },
+
+  async sendMessage() {
+    const input = document.getElementById('messageInput');
+    const text = input.value.trim();
+    if (!text || !this.currentConversation) return;
+    input.value = '';
+    try {
+      await this.api('POST', `/api/v1/conversations/${this.currentConversation.id}/messages`, { message: text });
+      await this.loadMessages(this.currentConversation.id);
+    } catch (e) { alert(e.message); }
+  },
+
+  async checkoutProduct(productId, priceCents) {
+    try {
+      if (!priceCents) {
+        const data = await this.api('POST', `/api/v1/account/products/${productId}/checkout`);
+        alert(data.success ? 'Product provisioned.' : 'Could not provision product.');
+        this.loadProducts();
+        return;
+      }
+      const data = await this.api('POST', `/api/v1/account/products/${productId}/checkout`);
+      if (data.url) window.location.href = data.url;
+      else alert('Checkout unavailable');
+    } catch (e) { alert(e.message); }
+  },
+
+  async openBillingPortal() {
+    try {
+      const data = await this.api('POST', '/api/v1/billing/portal');
+      if (data.url) window.location.href = data.url;
+    } catch (e) { alert(e.message); }
+  },
+
+  escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+};
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(console.error);
+}
+app.init();
+</script>
+</body>
+</html>

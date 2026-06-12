@@ -5,9 +5,47 @@ const path = require('path');
 const crypto = require('crypto');
 const http = require('http');
 const https = require('https');
-const url = require('url');
+const redis = require('redis');
 const app = express();
 const port = Number(process.env.PORT || 5050);
+
+// Redis client for persisting backup state across restarts
+const REDIS_URL = process.env.REDIS_URL || 'redis://redis:6379/0';
+let redisClient = null;
+let redisReady = false;
+(async () => {
+  try {
+    redisClient = redis.createClient({ url: REDIS_URL });
+    redisClient.on('error', (err) => { redisReady = false; });
+    await redisClient.connect();
+    redisReady = true;
+    console.log('[MOBILE-GATEWAY] Redis connected for backup persistence');
+  } catch (e) {
+    console.warn('[MOBILE-GATEWAY] Redis unavailable, backup state will be in-memory only:', e.message);
+  }
+})();
+
+async function redisPush(key, item, maxLen = 500) {
+  if (!redisReady) return false;
+  try {
+    await redisClient.lPush(key, JSON.stringify(item));
+    await redisClient.lTrim(key, 0, maxLen - 1);
+    return true;
+  } catch (e) { return false; }
+}
+
+async function redisRange(key, start = 0, stop = -1) {
+  if (!redisReady) return [];
+  try {
+    const items = await redisClient.lRange(key, start, stop);
+    return items.map(i => { try { return JSON.parse(i); } catch { return null; } }).filter(Boolean);
+  } catch (e) { return []; }
+}
+
+async function redisLen(key) {
+  if (!redisReady) return 0;
+  try { return await redisClient.lLen(key); } catch (e) { return 0; }
+}
 
 const mobileSigningKey = process.env.MOBILE_SIGNING_KEY || 'mobile-system-secret';
 const mobileFingerprint = process.env.MOBILE_SIGNING_FINGERPRINT || 'mobile-fingerprint-456';
@@ -39,6 +77,7 @@ function signPayload(payload) {
 // Helper: HTTP health check to any node
 function checkNode(node) {
   return new Promise((resolve) => {
+    const start = Date.now();
     const options = {
       hostname: node.host,
       port: node.port,
@@ -54,13 +93,46 @@ function checkNode(node) {
         resolve({
           up: res.statusCode >= 200 && res.statusCode < 300,
           statusCode: res.statusCode,
-          latency: Date.now(),
+          latency: Date.now() - start,
         });
       });
     });
-    req.on('error', () => resolve({ up: false, statusCode: 0, latency: Date.now() }));
-    req.on('timeout', () => { req.destroy(); resolve({ up: false, statusCode: 0, latency: Date.now() }); });
+    req.on('error', () => resolve({ up: false, statusCode: 0, latency: Date.now() - start }));
+    req.on('timeout', () => { req.destroy(); resolve({ up: false, statusCode: 0, latency: Date.now() - start }); });
     req.setTimeout(5000);
+    req.end();
+  });
+}
+
+// Helper: generic proxy request to an upstream service
+function proxyRequest(targetUrl, method = 'GET', body = null, headers = {}, timeoutMs = 30000) {
+  return new Promise((resolve) => {
+    const parsed = new URL(targetUrl);
+    const postData = body ? JSON.stringify(body) : null;
+    const options = {
+      hostname: parsed.hostname,
+      port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+      path: parsed.pathname + parsed.search,
+      method,
+      headers: {
+        ...headers,
+        ...(postData ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData) } : {}),
+      },
+      timeout: timeoutMs,
+    };
+    const client = (parsed.protocol === 'https:') ? https : http;
+    const req = client.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try { resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data: JSON.parse(data) }); }
+        catch { resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data: { raw: data } }); }
+      });
+    });
+    req.on('error', (e) => resolve({ ok: false, error: e.message }));
+    req.on('timeout', () => { req.destroy(); resolve({ ok: false, error: 'timeout' }); });
+    req.setTimeout(timeoutMs);
+    if (postData) req.write(postData);
     req.end();
   });
 }
@@ -116,6 +188,48 @@ app.use(morgan('tiny'));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Background failover monitor: check primary gateway every 15 seconds
+// Require 3 consecutive failures to enter active mode, and 2 consecutive passes to recover.
+let consecutivePrimaryFailures = 0;
+let consecutivePrimaryPasses = 0;
+
+async function runBackupMonitor() {
+  try {
+    const primary = await checkNode(UPSTREAM_NODES.primary);
+    backupState.lastPrimaryCheck = new Date().toISOString();
+    backupState.nodeStatus.primary = primary;
+
+    if (primary.up) {
+      consecutivePrimaryFailures = 0;
+      consecutivePrimaryPasses++;
+      if (consecutivePrimaryPasses >= 2) {
+        if (backupState.mode === 'active') backupState.mode = 'recovery';
+        else if (backupState.mode === 'recovery') {
+          backupState.mode = 'standby';
+          backupState.activatedAt = null;
+        }
+      }
+    } else {
+      consecutivePrimaryPasses = 0;
+      consecutivePrimaryFailures++;
+      if (consecutivePrimaryFailures >= 3 && backupState.mode === 'standby') {
+        backupState.mode = 'active';
+        backupState.activatedAt = new Date().toISOString();
+      }
+    }
+  } catch (e) {
+    console.error('[MONITOR] Health check error:', e.message);
+  }
+}
+
+setInterval(runBackupMonitor, 15000);
+runBackupMonitor(); // initial check
+
+// Token verification helper
+function verifyOwnerToken(token) {
+  return token && token === process.env.OWNER_SESSION_TOKEN;
+}
+
 // ========================================================================
 // HEALTH & SIGNATURE
 // ========================================================================
@@ -158,7 +272,7 @@ app.get('/api/stats', (req, res) => {
 // ========================================================================
 // BEACON
 // ========================================================================
-app.post('/api/beacon', (req, res) => {
+app.post('/api/beacon', async (req, res) => {
   const { deviceId, latitude, longitude, battery, note } = req.body;
   if (!deviceId) {
     return res.status(400).json({ error: 'deviceId required' });
@@ -173,7 +287,8 @@ app.post('/api/beacon', (req, res) => {
     timestamp: new Date().toISOString(),
     source: 'mobile-gateway',
   };
-  // Cache locally for sync
+  // Persist to Redis if available, otherwise in-memory
+  await redisPush('mobile:beacons', beacon, 500);
   backupState.cachedBeacons.push(beacon);
   if (backupState.cachedBeacons.length > 500) {
     backupState.cachedBeacons = backupState.cachedBeacons.slice(-500);
@@ -213,14 +328,17 @@ app.get('/api/backup/status', async (req, res) => {
     backupState.activatedAt = null;
   }
 
+  const redisBeaconCount = await redisLen('mobile:beacons');
+  const redisMessageCount = await redisLen('mobile:messages');
+
   res.json({
     mode: backupState.mode,
     activatedAt: backupState.activatedAt,
     lastPrimaryCheck: backupState.lastPrimaryCheck,
     nodes: results,
     local: {
-      beaconsCached: backupState.cachedBeacons.length,
-      messagesStored: backupState.emergencyMessages.length,
+      beaconsCached: redisBeaconCount || backupState.cachedBeacons.length,
+      messagesStored: redisMessageCount || backupState.emergencyMessages.length,
       beaconsRelayed: backupState.beaconsRelayed,
       aiRequestsProxied: backupState.aiRequestsProxied,
     },
@@ -252,8 +370,7 @@ app.get('/api/backup/nodes', (req, res) => {
 // Activate backup mode manually
 app.post('/api/backup/activate', (req, res) => {
   const { token, reason } = req.body;
-  // Simple token check — in production this should verify OWNER_SESSION_TOKEN or similar
-  if (token !== process.env.OWNER_SESSION_TOKEN && token !== 'emergency-override') {
+  if (!verifyOwnerToken(token)) {
     return res.status(403).json({ error: 'Invalid activation token' });
   }
   backupState.mode = 'active';
@@ -270,7 +387,7 @@ app.post('/api/backup/activate', (req, res) => {
 // Deactivate backup mode
 app.post('/api/backup/deactivate', (req, res) => {
   const { token } = req.body;
-  if (token !== process.env.OWNER_SESSION_TOKEN && token !== 'emergency-override') {
+  if (!verifyOwnerToken(token)) {
     return res.status(403).json({ error: 'Invalid token' });
   }
   backupState.mode = 'standby';
@@ -307,6 +424,7 @@ app.post('/api/backup/beacon/relay', async (req, res) => {
 
   backupState.beaconsRelayed += 1;
   backupState.cachedBeacons.push(beacon);
+  await redisPush('mobile:beacons', beacon, 500);
 
   res.json({
     relayed: true,
@@ -354,7 +472,7 @@ app.post('/api/backup/ai/generate', async (req, res) => {
 });
 
 // Store emergency message
-app.post('/api/backup/message', (req, res) => {
+app.post('/api/backup/message', async (req, res) => {
   const { from, text, priority, deviceId } = req.body;
   if (!text) return res.status(400).json({ error: 'text required' });
 
@@ -373,14 +491,16 @@ app.post('/api/backup/message', (req, res) => {
     backupState.emergencyMessages = backupState.emergencyMessages.slice(0, 1000);
   }
   backupState.messagesStored = backupState.emergencyMessages.length;
+  await redisPush('mobile:messages', msg, 1000);
 
   res.json({ stored: true, message: msg, queuePosition: 1 });
 });
 
 // Retrieve emergency messages
-app.get('/api/backup/messages', (req, res) => {
+app.get('/api/backup/messages', async (req, res) => {
   const { since, limit, priority } = req.query;
-  let msgs = backupState.emergencyMessages;
+  let msgs = await redisRange('mobile:messages');
+  if (!msgs.length) msgs = backupState.emergencyMessages;
   if (since) {
     msgs = msgs.filter((m) => m.timestamp >= since);
   }
@@ -449,9 +569,10 @@ app.post('/api/backup/sync', (req, res) => {
 });
 
 // Bulk beacon export (for reconciliation when primary comes back)
-app.get('/api/backup/beacons/export', (req, res) => {
+app.get('/api/backup/beacons/export', async (req, res) => {
   const { since, limit } = req.query;
-  let beacons = backupState.cachedBeacons;
+  let beacons = await redisRange('mobile:beacons');
+  if (!beacons.length) beacons = backupState.cachedBeacons;
   if (since) {
     beacons = beacons.filter((b) => b.timestamp >= since);
   }
@@ -462,18 +583,55 @@ app.get('/api/backup/beacons/export', (req, res) => {
   });
 });
 
+// Proxy pass-through for critical public routes when primary gateway is down.
+// These are only available when backupState.mode === 'active'.
+const BACKUP_PROXY_ROUTES = [
+  { method: 'GET', path: '/api/v1/system/health', target: (n) => `http://${n.host}:${n.port}/api/v1/system/health` },
+  { method: 'GET', path: '/api/v1/beacon/active', target: (n, q) => `http://${n.host}:${n.port}/api/v1/beacon/active?${q}` },
+  { method: 'GET', path: '/api/v1/beacon/awareness', target: (n, q) => `http://${n.host}:${n.port}/api/v1/beacon/awareness?${q}` },
+  { method: 'POST', path: '/api/v1/beacon/emit', target: (n) => `http://${n.host}:${n.port}/api/v1/beacon/emit` },
+  { method: 'POST', path: '/api/v1/ai/generate', target: (n) => `http://${n.host}:${n.port}/api/v1/ai/generate` },
+];
+
+function registerBackupProxyRoutes() {
+  for (const route of BACKUP_PROXY_ROUTES) {
+    const handler = async (req, res) => {
+      // Always allow /api/v1/system/health pass-through for health checks
+      if (backupState.mode !== 'active' && route.path !== '/api/v1/system/health') {
+        return res.status(503).json({ error: 'Backup gateway not active', mode: backupState.mode });
+      }
+      const nodesToTry = ['primary', 'ai1', 'ai2'];
+      for (const key of nodesToTry) {
+        const node = UPSTREAM_NODES[key];
+        if (!node) continue;
+        const target = route.target(node, new URLSearchParams(req.query).toString());
+        const result = await proxyRequest(target, route.method, route.method === 'POST' ? req.body : null, req.headers);
+        if (result.ok) {
+          return res.status(result.status).json(result.data);
+        }
+      }
+      res.status(503).json({ error: 'All upstream nodes unreachable', mode: backupState.mode });
+    };
+    if (route.method === 'GET') app.get(route.path, handler);
+    else if (route.method === 'POST') app.post(route.path, handler);
+  }
+}
+registerBackupProxyRoutes();
+
 // Clear synced data
 app.post('/api/backup/clear', (req, res) => {
   const { token, scope } = req.body;
-  if (token !== process.env.OWNER_SESSION_TOKEN && token !== 'emergency-override') {
+  if (!verifyOwnerToken(token)) {
     return res.status(403).json({ error: 'Invalid token' });
   }
   if (scope === 'beacons' || scope === 'all') {
     backupState.cachedBeacons = [];
+    if (redisReady) redisClient.del('mobile:beacons').catch(() => {});
   }
   if (scope === 'messages' || scope === 'all') {
     backupState.emergencyMessages = [];
     backupState.messagesStored = 0;
+    if (redisReady) redisClient.del('mobile:messages').catch(() => {});
   }
   res.json({ cleared: true, scope: scope || 'all' });
 });

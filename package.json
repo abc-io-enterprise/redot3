@@ -9,7 +9,8 @@
     "services/owner-dashboard",
     "services/mobile-gateway",
     "services/public-portal",
-    "services/beacon-pwa"
+    "services/beacon-pwa",
+    "services/account-pwa"
   ],
   "scripts": {
     "dev": "docker compose -f docker-compose.yml up -d",

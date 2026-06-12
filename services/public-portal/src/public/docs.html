@@ -4,11 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>API Documentation — ABC-IO</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:#0a0a2e;color:#e2e8f0;line-height:1.7}
+body{font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;background:#0a0a2e;color:#e2e8f0;line-height:1.7}
 .nav{display:flex;justify-content:space-between;align-items:center;padding:16px 32px;border-bottom:1px solid #1e293b}
 .nav .logo{font-size:18px;font-weight:700;color:#fff}
 .nav .logo span{color:#00ff88}
@@ -74,7 +73,7 @@ x-api-key: &lt;api-key&gt;</code></pre>
   <h2>AI Endpoints</h2>
   <h3>Generate</h3>
   <div class="endpoint"><span class="method">POST</span><span class="path">/ai/generate</span></div>
-  <pre><code>{ "prompt": "Explain quantum computing", "model": "mistral" }</code></pre>
+  <pre><code>{ "prompt": "Explain quantum computing", "model": "default" }</code></pre>
 
   <h3>Health</h3>
   <div class="endpoint"><span class="method">GET</span><span class="path">/ai/health</span></div>
@@ -121,7 +120,7 @@ x-api-key: &lt;api-key&gt;</code></pre>
   <p>Rate limit headers: <code>X-RateLimit-Limit</code>, <code>X-RateLimit-Remaining</code></p>
 
   <h2>Support</h2>
-  <p>Email: <a href="mailto:support@abc-io.com">support@abc-io.com</a> · <a href="https://github.com/ccplexmath/redot2complete" target="_blank">GitHub</a></p>
+  <p>Email: <a href="mailto:support@abc-io.com">support@abc-io.com</a></p>
 </div>
 </main>
 <footer class="brand-footer">
