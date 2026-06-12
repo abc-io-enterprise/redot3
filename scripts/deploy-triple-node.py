@@ -113,12 +113,12 @@ def deploy_node(name, info, bundle_path, env_path):
         env_extra = ""
         if compose == "compose.replica.yml":
             env_extra = (
-                f" && echo 'DATABASE_URL={SHARED_DB_URL}' >> {REMOTE_DIR}/.env"
+                f"echo 'DATABASE_URL={SHARED_DB_URL}' >> {REMOTE_DIR}/.env"
                 f" && echo 'REDIS_URL={SHARED_REDIS_URL}' >> {REMOTE_DIR}/.env"
                 f" && echo 'KIMI_ENDPOINTS={KIMI_ENDPOINTS}' >> {REMOTE_DIR}/.env"
             )
         else:
-            env_extra = f" && echo 'KIMI_ENDPOINTS={KIMI_ENDPOINTS}' >> {REMOTE_DIR}/.env"
+            env_extra = f"echo 'KIMI_ENDPOINTS={KIMI_ENDPOINTS}' >> {REMOTE_DIR}/.env"
 
         rc, out, err = run_remote(client, env_extra)
         if rc != 0:
