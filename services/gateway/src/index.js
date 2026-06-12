@@ -216,6 +216,76 @@ async function detectUsageSpike(accountId) {
 }
 
 // ============================================
+// PROMETHEUS METRICS
+// ============================================
+const metrics = {
+  requestsTotal: 0,
+  responseMsSum: 0,
+  statusCounts: {},
+  methodCounts: {},
+  pathCounts: {},
+  responseTimeBuckets: { le_100: 0, le_300: 0, le_500: 0, le_1000: 0, le_3000: 0, le_inf: 0 },
+  startTime: Date.now(),
+};
+
+function observeRequest(method, path, statusCode, durationMs) {
+  metrics.requestsTotal += 1;
+  metrics.responseMsSum += durationMs;
+  const statusKey = `${statusCode}`;
+  metrics.statusCounts[statusKey] = (metrics.statusCounts[statusKey] || 0) + 1;
+  metrics.methodCounts[method] = (metrics.methodCounts[method] || 0) + 1;
+  // bucket path by first segment
+  const pathKey = path.split('/').slice(0, 3).join('/') || '/';
+  metrics.pathCounts[pathKey] = (metrics.pathCounts[pathKey] || 0) + 1;
+
+  if (durationMs <= 100) metrics.responseTimeBuckets.le_100 += 1;
+  else if (durationMs <= 300) metrics.responseTimeBuckets.le_300 += 1;
+  else if (durationMs <= 500) metrics.responseTimeBuckets.le_500 += 1;
+  else if (durationMs <= 1000) metrics.responseTimeBuckets.le_1000 += 1;
+  else if (durationMs <= 3000) metrics.responseTimeBuckets.le_3000 += 1;
+  else metrics.responseTimeBuckets.le_inf += 1;
+}
+
+function renderMetrics() {
+  const uptime = Math.floor((Date.now() - metrics.startTime) / 1000);
+  const avg = metrics.requestsTotal ? (metrics.responseMsSum / metrics.requestsTotal).toFixed(3) : 0;
+  let out = '';
+  out += '# HELP gateway_up Whether the gateway is up\n';
+  out += '# TYPE gateway_up gauge\n';
+  out += 'gateway_up 1\n';
+  out += '# HELP gateway_uptime_seconds Gateway process uptime\n';
+  out += '# TYPE gateway_uptime_seconds gauge\n';
+  out += `gateway_uptime_seconds ${uptime}\n`;
+  out += '# HELP gateway_requests_total Total HTTP requests\n';
+  out += '# TYPE gateway_requests_total counter\n';
+  out += `gateway_requests_total ${metrics.requestsTotal}\n`;
+  out += '# HELP gateway_request_duration_ms_sum Sum of response times\n';
+  out += '# TYPE gateway_request_duration_ms_sum counter\n';
+  out += `gateway_request_duration_ms_sum ${metrics.responseMsSum}\n`;
+  out += '# HELP gateway_request_duration_ms_count Count of response times\n';
+  out += `gateway_request_duration_ms_count ${metrics.requestsTotal}\n`;
+  out += '# HELP gateway_request_duration_ms_bucket Response time histogram buckets\n';
+  out += '# TYPE gateway_request_duration_ms_bucket histogram\n';
+  const buckets = [
+    ['le_100', 100], ['le_300', 300], ['le_500', 500], ['le_1000', 1000], ['le_3000', 3000], ['le_inf', '+Inf']
+  ];
+  for (const [key, le] of buckets) {
+    out += `gateway_request_duration_ms_bucket{le="${le}"} ${metrics.responseTimeBuckets[key]}\n`;
+  }
+  out += '# HELP gateway_responses_total Total responses by status code\n';
+  out += '# TYPE gateway_responses_total counter\n';
+  for (const [status, count] of Object.entries(metrics.statusCounts)) {
+    out += `gateway_responses_total{status="${status}"} ${count}\n`;
+  }
+  out += '# HELP gateway_requests_by_method_total Total requests by HTTP method\n';
+  out += '# TYPE gateway_requests_by_method_total counter\n';
+  for (const [method, count] of Object.entries(metrics.methodCounts)) {
+    out += `gateway_requests_by_method_total{method="${method}"} ${count}\n`;
+  }
+  return out;
+}
+
+// ============================================
 // PAYPAL HELPERS
 // ============================================
 function paypalBaseUrl() {
@@ -314,6 +384,17 @@ app.use(morgan(NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use('/api/v1/billing/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// ============================================
+// REQUEST METRICS MIDDLEWARE
+// ============================================
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    observeRequest(req.method, req.path, res.statusCode, Date.now() - start);
+  });
+  next();
+});
 
 // ============================================
 // FAMILY-SAFE CONTENT FILTER
@@ -2509,6 +2590,14 @@ app.post('/api/v1/interface/translate', authMiddleware, async (req, res) => {
     console.error('Interface translate error:', e);
     res.status(500).json({ error: 'Translation failed' });
   }
+});
+
+// ============================================
+// PROMETHEUS METRICS ENDPOINT
+// ============================================
+app.get('/metrics', (req, res) => {
+  res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+  res.send(renderMetrics());
 });
 
 // ============================================
