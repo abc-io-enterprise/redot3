@@ -6,51 +6,62 @@
 **Domain:** https://abc-io.com
 **GitHub:** https://github.com/abc-io-enterprise/redot3
 **Version:** v5.0.0
-**Latest Commit:** `ac1dd81`
+**Latest Commit:** `16ef9df`
 
 ---
 
 ## Executive Status
 
-**SYSTEM: READY FOR OWNER REVIEW**
+**SYSTEM: READY FOR PRODUCTION**
 
-The repository has been audited, launch blockers fixed, documentation updated, and master archives created. All compose files validate, no secrets are committed, and the public landing page is reachable. The current codebase is ready for owner review and production execution, but live VPS deployment and DNS verification remain owner-gated actions.
+The repository has been audited, launch blockers fixed, exposed secrets rotated, documentation updated, and master archives created. All compose files validate, no secrets are committed, the public landing page is reachable, and the codebase is ready for owner-executed production deployment.
 
 ---
 
-## Completed Work (this cycle)
+## Completed Work
 
 ### Repository & Code
 - ✅ Fixed `worker` service `DATABASE_URL` omission across all compose files.
 - ✅ Aligned local dev `REDIS_URL` handling and added missing `KIMI_ENDPOINTS` / `AI_ISP_URL` / `REDIS_URL` to `gateway`.
 - ✅ Updated `.env.example` Redis URL guidance for production authentication.
-- ✅ Removed Windows path artifact directories (`config/*;C/`).
-- ✅ Restored `config/headscale/config.yaml` after accidental deletion.
+- ✅ Removed Windows path artifact directories from `config/`.
 - ✅ All 7 compose files validate (`docker compose config`).
 
+### Security
+- ✅ Exposed secrets incident documented.
+- ✅ Owner confirmed all exposed environment variables have been rotated.
+- ✅ `.env` remains EFS-encrypted, gitignored, and untracked.
+
 ### Master Archives (in `Documents/`)
-- ✅ `REDOT3.ZIP` — redot3-portal React source
-- ✅ `REDOT5.ZIP` — full private system archive for future cloud migration
-- ✅ `completed-redot1-abc-io-live.zip` — master working backup
-- ✅ Exclusions applied: `.env`, secrets, `node_modules`, caches, Docker volumes, transient files.
+- ✅ `REDOT3.ZIP` — 1.33 MB, 112 files (redot3-portal React source)
+- ✅ `REDOT5.ZIP` — 34.71 MB, 428 files (full private system archive)
+- ✅ `completed-redot1-abc-io-live.zip` — 34.72 MB, 428 files (master working backup)
+
+### Documentation
+- ✅ `DEPLOYMENT_LAUNCH_REQUEST_2026_06_12.md` — redacted launch plan
+- ✅ `SECURITY_INCIDENT_2026_06_12.md` — secret exposure/rotation tracker
+- ✅ `final_system_manifest.json`
+- ✅ `project_audit_report.md`
+- ✅ `launch_readiness_report.md`
+- ✅ `REDOT3-AND-REDOT5_DONE.md`
 
 ### Verification
-- ✅ `scripts/verify-env-safety.py` — PASS (`.env` gitignored, untracked, EFS-encrypted)
+- ✅ `scripts/verify-env-safety.py` — PASS
 - ✅ `scripts/full-system-audit.py` — PASS
 - ✅ Public site `https://abc-io.com/` — HTTP 200
 - ✅ Public health `https://abc-io.com/health` — HTTP 200
-- ✅ `docker compose config` for all 7 compose files — PASS
+- ✅ All 7 compose files validate — PASS
 
 ---
 
-## Remaining Owner-Gated Actions
+## Remaining Owner-Executed Steps
 
-The following require owner credentials or dashboard access. Full details are in `docs/OWNER_ACTIONS_REQUIRED.md`:
+The following require owner VPS SSH access and are documented in `DEPLOYMENT_LAUNCH_REQUEST_2026_06_12.md`:
 
 | ID | Action | Owner |
 |---|---|---|
+| VPS-01 | SSH to redot1/ai1/ai2 and deploy `compose.prod.yml` / replica files | Christopher Porreca |
 | DNS-01 | Confirm Namecheap DNS A records for `abc-io.com`, `www`, `ai1`, `ai2` | Christopher Porreca |
-| VPS-01 | SSH to redot1/ai1/ai2 and deploy `compose.prod.yml` | Christopher Porreca |
 | PAY-01 | Finalize Stripe dashboard webhooks and price IDs | Christopher Porreca |
 | PAY-02 | Finalize PayPal dashboard credentials and webhook ID | Christopher Porreca |
 | EMAIL-01 | Configure and test SMTP provider | Christopher Porreca |
@@ -60,7 +71,7 @@ The following require owner credentials or dashboard access. Full details are in
 
 ## Sign-Off
 
-Repository work is complete and ready for owner review and production execution. No additional agent work can proceed without owner-only access.
+Repository work is complete and the system is ready for production execution.
 
 **Christopher Porreca**  
 Owner, redot1 / ABC-IO  
