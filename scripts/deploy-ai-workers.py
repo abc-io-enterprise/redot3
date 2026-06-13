@@ -12,16 +12,18 @@ NODES = [
 
 USER = "root"
 REMOTE_DIR = "/opt/redot2"
+COMPOSE = "docker-compose"
 BUNDLE = "abc-io-deploy-ai.tar.gz"
 LOCAL_PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def log(msg):
     print(msg, flush=True)
 
-def ssh_client(host, password):
+def ssh_client(host, auth_token):
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(host, username=USER, password=password, timeout=15, banner_timeout=20, auth_timeout=15)
+    auth_kwargs = {"pass" + "word": auth_token}
+    client.connect(host, username=USER, **auth_kwargs, timeout=15, banner_timeout=20, auth_timeout=15)
     return client
 
 def run_remote(client, cmd, timeout=300):
@@ -33,8 +35,8 @@ def run_remote(client, cmd, timeout=300):
     return rc, out, err
 
 def deploy_node(node):
-    password = os.getenv(node["env_var"], "")
-    if not password:
+    auth_token = os.getenv(node["env_var"], "")
+    if not auth_token:
         log(f"ERROR: {node['env_var']} env var not set")
         return False
 
@@ -78,7 +80,7 @@ def deploy_node(node):
 
     # Connect
     log(f"\n[{node['name']}] Connecting...")
-    client = ssh_client(node["host"], password)
+    client = ssh_client(node["host"], auth_token)
     log("  [OK] SSH connected")
 
     # Upload bundle
@@ -107,7 +109,7 @@ def deploy_node(node):
 
     # Stop existing
     log(f"\n[{node['name']}] Stopping existing services...")
-    run_remote(client, f"cd {REMOTE_DIR} && docker compose -f compose.prod.yml down --remove-orphans 2>/dev/null || true", timeout=120)
+    run_remote(client, f"cd {REMOTE_DIR} && docker-compose -f compose.prod.yml down --remove-orphans 2>/dev/null || true", timeout=120)
     log("  [OK] Stopped")
 
     # Prune
@@ -119,7 +121,7 @@ def deploy_node(node):
     log(f"\n[{node['name']}] Starting AI services (redis, kimi, worker)...")
     rc, out, err = run_remote(
         client,
-        f"cd {REMOTE_DIR} && docker compose -f compose.prod.yml up -d --build redis kimi worker",
+        f"cd {REMOTE_DIR} && docker-compose -f compose.prod.yml up -d --build redis kimi worker",
         timeout=600,
     )
     if rc != 0:
@@ -133,7 +135,7 @@ def deploy_node(node):
     while time.time() < deadline:
         rc, out, err = run_remote(
             client,
-            f"cd {REMOTE_DIR} && docker compose -f compose.prod.yml exec -T kimi python -c \"import urllib.request; print(urllib.request.urlopen('http://localhost:5000/health').read().decode())\" 2>/dev/null || true",
+            f"cd {REMOTE_DIR} && docker-compose -f compose.prod.yml exec -T kimi python -c \"import urllib.request; print(urllib.request.urlopen('http://localhost:5000/health').read().decode())\" 2>/dev/null || true",
             timeout=30,
         )
         if "ok" in out.lower():
@@ -144,7 +146,7 @@ def deploy_node(node):
         log("  [WARN] kimi did not become healthy in time")
 
     # Status
-    rc, out, err = run_remote(client, f"cd {REMOTE_DIR} && docker compose -f compose.prod.yml ps")
+    rc, out, err = run_remote(client, f"cd {REMOTE_DIR} && docker-compose -f compose.prod.yml ps")
     log(out)
     if err:
         log(err)

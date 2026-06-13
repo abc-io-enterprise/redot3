@@ -1,11 +1,14 @@
 #!/bin/sh
 set -e
 
+REDOT3_PORT="${REDOT3_PORT:-8088}"
+NGINX_PORT="${NGINX_PORT:-8088}"
+
 HEALTH_URLS="
 gateway|http://localhost:4000/health
 operator-station|http://localhost:8080/health
 public-portal|http://localhost:8090/health
-redot3-portal|http://localhost:8088/portal/health
+redot3-portal|http://localhost:${REDOT3_PORT}/portal/health
 mobile-gateway|http://localhost:5050/health
 owner-dashboard|http://localhost:8500/health
 kimi|http://localhost:5000/health
@@ -14,7 +17,7 @@ beacon-pwa|http://localhost:3005/health
 account-pwa|http://localhost:8100/health
 interface-pwa|http://localhost:8110/health
 ai-isp|http://localhost:7000/health
-nginx|http://localhost:8088/health
+nginx|http://localhost:${NGINX_PORT}/health
 prometheus|http://localhost:9091/-/healthy
 grafana|http://localhost:14000/api/health
 tracer|http://localhost:16686/

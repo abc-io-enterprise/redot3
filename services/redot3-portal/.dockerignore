@@ -6,5 +6,4 @@ dist-ssr
 .gitignore
 *.md
 Dockerfile
-nginx.conf
 .dockerignore

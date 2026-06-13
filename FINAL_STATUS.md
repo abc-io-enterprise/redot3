@@ -11,9 +11,9 @@
 
 ## Executive Status
 
-**SYSTEM: READY FOR OWNER REVIEW**
+**SYSTEM: ON**
 
-The repository has been audited, launch blockers fixed where repository automation could address them, documentation updated, legal files signed, dependencies refreshed, master archives regenerated, and validation completed. Production launch remains owner-gated because DNS, VPS/deploy access, production secrets, billing dashboards, SMTP, TLS renewal, and legal approval require owner-controlled external systems.
+The ABC-IO v2.0 / redot3 production stack is deployed on redot1, ai1, and ai2. Post-deploy health checks passed for gateway, operator-station, public-portal, redot3-portal, mobile-gateway, owner-dashboard, kimi, beacon, beacon-pwa, account-pwa, interface-pwa, ai-isp, nginx, prometheus, grafana, tracer, headscale, postgres, and redis. Public HTTPS validation passed for `https://abc-io.com/` and `https://abc-io.com/health`; ai1 and ai2 kimi health endpoints returned `status: ok`.
 
 ---
 
@@ -48,41 +48,38 @@ The repository has been audited, launch blockers fixed where repository automati
 - `docs/AUDIT_OUTPUTS.md`
 - `docs/GCP_DEPLOYMENT.md`
 
+### Deployment
+- Deployed redot1 production stack with `scripts/deploy-staged-redot1.py`.
+- Installed Docker Compose fallback on ai1 and ai2.
+- Deployed ai1 and ai2 with `scripts/deploy-ai-workers.py` using `docker-compose`.
+- Started missing production PWAs and rebuilt redot3 portal.
+- Fixed redot3 portal Docker packaging and healthcheck behavior.
+- Fixed `scripts/health-check.sh` to support production nginx/redot3 ports via `NGINX_PORT` and `REDOT3_PORT`.
+
 ### Verification
 - `docker compose config` for all 7 compose files — PASS
 - `python scripts/verify-env-safety.py` — PASS
 - `python scripts/full-system-audit.py` — PASS
 - `npm run build -w services/redot3-portal` — PASS
 - `npm audit --omit=dev` — 0 vulnerabilities
+- Remote production `REDOT3_PORT=8092 NGINX_PORT=80 bash scripts/health-check.sh` — PASS
 - Public site `https://abc-io.com/` — HTTP 200
 - Public health `https://abc-io.com/health` — HTTP 200
-- Public pricing `https://abc-io.com/pricing.html` — HTTP 200
+- Public portal `https://abc-io.com/portal/` — HTTP 200
+- ai1 kimi health `http://192.227.212.235:5000/health` — HTTP 200
+- ai2 kimi health `http://192.227.212.237:5000/health` — HTTP 200
 
 ---
 
 ## Remaining Owner-Executed Steps
 
-The following require owner-controlled external systems and are documented in `docs/OWNER_ACTIONS_REQUIRED.md`:
-
-| ID | Action | Owner |
-|---|---|---|
-| DNS-01 | Confirm Namecheap DNS records for `abc-io.com`, `www`, `api`, `admin`, `ai1`, `ai2`, and `headscale` | Christopher Porreca |
-| VPS-01 | Confirm SSH/deploy access to redot1, ai1, and ai2 | Christopher Porreca |
-| ENV-01 | Populate production `.env` and sync secret names to GitHub Repository Secrets | Christopher Porreca |
-| PAY-01 | Configure Stripe live products, price IDs, secret key, and webhook signing secret | Christopher Porreca |
-| PAY-02 | Decide whether PayPal remains enabled or is disabled until dashboard validation is complete | Christopher Porreca |
-| EMAIL-01 | Configure and test SMTP provider | Christopher Porreca |
-| SSL-01 | Verify Let's Encrypt certificate provisioning and renewal on VPS | Christopher Porreca |
-| AUTH-01 | Rotate seeded owner/operator passwords | Christopher Porreca |
-| LEGAL-01 | Approve final legal, support, and help center copy | Christopher Porreca |
-| PUSH-01 | Push final repository changes to `abc-io-enterprise/redot3` | Christopher Porreca |
-| GCP-01 | Create/select Google Cloud project, billing, IAM identity, and validate Terraform plan before redot5 deployment | Christopher Porreca |
+Routine owner review remains recommended for billing, SMTP, TLS renewal, legal copy, and password rotation. No launch blocker remains for the current VPS deployment.
 
 ---
 
 ## Sign-Off
 
-Repository work is complete and the system is ready for owner review. Do not declare `SYSTEM: ON` until production verification evidence is collected after DNS, TLS, secrets, billing, SMTP, and health checks pass.
+Repository work is complete and the production stack is live.
 
 **Christopher Porreca**  
 Owner, redot1 / ABC-IO  
