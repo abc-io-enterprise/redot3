@@ -1,25 +1,25 @@
 {
-  "generated_at": "2026-06-12T22:46:10.780102+00:00",
+  "generated_at": "2026-06-13T00:58:04.589303+00:00",
   "repo_root": "C:\\Users\\cplexmath\\OneDrive\\Documents\\redot2",
-  "status": "SYSTEM: READY FOR OWNER REVIEW",
+  "status": "SYSTEM: ON",
   "archives": {
     "REDOT3.ZIP": {
       "path": "C:\\Users\\cplexmath\\Documents\\REDOT3.ZIP",
-      "size_bytes": 36518084,
+      "size_bytes": 36518024,
       "size_mb": 34.83,
       "files": 482,
       "description": "GitHub-ready redot3 repository package for public and private deployment preparation"
     },
     "REDOT5.ZIP": {
       "path": "C:\\Users\\cplexmath\\Documents\\REDOT5.ZIP",
-      "size_bytes": 36518084,
+      "size_bytes": 36518024,
       "size_mb": 34.83,
       "files": 482,
       "description": "Private Google Cloud redot5 migration package with Terraform, Kubernetes, docs, manifests, and legal files"
     },
     "completed-redot1-abc-io-live.zip": {
       "path": "C:\\Users\\cplexmath\\Documents\\completed-redot1-abc-io-live.zip",
-      "size_bytes": 36529652,
+      "size_bytes": 36529592,
       "size_mb": 34.84,
       "files": 482,
       "description": "Master working backup of the live system"
